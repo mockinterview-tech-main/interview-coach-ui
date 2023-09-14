@@ -1,4 +1,4 @@
-export async function transcribeAudioWithWhisperApi(audioBlob: Blob): Promise<string> {
+export const transcribeAudioWithWhisperApi = async (audioBlob: Blob): Promise<string> => {
      const openaiKey = import.meta.env["VITE_OPENAI_API_KEY"];
 	// Check if the size is less than 25MB
 	if (audioBlob.size > 25 * 1024 * 1024) 

@@ -1,4 +1,4 @@
 import { writable } from 'svelte/store';
 
-type InterviewQuestion = {qid: string, question: string};
-export const interviewQuestion = writable<InterviewQuestion>({qid: "", question: ""});
+export type InterviewQuestion = {uuid: string, question_text: string};
+export const interviewQuestion = writable<InterviewQuestion>({uuid: "", question_text: ""});

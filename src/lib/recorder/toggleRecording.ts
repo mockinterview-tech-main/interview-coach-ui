@@ -3,7 +3,7 @@ import { transcribeAudioWithWhisperApi } from '$lib/transcribeAudioWhisper';
 import { get } from 'svelte/store';
 import { startRecording, stopRecording } from './mediaRecorder';
 
-export async function toggleRecording() {
+export const toggleRecording = async () => {
 	const recordingStateValue = get(recordingState);
     
 	if (recordingStateValue === 'idle') {
