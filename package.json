@@ -25,6 +25,7 @@
 	},
 	"type": "module",
 	"dependencies": {
-		"pocketbase": "^0.15.2"
+		"pocketbase": "^0.15.2",
+		"sass": "^1.67.0"
 	}
 }

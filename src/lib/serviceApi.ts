@@ -1,5 +1,6 @@
 import type { Followup, InterviewAnswer } from "./stores/answerStore";
 import type { InterviewQuestion } from "./stores/interviewQuestion";
+import type { InterviewSummary } from "./stores/summaryStore";
 
 const resumeUrl = import.meta.env["VITE_RESUME_URL"];
 
@@ -71,7 +72,7 @@ export const answerFollowup = async (answerText: string, followupId: string): Pr
     }
 }
 
-export const getSummary = async (answerId: string) => {
+export const getSummary = async (answerId: string): Promise<InterviewSummary | null> => {
     try {
         const response = await fetch(`${resumeUrl}/summary/${answerId}`, {
             method: 'GET',
@@ -79,11 +80,13 @@ export const getSummary = async (answerId: string) => {
         });
         if (response.ok) {
             const d = await response.json();
-            return d
+            return d.feedback as InterviewSummary
         } else {
             console.error('Error uploading interview answer');
+            return null;
         }
     } catch (error) {
         console.error('An error occurred:', error);
+        return null;
     }
 };
