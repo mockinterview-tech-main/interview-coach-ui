@@ -1,8 +1,17 @@
+<script lang="ts">
+    export let data;
+    const loggedIn = data.loggedIn
+</script>
+
 <main>
     <nav>
         <span><a href="/">Home</a></span>
-        <span><a href="/interview">New Interview</a></span>
-        <span><a data-sveltekit-preload-data="hover" href="/summary">Past Sessions</a></span>
+        {#if loggedIn}
+            <span><a href="/interview">New Interview</a></span>
+            <span><a data-sveltekit-preload-data="hover" href="/summary">Past Sessions</a></span>
+        {:else}
+            <span><a href="/login">Get Started</a></span>
+        {/if}
     </nav>
     <slot/>
     <footer>

@@ -2,7 +2,6 @@
     import microsoftLogo from '../lib/assets/microsoftLogo.svg'
     import amazonLogo from '../lib/assets/amazonLogo.svg'
     import metaLogo from '../lib/assets/metaLogo.svg'
-
 </script>
 
 <section class="jumbotron">
@@ -14,7 +13,7 @@
     <div class="container">
         <h2>Our Approach</h2>
         <div class="steps">
-            <div class="step approach" style="line-height: 50px; padding-top: 100px;">
+            <div class="step approach" style="line-height: 50px; padding-top: 50px; text-align: left;">
                 <p>We'll give you tips on how to <b>be an effective story teller.</b></p>
                 <p><b>See your responses as hiring managers see them.</b></p>
                 <p>Refine and hone your answers for <b>maximum impact.</b></p>
@@ -106,7 +105,7 @@
         background-size: cover;
         background-position: center;
         color: #fff;
-        padding: 200px 40px;
+        padding: 250px 40px;
         h1 {
             font-size: 42px;
         }

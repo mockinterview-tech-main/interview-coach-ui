@@ -41,7 +41,7 @@
         <h2>Social Login</h2>
         {#each Object.keys(providers) as provider}
             {#if providers[provider].authProviderState}
-                <button class="social-button" on:click={() => gotoAuthProvider(provider)}><img width="20px" height="20px" src={googleGLogo} alt="Google Logo">Login with {provider}</button>
+                <button class="social-button" on:click={() => gotoAuthProvider(provider)}><img width="20px" height="20px" src={googleGLogo} alt="Google Logo"/>Login with {provider}</button>
             {/if}
         {/each}
     </div>
