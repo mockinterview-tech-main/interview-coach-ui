@@ -1,10 +1,35 @@
 <script lang="ts">
+    import microsoftLogo from '../lib/assets/microsoftLogo.svg'
+    import amazonLogo from '../lib/assets/amazonLogo.svg'
+    import metaLogo from '../lib/assets/metaLogo.svg'
 
 </script>
 
 <section class="jumbotron">
     <h1>You Are Exceptional</h1>
-    <p>Let us help you make your story as excpetional as you</p>
+    <p>Let us help you make your story as excpetional as you are</p>
+</section>
+
+<section class="section">
+    <div class="container">
+        <h2>Our Approach</h2>
+        <div class="steps">
+            <div class="step approach" style="line-height: 50px; padding-top: 100px;">
+                <p>We'll give you tips on how to <b>be an effective story teller.</b></p>
+                <p><b>See your responses as hiring managers see them.</b></p>
+                <p>Refine and hone your answers for <b>maximum impact.</b></p>
+            </div>
+            <div class="step approach" style="text-align: center;">
+                <p>
+                    Our interview coaching is fine tuned buy hiring managers with experience at top companies including <br/><br/>
+                    <img width="100px" src={microsoftLogo} alt="Microsoft Logo"/>&emsp14;
+                    <img width="150px" src={amazonLogo} alt="Amazon Logo"/>&emsp14;
+                    <img width="100px" src={metaLogo} alt="Meta Logo"/>&emsp14;
+                    <br/><br/><b>And More</b><br/><br/>
+                </p>
+            </div>
+        </div>
+    </div>
 </section>
 
 <section class="section">
@@ -73,19 +98,7 @@
     </div>
 </section>
 
-<section class="section">
-    <div class="container">
-        <h2>Our Approach</h2>
-        <div class="row">
-            <p>In interviews, there rarely is a "right answer"</p>
-            <p>From our experience, the thing that sinks most candidates is <b>ineffective story telling.</b></p>
-            <p>We want to help you experience your own story from the perspective of the interviewer and give real feedback to your answers.</p>
-            <p>That's why we don't simply doll out a huge list of practice tests for cracking an interview.</p>
-            <p>We focus on a <b>single question at a time</b> and give you a deep assessment on how your story was received and what specific areas you can improve upon to help you refine and hone your answers.</p>
-            <p>That's also why we encourage you to look at past answers and attempt some questions multiple times to really dial in the parts of your story with the <b>maximum impact</b> to really impress your interviewer.</p>
-        </div>
-    </div>
-</section>
+
 
 <style lang="scss">
     .jumbotron {
@@ -103,8 +116,11 @@
     } 
 
     .section {
-        padding: 50px 0;
+        padding: 20px 0;
         text-align: center;
+        &:last-of-type {
+            padding-bottom: 60px;
+        }
     }
 
     .outcome {
@@ -122,6 +138,15 @@
         padding: 10px;
         border-radius: 8px;
         flex: 1;
+        margin: 20px;
+    }
+
+    .approach {
+        background-color: #fff;
+        justify-content: center;
+        img {
+            margin: 10px;
+        }
     }
 
     ul {

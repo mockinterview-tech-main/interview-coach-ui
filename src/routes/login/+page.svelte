@@ -1,7 +1,7 @@
 <script lang="ts">
     import { browser } from '$app/environment';
     import type { PageData } from './$types';
-    import googleGLogo from '../../lib/assets/GoogleGLogo.svg.png'
+    import googleGLogo from '../../lib/assets/googleLogo.svg'
     export let data: PageData;
 
     let providers = data;
