@@ -35,8 +35,6 @@ export const load: PageServerLoad<OutputType> = async ({ locals, url, cookies })
         console.error("[ERROR] Unable to connect to authentication service")
         return {}
     }
-
-    
 };
 
 export const actions = {

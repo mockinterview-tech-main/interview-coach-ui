@@ -30,7 +30,7 @@ type AnswerQuestionRequest = {
     answer_text: string;
 }
 
-export const answerQuestion = async (answer: AnswerQuestionRequest): Promise<{answer: InterviewAnswer, followups: Followup[]} | null> => {
+export const answerQuestion = async (answer: AnswerQuestionRequest): Promise<{answer: InterviewAnswer, followups: Followup[], errors: string} | null> => {
     try {
         let response = await fetch(`${resumeUrl}/answer`, {
             method: 'POST',
@@ -42,7 +42,7 @@ export const answerQuestion = async (answer: AnswerQuestionRequest): Promise<{an
             return d;
         }
         else {
-            console.error('API returned an error: ', response.status);
+            console.error('API returned an error: ', response);
             return null;
         }
     } catch (e) {
@@ -63,7 +63,7 @@ export const answerFollowup = async (answerText: string, followupId: string): Pr
             return d.followup as Followup;
         }
         else {
-            console.error('API returned an error: ', response.status);
+            console.error('API returned an error: ', response);
             return null;
         }
     } catch (e) {
@@ -72,9 +72,51 @@ export const answerFollowup = async (answerText: string, followupId: string): Pr
     }
 }
 
-export const getSummary = async (answerId: string): Promise<InterviewSummary | null> => {
+export const buildSummary = async (answerId: string): Promise<InterviewSummary | null> => {
     try {
-        const response = await fetch(`${resumeUrl}/summary/${answerId}`, {
+        const response = await fetch(`${resumeUrl}/summary`, {
+            method: 'POST',
+            credentials: 'include',
+            body: JSON.stringify({answer_id: answerId})
+        });
+        if (response.ok) {
+            const d = await response.json();
+            return d.feedback as InterviewSummary
+        } else {
+            console.error('API returned an error: ', response);
+            return null;
+        }
+    } catch (error) {
+        console.error('An error occurred:', error);
+        return null;
+    }
+};
+
+export const getAnswer = async (answerId: string): Promise<{answer: InterviewAnswer, question: InterviewQuestion} | null> => {
+    try {
+        const response = await fetch(`${resumeUrl}/answer/${answerId}`, {
+            method: 'GET',
+            credentials: 'include'
+        });
+        if (response.ok) {
+            const d = await response.json();
+            return {
+                answer: d.answer as InterviewAnswer,
+                question: d.question as InterviewQuestion
+            }
+        } else {
+            console.error('API returned an error: ', response);
+            return null;
+        }
+    } catch (error) {
+        console.error("An error occurred: ", error);
+        return null;
+    }
+}
+
+export const getSummary = async (summaryId: string): Promise<InterviewSummary | null> => {
+    try {
+        const response = await fetch(`${resumeUrl}/summary/${summaryId}`, {
             method: 'GET',
             credentials: 'include',
         });
@@ -82,7 +124,26 @@ export const getSummary = async (answerId: string): Promise<InterviewSummary | n
             const d = await response.json();
             return d.feedback as InterviewSummary
         } else {
-            console.error('Error uploading interview answer');
+            console.error('API returned an error: ', response);
+            return null;
+        }
+    } catch (error) {
+        console.error('An error occurred:', error);
+        return null;
+    }
+};
+
+export const getSummaries = async (): Promise<Array<InterviewSummary> | null> => {
+    try {
+        const response = await fetch(`${resumeUrl}/summary`, {
+            method: 'GET',
+            credentials: 'include',
+        });
+        if (response.ok) {
+            const d = await response.json();
+            return d.summaries as Array<InterviewSummary>
+        } else {
+            console.error('API returned an error: ', response);
             return null;
         }
     } catch (error) {
