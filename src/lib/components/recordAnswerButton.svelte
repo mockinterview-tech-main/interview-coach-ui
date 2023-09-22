@@ -5,8 +5,7 @@
 	import { toggleRecording } from "$lib/recorder/toggleRecording";
 
     export let loading: boolean;
-    export let testFu: () => Promise<void>;
-    export let testLLM: () => Promise<void>;
+
 </script>
 
 <button 
@@ -15,16 +14,6 @@
     title={$recordingState === 'idle' ? "start recording" : "finish recording"}
     class={`record-button ${$recordingState === 'recording'? 'flash': ''}`}>
         {$recordingState === 'idle' ? " ▶️" : "⏹️ "}
-</button>
-<button 
-    disabled={loading || $recordingState === 'transcribing' || !($interviewQuestion.question_text || $currentFollowupStore)} 
-    on:click={testLLM}>
-        Answer Question
-</button>
-<button 
-    disabled={loading || $recordingState === 'transcribing' || !($interviewQuestion.question_text || $currentFollowupStore)} 
-    on:click={testFu}>
-        Answer Followup
 </button>
 
 <style lang="scss">

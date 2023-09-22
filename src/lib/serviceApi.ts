@@ -23,6 +23,25 @@ export const getQuestion = async (): Promise<InterviewQuestion | null> => {
     }
 };
 
+export const getQuestions = async (): Promise<Array<InterviewQuestion> | null> => {
+    try {
+        const response = await fetch(`${resumeUrl}/questions`, {
+            method: 'GET',
+            credentials: 'include',
+        });
+        if (response.ok) {
+            const d = await response.json();
+            return d.questions as Array<InterviewQuestion>;
+        } else {
+            console.error('Error uploading interview answer');
+            return null
+        }
+    } catch (error) {
+        console.error('An error occurred:', error);
+        return null
+    }
+}
+
 type AnswerQuestionRequest = {
     company: string;
     job: string;

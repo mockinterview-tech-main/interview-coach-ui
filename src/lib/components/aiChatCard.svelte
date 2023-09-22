@@ -6,7 +6,7 @@
     export let loading: boolean;
     export let endInterview: boolean;
     export let jobInfo: {job: string, company: string};
-    export let handleJobInfo: (e: Event) => Promise<void>;
+    export let handleJobInfo: (e: Event) => void;
 
     const conversationSectionElement = document.querySelector('conversationSection');    
     if(conversationSectionElement){
@@ -34,7 +34,7 @@
 <h3>AI Chat</h3>
 <div id="conversationSection" bind:this={conversationSection}>
     {#if $interviewQuestion.question_text === ""}
-        <p class="conversationPart">{$aiChatStore[0]}</p>
+        <p>{$aiChatStore[0]}</p>
         <form on:submit={handleJobInfo}>
             <label for="job">Job Title</label>
             <input id="job" type="text" bind:value={jobInfo.job} placeholder="Technical Program Manager"/><br/>
