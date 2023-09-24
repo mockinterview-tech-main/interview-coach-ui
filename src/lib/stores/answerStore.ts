@@ -3,7 +3,7 @@ import { writable } from 'svelte/store';
 export type InterviewAnswer = {
     id: string, 
     user_id: string,
-    question_id: string,
+    question_text: string,
     company_name: string,
     job_title: string,
     answer_text: string,

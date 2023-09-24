@@ -1,12 +1,14 @@
 <script lang="ts">
 	import { interviewQuestion } from "$lib/stores/interviewQuestion";
     import { aiChatStore } from "$lib/stores/chatStore";
-	import { afterUpdate, beforeUpdate } from "svelte";
+	import { afterUpdate, beforeUpdate, onMount } from "svelte";
+	import { goto } from "$app/navigation";
 
     export let loading: boolean;
     export let endInterview: boolean;
     export let jobInfo: {job: string, company: string};
     export let handleJobInfo: (e: Event) => void;
+    export let credits: number;
 
     const conversationSectionElement = document.querySelector('conversationSection');    
     if(conversationSectionElement){
@@ -29,18 +31,31 @@
 		}
 	});
 
+    const buyCredits = (e: Event) => {
+        e.preventDefault();
+        goto('/credits')
+    }
+
 </script>
 
 <h3>AI Chat</h3>
 <div id="conversationSection" bind:this={conversationSection}>
     {#if $interviewQuestion.question_text === ""}
         <p>{$aiChatStore[0]}</p>
+        {#if credits === 0}
+            <p><b>Uh oh, looks like you're out of credits. Please buy more before continuing.</b></p>
+        {/if}
         <form on:submit={handleJobInfo}>
-            <label for="job">Job Title</label>
-            <input id="job" type="text" bind:value={jobInfo.job} placeholder="Technical Program Manager"/><br/>
-            <label for="company">Company</label>
-            <input id="company" type="text" bind:value={jobInfo.company} placeholder="Google"/><br/><br/>
-            <button type="submit">Get Started</button>
+            {#if credits !== 0}
+                <label for="job">Job Title</label>
+                <input disabled={credits === 0} id="job" type="text" bind:value={jobInfo.job} placeholder="Technical Program Manager"/><br/>
+                <label for="company">Company</label>
+                <input disabled={credits === 0} id="company" type="text" bind:value={jobInfo.company} placeholder="Google"/><br/><br/>
+                <button type="submit">Get Started</button>
+            {/if}
+            {#if credits === 0}
+                <div style="display: flex; justify-content: center;"><button on:click={buyCredits}>Buy Credits</button></div>
+            {/if}
         </form>
     {:else}
         {#each $aiChatStore as part}

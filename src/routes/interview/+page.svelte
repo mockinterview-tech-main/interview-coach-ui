@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 
     import { type InterviewQuestion, interviewQuestion } from '$lib/stores/interviewQuestion';
@@ -6,19 +7,20 @@
     import {type Followup, interviewAnswerStore, followupsStore, currentFollowupStore } from '$lib/stores/answerStore';
 	import { aiChatStore, userChatStore } from '$lib/stores/chatStore';
 
-	import { answerFollowup, answerQuestion, buildSummary, getQuestions } from '$lib/serviceApi';
+	import { answerFollowup, answerQuestion, buildSummary, getAIQuestion, getQuestions } from '$lib/serviceApi';
 
 	import AIChatCard from '$lib/components/aiChatCard.svelte';
 	import RecordAnswerButton from '$lib/components/recordAnswerButton.svelte';
-
 	import UserChatCard from '$lib/components/userChatCard.svelte';
-	import { onMount } from 'svelte';
 	import QuestionList from '$lib/components/questionList.svelte';
+
+    export let data;
+    const credits = data.credits;
 
     // Initial Values
     let jobInfo = { company: "", job: "" };
     let questions: Array<InterviewQuestion>;
-    let selectedQuestion = {title: "A random question", data: {uuid: "", question_text: "A random question"}}
+    let selectedQuestion = {title: "Ask Me Anything", data: {uuid: "", question_text: "Ask Me Anything"}}
     let loading = false;
     let endInterview = false;
     
@@ -27,19 +29,38 @@
     $: loading
     $: selectedQuestion
 
-    onMount(() =>{
+    onMount( async () =>{
         interviewQuestion.set({uuid: "", question_text: ""})
         aiChatStore.set(["Lucy: Hi there 👋 I'm Lucy and I'll be conducting your mock interview today! Please tell me what role and company you'd like to practice for."]);
         userChatStore.set([])
         outputText.set("")
+        const result = await getQuestions();
+        if (result) {
+            questions = [selectedQuestion.data].concat(result)
+        }
+        if (credits === 0) {
+            console.log("bummer dude")
+        } else {
+            console.log("you have enough credits")
+        }
     })
 
-    const handleJobInfo = (e: Event) => {
+    const handleJobInfo = async (e: Event) => {
         e.preventDefault();
         if (jobInfo.company && jobInfo.job) {
             if (selectedQuestion.data.uuid === '') {
-                let actualQuestions = questions.filter(q => q.uuid !== '')
-                $interviewQuestion = actualQuestions[Math.floor(Math.random() * actualQuestions.length)];
+                loading = true;
+                let aiQuestion = await getAIQuestion({
+                    company: jobInfo.company,
+                    job: jobInfo.job,
+                })
+                loading = false;
+                if (aiQuestion){
+                    $interviewQuestion = {...aiQuestion, uuid: 'ephemeral'}
+                } else {
+                    let actualQuestions = questions.filter(q => q.uuid !== '')
+                    $interviewQuestion = actualQuestions[Math.floor(Math.random() * actualQuestions.length)];
+                }                
             } else {
                 $interviewQuestion = selectedQuestion.data
             }
@@ -49,13 +70,6 @@
             alert("Please tell me what job and company you're preparing for")
         }
     };
-
-    onMount( async () => {
-        const result = await getQuestions();
-        if (result) {
-            questions = [selectedQuestion.data].concat(result)
-        }
-    });
 
     const followupGenerator = function* (followups: Array<Followup>) {
         for (const item of followups) {
@@ -72,7 +86,7 @@
                 loading = true;
                 if(!$interviewAnswerStore){
                     const result = await answerQuestion({
-                        question_id: $interviewQuestion.uuid,
+                        question_text: $interviewQuestion.question_text,
                         company: jobInfo.company,
                         job: jobInfo.job,
                         answer_text: answerText,
@@ -121,7 +135,7 @@
 
 <div>
     <div class="aiChat">
-        <AIChatCard loading={loading} endInterview={endInterview} jobInfo={jobInfo} handleJobInfo={handleJobInfo}/>
+        <AIChatCard credits={credits} loading={loading} endInterview={endInterview} jobInfo={jobInfo} handleJobInfo={handleJobInfo}/>
     </div>
     <div class="userChat">
         {#if !$interviewQuestion.uuid}

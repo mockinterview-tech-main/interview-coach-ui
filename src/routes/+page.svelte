@@ -2,11 +2,23 @@
     import microsoftLogo from '../lib/assets/microsoftLogo.svg'
     import amazonLogo from '../lib/assets/amazonLogo.svg'
     import metaLogo from '../lib/assets/metaLogo.svg'
+    
+    export let data;
+    const loggedIn = data.loggedIn
 </script>
 
 <section class="jumbotron">
     <h1>You Are Exceptional</h1>
     <p>Let us help you make your story as excpetional as you are</p>
+    <div>
+        {#if loggedIn}
+            <a data-sveltekit-preload-data href="/interview"><button class="primary-button">New Interview</button></a>
+            <a data-sveltekit-preload-data href="/summary"><button class="secondary-button">Review Past Sessions</button></a>
+        {:else}
+            <a href="/login"><button class="primary-button">Get Started!</button></a>
+            <a href="/login"><button class="secondary-button">Log In</button></a>
+        {/if}
+    </div>
 </section>
 
 <section class="section">
@@ -55,15 +67,15 @@
         <div class="row">
             <div class="outcome">
                 <h3>High Impact Storytelling</h3>
-                <p>Most interviewers expect stories to be in the Situation Task Action Result (STAR) format</p>
+                <p>Most interviewers expect stories to be in the Situation Task Action Result (STAR) format so we objectively evaluate how well you cover each STAR point and echo it back to you so you know where to improve your story.</p>
             </div>
             <div class="outcome">
                 <h3>Focused Coaching</h3>
-                <p>See how well you're being understood and get actionable advice to strengthen your stories and land your dream job</p>
+                <p>See how well you're being understood and get actionable advice to strengthen your stories and land your dream job. Our prompts and grading rubrics come from hiring managers and employees at top companies so you get the inside scoop on what they expect from candidates.</p>
             </div>
             <div class="outcome">
                 <h3>Trackable Progress</h3>
-                <p>We'll keep a history of past responses so you can see how well your storytelling has improved and highlight trends in areas where you can provide the details that will wow your next interviewer</p>
+                <p>We'll keep a history of past responses so you can see how well your storytelling has improved and highlight trends in areas where you can provide the details that will wow your next interviewer.</p>
             </div>
         </div>
     </div>
@@ -71,27 +83,24 @@
 
 <section class="section">
     <h2>Pricing</h2>
+    <p>All packages come with result summaries. Credits never expire.</p>
     <div class="steps">
         <div class="step">
-            <h3>Looking Around</h3>
+            <h3>Looking Around $2.00</h3>
             <ul>
-                <li>3 Interview Question</li>
-                <li>Full Assessment of Storytelling</li>
-                <li>Actionable Feedback For Your Interview</li>
+                <li>1 Interview Question</li>
             </ul>
         </div>
         <div class="step">
-            <h3>Passive Candidate</h3>
+            <h3>Passive Candidate $5.00</h3>
             <ul>
-                <li>Everything in "Looking Around"</li>
-                <li>5 Questions per day</li>
+                <li>3 Interview Questions</li>
             </ul>
         </div>
         <div class="step">
-            <h3>Active Candidate</h3>
+            <h3>Active Candidate $8.00</h3>
             <ul>
-                <li>Everything in "Passive Candidate"</li>
-                <li>1 Hour Session With a Live Interview Coach</li>
+                <li>5 Interview Questions</li>
             </ul>
         </div>
     </div>
@@ -105,12 +114,53 @@
         background-size: cover;
         background-position: center;
         color: #fff;
-        padding: 250px 40px;
+        padding: 200px 40px;
         h1 {
             font-size: 42px;
         }
         p {
             font-size: 24px;
+        }
+        div {
+            display: flex;
+            a {
+                text-decoration: none;
+            }
+            button {
+                margin-right: 20px;
+                margin-top: 40px;
+                display: flex;
+                align-items: center;
+                padding: 10px 20px;
+                border: 2px solid transparent;
+                cursor: pointer;
+                font-weight: bold;
+                border-radius: 4px;
+                transition: background-color 0.3s, border-color 0.3s;
+                outline: none;
+                font-size: 16px;
+            }
+
+            .primary-button {
+                background-color: #A40080;
+                border-color: #FDF56C;
+                color: #FDF56C;
+            }
+            .primary-button:hover {
+                border-color: #A40080;
+                background-color: #fff;
+                color: #A40080;
+            }
+            .secondary-button {
+                background-color: #A40080;
+                border-color: #fff;
+                color: #fff;
+            }
+            .secondary-button:hover {
+                border-color: #A40080;
+                background-color: #fff;
+                color: #A40080;
+            }
         }
     } 
 
@@ -134,10 +184,20 @@
 
     .step {
         background-color: #f5f5f5;
-        padding: 10px;
+        padding: 20px;
         border-radius: 8px;
         flex: 1;
         margin: 20px;
+        h3 {
+            text-align: center;
+        }
+        ul {
+            margin: auto;
+            padding: 0;
+            li {
+                text-align: center;
+            }
+        }
     }
 
     .approach {

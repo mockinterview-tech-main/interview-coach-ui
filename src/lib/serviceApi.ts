@@ -42,10 +42,36 @@ export const getQuestions = async (): Promise<Array<InterviewQuestion> | null> =
     }
 }
 
+type AIQuestionRequest = {
+    company: string;
+    job: string;
+}
+
+export const getAIQuestion = async (req: AIQuestionRequest): Promise<InterviewQuestion | null> => {
+    try {
+        const response = await fetch(`${resumeUrl}/ai-question`, {
+            method: 'POST',
+            credentials: 'include',
+            body: JSON.stringify(req)
+        });
+        if (response.ok) {
+            const d = await response.json();
+            return d.question as InterviewQuestion;
+        } else {
+            console.error('Error uploading interview answer');
+            return null
+        }
+    } catch (error) {
+        console.error('An error occurred:', error);
+        return null
+    }
+
+}
+
 type AnswerQuestionRequest = {
     company: string;
     job: string;
-    question_id: string;
+    question_text: string;
     answer_text: string;
 }
 

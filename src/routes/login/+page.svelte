@@ -69,6 +69,7 @@
             input:focus {
                 border: 1px solid #A40080;
             }
+            
             button {
                 display: flex;
                 align-items: center;
@@ -81,17 +82,14 @@
                 background: none;
                 outline: none;
                 font-size: 16px;
+                border-color: #A40080;
+                color: #333;
             }
 
             button img {
                 width: 24px;
                 height: 24px;
                 margin-right: 10px;
-            }
-
-            button {
-                border-color: #A40080;
-                color: #333; /* Google's blue color, can adjust if needed */
             }
 
             button:hover {

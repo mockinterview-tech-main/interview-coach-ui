@@ -4,9 +4,6 @@
 	import { afterUpdate, beforeUpdate } from "svelte";
 
     export let endInterview: boolean;
-
-    let hidden = true;
-    $: hidden;    
     
     let autoscroll = false;
     let userChatContainer: HTMLDivElement;

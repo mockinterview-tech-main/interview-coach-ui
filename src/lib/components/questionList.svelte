@@ -14,7 +14,7 @@
 </script>
 
 <h3>User Chat</h3>
-<p>I'd like to practice this question!</p>
+<p>Select "Ask Me Anything" for an AI generated prompt, or select from our list of most common interview questions.</p>
 <div>
     {#each options as option}
         <ListItem selected={option.title === selectedItem.title} title={option.title} subtitle="" on:click={() => selectItem(option)}/>

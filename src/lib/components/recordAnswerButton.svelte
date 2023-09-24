@@ -5,7 +5,6 @@
 	import { toggleRecording } from "$lib/recorder/toggleRecording";
 
     export let loading: boolean;
-
 </script>
 
 <button 
