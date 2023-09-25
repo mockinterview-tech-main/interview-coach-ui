@@ -8,7 +8,7 @@
 </script>
 
 <section class="jumbotron">
-    <h1>You Are Exceptional</h1>
+    <h1>Nail Your Next Interview</h1>
     <p>Let us help you make your story as excpetional as you are</p>
     <div>
         {#if loggedIn}
