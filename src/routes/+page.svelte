@@ -92,6 +92,7 @@
                 <li>1 Interview Question</li>
                 <li>Best as a refresher on interviewing</li>
             </ul>
+            <a href="/credits"><button>Buy Now</button></a>
         </div>
         <div class="step">
             <h3>Passive Candidate $20.00</h3>
@@ -99,6 +100,7 @@
                 <li>5 Interview Questions</li>
                 <li>Equivalent to a 2 hour live person coaching session valued at $200.00</li>
             </ul>
+            <a href="/credits"><button>Buy Now</button></a>
         </div>
         <div class="step">
             <h3>Active Candidate $30.00</h3>
@@ -106,6 +108,7 @@
                 <li>10 Interview Questions</li>
                 <li>Best for refining answers to tricky interview questions or preparing for multiple interviews</li>
             </ul>
+            <a href="/credits"><button>Buy Now</button></a>
         </div>
     </div>
     <div class="step">
@@ -118,6 +121,31 @@
 
 
 <style lang="scss">
+
+    button {
+        margin-right: 20px;
+        margin-top: 40px;
+        display: flex;
+        align-items: center;
+        padding: 10px 20px;
+        border: 2px solid transparent;
+        cursor: pointer;
+        font-weight: bold;
+        border-radius: 4px;
+        transition: background-color 0.3s, border-color 0.3s;
+        outline: none;
+        font-size: 16px;
+        border-color: #fff;
+        background-color: #A40080;
+        color: #fff;
+    }
+
+    button:hover {
+        border-color: #A40080;
+        background-color: #fff;
+        color: #A40080;
+    }
+
     .jumbotron {
         background-image: url('../lib/assets/jumbotron.jpg');
         background-size: cover;
@@ -135,21 +163,6 @@
             a {
                 text-decoration: none;
             }
-            button {
-                margin-right: 20px;
-                margin-top: 40px;
-                display: flex;
-                align-items: center;
-                padding: 10px 20px;
-                border: 2px solid transparent;
-                cursor: pointer;
-                font-weight: bold;
-                border-radius: 4px;
-                transition: background-color 0.3s, border-color 0.3s;
-                outline: none;
-                font-size: 16px;
-            }
-
             .primary-button {
                 background-color: #A40080;
                 border-color: #FDF56C;
@@ -206,6 +219,12 @@
             li {
                 text-align: center;
             }
+        }
+        a {
+            text-decoration: none;
+        }
+        button {
+            margin: auto;
         }
     }
 
