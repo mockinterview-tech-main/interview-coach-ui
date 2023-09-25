@@ -23,21 +23,19 @@
 
 <section class="section">
     <div class="container">
-        <h2>Our Approach</h2>
-        <div class="steps">
-            <div class="step approach" style="line-height: 50px; padding-top: 50px; text-align: left;">
-                <p>We'll give you tips on how to <b>be an effective story teller.</b></p>
-                <p><b>See your responses as hiring managers see them.</b></p>
-                <p>Refine and hone your answers for <b>maximum impact.</b></p>
+        <h2>Why Us?</h2>
+        <div class="row">
+            <div class="outcome">
+                <h3>High Impact Storytelling</h3>
+                <p>Most interviewers expect stories to be in the Situation Task Action Result (STAR) format so we objectively evaluate how well you cover each STAR point and echo it back to you so you know where to improve your story.</p>
             </div>
-            <div class="step approach" style="text-align: center;">
-                <p>
-                    Our interview coaching is fine tuned buy hiring managers with experience at top companies including <br/><br/>
-                    <img width="100px" src={microsoftLogo} alt="Microsoft Logo"/>&emsp14;
-                    <img width="150px" src={amazonLogo} alt="Amazon Logo"/>&emsp14;
-                    <img width="100px" src={metaLogo} alt="Meta Logo"/>&emsp14;
-                    <br/><br/><b>And More</b><br/><br/>
-                </p>
+            <div class="outcome">
+                <h3>Focused Coaching</h3>
+                <p>See how well you're being understood and get actionable advice to strengthen your stories and land your dream job. Our prompts and grading rubrics come from hiring managers and employees at top companies so you get the inside scoop on what they expect from candidates.</p>
+            </div>
+            <div class="outcome">
+                <h3>Trackable Progress</h3>
+                <p>We'll keep a history of past responses so you can see how well your storytelling has improved and highlight trends in areas where you can provide the details that will wow your next interviewer.</p>
             </div>
         </div>
     </div>
@@ -63,20 +61,23 @@
 
 <section class="section">
     <div class="container">
-        <h2>Why Us?</h2>
-        <div class="row">
-            <div class="outcome">
-                <h3>High Impact Storytelling</h3>
-                <p>Most interviewers expect stories to be in the Situation Task Action Result (STAR) format so we objectively evaluate how well you cover each STAR point and echo it back to you so you know where to improve your story.</p>
+        <h2>Our Approach</h2>
+        <div class="steps">
+            <div class="step approach" style="text-align: center;">
+                <p>
+                    Our interview coaching is fine tuned buy hiring managers with experience at top companies including <br/><br/>
+                    <img width="100px" src={metaLogo} alt="Meta Logo"/>&emsp14;
+                    <img width="100px" src={microsoftLogo} alt="Microsoft Logo"/>&emsp14;
+                    <img width="150px" src={amazonLogo} alt="Amazon Logo"/>&emsp14;
+                    <br/><br/><b>And More</b><br/><br/>
+                </p>
             </div>
-            <div class="outcome">
-                <h3>Focused Coaching</h3>
-                <p>See how well you're being understood and get actionable advice to strengthen your stories and land your dream job. Our prompts and grading rubrics come from hiring managers and employees at top companies so you get the inside scoop on what they expect from candidates.</p>
+            <div class="step approach" style="line-height: 50px; padding-top: 50px; text-align: left;">
+                <p>Get tips on how to <b>be an effective story teller.</b></p>
+                <p><b>See your responses as hiring managers see them.</b></p>
+                <p>Refine and hone your answers for <b>maximum impact.</b></p>
             </div>
-            <div class="outcome">
-                <h3>Trackable Progress</h3>
-                <p>We'll keep a history of past responses so you can see how well your storytelling has improved and highlight trends in areas where you can provide the details that will wow your next interviewer.</p>
-            </div>
+            
         </div>
     </div>
 </section>
@@ -86,23 +87,31 @@
     <p>All packages come with result summaries. Credits never expire.</p>
     <div class="steps">
         <div class="step">
-            <h3>Looking Around $2.00</h3>
+            <h3>Looking Around $5.00</h3>
             <ul>
                 <li>1 Interview Question</li>
+                <li>Best as a refresher on interviewing</li>
             </ul>
         </div>
         <div class="step">
-            <h3>Passive Candidate $5.00</h3>
-            <ul>
-                <li>3 Interview Questions</li>
-            </ul>
-        </div>
-        <div class="step">
-            <h3>Active Candidate $8.00</h3>
+            <h3>Passive Candidate $20.00</h3>
             <ul>
                 <li>5 Interview Questions</li>
+                <li>Equivalent to a 2 hour live person coaching session valued at $200.00</li>
             </ul>
         </div>
+        <div class="step">
+            <h3>Active Candidate $30.00</h3>
+            <ul>
+                <li>10 Interview Questions</li>
+                <li>Best for refining answers to tricky interview questions or preparing for multiple interviews</li>
+            </ul>
+        </div>
+    </div>
+    <div class="step">
+        <h3>Live Coaching</h3>
+        <p>Contact us for a consultation with one of our interview experts with experience at top paying companies including <b>Microsoft</b>, <b>Amazon</b>, <b>Meta</b>, and more!</p>
+        <p>We'll work with you on your career goals and craft an interviewing plan that is perfect for you.</p>
     </div>
 </section>
 

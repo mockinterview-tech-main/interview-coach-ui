@@ -1,21 +1,18 @@
 <script lang="ts">
-    import type { Choice } from '../api/payment-intent/+server';
-
-    let offerings: Array<Choice> = [
-        {SKU: "good", Price: 2, Label: "1 Interview Question"},
-        {SKU: "better", Price: 5, Label: "3 Interview Questions"},
-        {SKU: "best", Price: 10, Label: "5 Interview Questions"}
-    ]
-
+    export let data;
+    const offerings = data.offerings;
     let selectedOffering = offerings[0];
     $: selectedOffering
  
 </script>
 
 <div>
-    <form action="?/five" method="POST">
-        <button type="submit" id="checkout-button">Checkout</button>
-    </form>
+    {#each offerings as offering}
+        <form action="?/purchase" method="POST">
+            <input type="hidden" name="chosenOffering" value={JSON.stringify(offering)} />
+            <button type="submit" id="checkout-button">{offering.label} ${offering.price}.00</button>
+        </form>
+    {/each}
 </div>
 
 <style lang="scss">

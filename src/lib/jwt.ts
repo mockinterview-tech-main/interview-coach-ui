@@ -10,9 +10,12 @@ export const decodeJwt = (token: string): any => {
     }
 }
 
-export const mintJwt = (data: string, secret: string): string => {
-    return jwt.sign(data, secret, {
-        expiresIn: '1h',
-        
-    })
+export const validateJwt = (token: string, secret: string): any => {
+    try {
+        const valid = jwt.verify(token, secret)
+        console.log(valid)
+        return valid
+    } catch (e) {
+        console.error('Invalid token: ', e)
+    }
 }

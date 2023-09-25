@@ -1,6 +1,7 @@
 import { redirect } from '@sveltejs/kit';
 import type { LayoutServerLoad } from './$types';
-import { decodeJwt } from '$lib/jwt';
+import { decodeJwt, validateJwt } from '$lib/jwt';
+import { NONCE_SIGNING_SECRET } from '$env/static/private';
 
 export const load: LayoutServerLoad = async ({ locals, url }) => {
     const protectedRoutes = ['interview', 'summary']
@@ -11,8 +12,18 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
     
     const currentUserToken = decodeJwt(locals.pb?.authStore.token || '');
     if (currentUserToken){
-        const currentUser = await locals.pb?.collection('users').getOne(currentUserToken.id);
+        let currentUser = await locals.pb?.collection('users').getOne(currentUserToken.id);
         if (currentUser){
+            if (currentUser.nonce) {
+                const nonce = url.searchParams.get('nonce')
+                if (validateJwt(currentUser.nonce, NONCE_SIGNING_SECRET)){
+                    const userToken = decodeJwt(currentUser.nonce)
+                    if (userToken.nonce === nonce) {
+                        await locals.pb?.collection('users').update(currentUserToken.id, { nonce: '', credits: (currentUser.credits + userToken.credits)});
+                        currentUser = await locals.pb?.collection('users').getOne(currentUserToken.id);
+                    }
+                }
+            }
             return {
                 loggedIn: locals.pb?.authStore.isValid,
                 credits: currentUser?.credits

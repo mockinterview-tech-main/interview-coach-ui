@@ -1,27 +1,77 @@
+import jwt from 'jsonwebtoken';
+
 import { redirect } from "@sveltejs/kit";
 import { stripe } from '$lib/stripe';
+import type { PageServerLoad } from "./$types";
+import { 
+    STRIPE_ID_BEST_PRODUCT, 
+    STRIPE_ID_BETTER_PRODUCT, 
+    STRIPE_ID_GOOD_PRODUCT, 
+    NONCE_SIGNING_SECRET 
+} from "$env/static/private";
+import { decodeJwt } from '$lib/jwt';
+
+export type Choice = {
+    sku: string;
+    price: number;
+    label: string;
+    stripeID: string;
+    credits: number;
+}
+
+const offerings: Array<Choice> = [
+    {sku: "good", price: 5, label: "1 Interview Question", credits: 1, stripeID: STRIPE_ID_GOOD_PRODUCT},
+    {sku: "better", price: 20, label: "5 Interview Questions", credits: 5, stripeID: STRIPE_ID_BETTER_PRODUCT},
+    {sku: "best", price: 30, label: "10 Interview Questions", credits: 10, stripeID: STRIPE_ID_BEST_PRODUCT}
+]
+
+export const load: PageServerLoad = async () =>  {
+    return { offerings } 
+}
+
+const generateNonce = (length = 24) => {
+    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let result = '';
+
+    for (let i = 0; i < length; i++) {
+        const randomIndex = Math.floor(Math.random() * characters.length);
+        result += characters.charAt(randomIndex);
+    }
+
+    return result;
+}
 
 export const actions = {
-    five: async () => {
-        // todo - determine selected product
-        // todo - if user not authed -> kick them to home page (this shouldnt happen really but 🤷‍♂️)
-        // todo - generate a slug & store it in pb with user and stripe-callback endpoint (success page).
-            // todo - slug should be signed jwt including how many units purchased
-            // todo - validate the slug. if it exists & is valid, bump the credits by however many they purchase
-        const session = await stripe.checkout.sessions.create({
-            line_items: [
-                {
-                    // Provide the exact Price ID (for example, pr_1234) of the product you want to sell
-                    price: 'price_1NtjlXL5tBw90QNmvKbb0q6m',
-                    quantity: 1,
-                },
-            ],
-            mode: 'payment',
-            success_url: `http://localhost:5173?slug=whatthefuckisthisanyway`,
-            cancel_url: `http://localhost:5173`,
-            automatic_tax: {enabled: true},
-        });
+    purchase: async ({request, locals}) => {
+        if (!locals.pb?.authStore.isValid){
+            throw redirect(301, '/');
+        }
+        const rawData = await request.formData();
+        const chosenOffering = rawData.get('chosenOffering');
+        if (chosenOffering) {
+            const chosen = JSON.parse(chosenOffering.toString()) as Choice
+            const nonce = generateNonce();
+            const nonceToken = jwt.sign({...chosen, nonce}, NONCE_SIGNING_SECRET);
 
-        throw redirect(303, session.url || 'http://localhost:5173');
+            const currentUserToken = decodeJwt(locals.pb?.authStore.token || '');
+            locals.pb?.collection('users').update(currentUserToken.id, {nonce: nonceToken});
+
+            const session = await stripe.checkout.sessions.create({
+                line_items: [
+                    {
+                        // Provide the exact price ID (for example, pr_1234) of the product you want to sell
+                        price: chosen.stripeID,
+                        quantity: 1,
+                    },
+                ],
+                mode: 'payment',
+                success_url: `http://localhost:5173?nonce=${nonce}`,
+                cancel_url: `http://localhost:5173`,
+                automatic_tax: {enabled: true},
+            });
+            throw redirect(303, session.url || 'http://localhost:5173');
+        }
+        
+        // todo - validate the slug. if it exists & is valid, bump the credits by however many they purchase
     },
 }

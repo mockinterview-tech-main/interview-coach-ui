@@ -39,9 +39,7 @@
             questions = [selectedQuestion.data].concat(result)
         }
         if (credits === 0) {
-            console.log("bummer dude")
-        } else {
-            console.log("you have enough credits")
+
         }
     })
 
@@ -66,6 +64,10 @@
             }
             aiChatStore.set([...$aiChatStore, `Lucy: I see you're interviewing as a ${jobInfo.job} at ${jobInfo.company}. Here is your first question 🙂!`])
             aiChatStore.set([...$aiChatStore, $interviewQuestion.question_text])
+            fetch('/interview', {
+                method: 'POST',
+                credentials: 'include'
+            })
         } else {
             alert("Please tell me what job and company you're preparing for")
         }
