@@ -16,9 +16,9 @@
     <slot/>
     <footer>
         <span>&copy; 2023 EmpowerPro Labs</span>
-        <span><a href="/tos">Terms of Service</a></span>
-        <span><a href="/privacy">Privacy Policy</a></span>
-        <span><a href="/cookie">Cookie Policy</a></span>
+        <span><a href="/legal/tos">Terms of Service</a></span>
+        <span><a href="/legal/privacy">Privacy Policy</a></span>
+        <span><a href="/legal/cookie">Cookie Policy</a></span>
     </footer>
 </main>
 
