@@ -56,6 +56,7 @@ export const actions = {
             const currentUserToken = decodeJwt(locals.pb?.authStore.token || '');
             locals.pb?.collection('users').update(currentUserToken.id, {nonce: nonceToken});
 
+            const isProd = process.env.NODE_ENV === 'production' ? true : false;
             const session = await stripe.checkout.sessions.create({
                 line_items: [
                     {
@@ -65,8 +66,8 @@ export const actions = {
                     },
                 ],
                 mode: 'payment',
-                success_url: `http://localhost:5173?nonce=${nonce}`,
-                cancel_url: `http://localhost:5173`,
+                success_url: isProd ? `https://mockinterview.tech?nonce=${nonce}` : `http://localhost:5173?nonce=${nonce}`,
+                cancel_url: isProd ? `https://mockinterview.tech` : `http://localhost:5173`,
                 automatic_tax: {enabled: true},
             });
             throw redirect(303, session.url || 'http://localhost:5173');
