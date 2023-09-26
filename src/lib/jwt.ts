@@ -13,7 +13,6 @@ export const decodeJwt = (token: string): any => {
 export const validateJwt = (token: string, secret: string): any => {
     try {
         const valid = jwt.verify(token, secret)
-        console.log(valid)
         return valid
     } catch (e) {
         console.error('Invalid token: ', e)

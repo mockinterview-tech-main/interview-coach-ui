@@ -4,7 +4,7 @@ import { decodeJwt, validateJwt } from '$lib/jwt';
 import { VITE_NONCE_SIGNING_SECRET } from '$env/static/private';
 
 export const load: LayoutServerLoad = async ({ locals, url }) => {
-    const protectedRoutes = ['interview', 'summary']
+    const protectedRoutes = ['interview', 'summary', 'credits']
 
     if (!locals.pb?.authStore.isValid && protectedRoutes.includes(url.pathname.split("/").filter(Boolean)[0])) {
         throw redirect(302, '/login')
@@ -26,6 +26,7 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
             }
             return {
                 loggedIn: locals.pb?.authStore.isValid,
+                username: currentUser?.name || "Current User",
                 credits: currentUser?.credits
             }
         }

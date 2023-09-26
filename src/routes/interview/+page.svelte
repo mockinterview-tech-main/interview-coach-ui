@@ -15,7 +15,8 @@
 	import QuestionList from '$lib/components/questionList.svelte';
 
     export let data;
-    const credits = data.credits;
+    const {credits, username} = data;
+
 
     // Initial Values
     let jobInfo = { company: "", job: "" };
@@ -31,7 +32,7 @@
 
     onMount( async () =>{
         interviewQuestion.set({uuid: "", question_text: ""})
-        aiChatStore.set(["Lucy: Hi there 👋 I'm Lucy and I'll be conducting your mock interview today! Please tell me what role and company you'd like to practice for."]);
+        aiChatStore.set([`Lucy: Hi ${username} I'm Lucy and I'll be conducting your mock interview today! Please tell me what role and company you'd like to practice for.`]);
         userChatStore.set([])
         outputText.set("")
         const result = await getQuestions();
@@ -136,24 +137,26 @@
 </script>
 
 <div>
-    <div class="aiChat">
+    <div class="aiChat {credits === 0 ? 'solo' : ''}">
         <AIChatCard credits={credits} loading={loading} endInterview={endInterview} jobInfo={jobInfo} handleJobInfo={handleJobInfo}/>
     </div>
-    <div class="userChat">
-        {#if !$interviewQuestion.uuid}
-            {#if questions && !$interviewQuestion.question_text}
-                <QuestionList
-                    bind:selectedItem={selectedQuestion}
-                    options={questions.map( question => ({title: question.question_text, data: question}))} 
-                />
+    {#if credits !== 0}
+        <div class="userChat">
+            {#if !$interviewQuestion.uuid}
+                {#if questions && !$interviewQuestion.question_text}
+                    <QuestionList
+                        bind:selectedItem={selectedQuestion}
+                        options={questions.map( question => ({title: question.question_text, data: question}))} 
+                    />
+                {/if}
+            {:else}
+                <UserChatCard endInterview={endInterview} />
+                {#if !endInterview && (jobInfo.company !== '' || jobInfo.job !== '')}
+                    <div><RecordAnswerButton loading={loading}/></div>
+                {/if}
             {/if}
-        {:else}
-            <UserChatCard endInterview={endInterview} />
-            {#if !endInterview && (jobInfo.company !== '' || jobInfo.job !== '')}
-                <div><RecordAnswerButton loading={loading}/></div>
-            {/if}
-        {/if}
-    </div>
+        </div>
+    {/if}
 </div>
 
 <style lang="scss">
@@ -166,6 +169,10 @@
             justify-items: center;
             width: 50%;
             max-height: 100vh;
+        }
+        .aiChat.solo {
+            width: 100%;
+            text-align: center;
         }
         .userChat {
             display: flex;

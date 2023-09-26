@@ -13,7 +13,7 @@
     <div>
         {#if loggedIn}
             <a data-sveltekit-preload-data href="/interview"><button class="primary-button">New Interview</button></a>
-            <a data-sveltekit-preload-data href="/summary"><button class="secondary-button">Review Sessions</button></a>
+            <a data-sveltekit-preload-data href="/summary"><button class="secondary-button">Review Interviews</button></a>
         {:else}
             <a href="/login"><button class="primary-button">Get Started!</button></a>
             <a href="/login"><button class="secondary-button">Log In</button></a>
@@ -92,7 +92,7 @@
                 <li>1 Interview Question</li>
                 <li>Best as a refresher on interviewing</li>
             </ul>
-            <a href="/credits"><button>Buy Now</button></a>
+            <a href={loggedIn ? '/credits' : '/login'}><button>Buy Now</button></a>
         </div>
         <div class="step">
             <h3>Passive Candidate $20.00</h3>
@@ -100,7 +100,7 @@
                 <li>5 Interview Questions</li>
                 <li>Equivalent to a 2 hour live person coaching session valued at $200.00</li>
             </ul>
-            <a href="/credits"><button>Buy Now</button></a>
+            <a href={loggedIn ? '/credits' : '/login'}><button>Buy Now</button></a>
         </div>
         <div class="step">
             <h3>Active Candidate $30.00</h3>
@@ -108,7 +108,7 @@
                 <li>10 Interview Questions</li>
                 <li>Best for refining answers to tricky interview questions or preparing for multiple interviews</li>
             </ul>
-            <a href="/credits"><button>Buy Now</button></a>
+            <a href={loggedIn ? '/credits' : '/login'}><button>Buy Now</button></a>
         </div>
     </div>
     <div class="step">

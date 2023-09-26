@@ -1,5 +1,6 @@
 import { redirect } from '@sveltejs/kit';
 import type { RequestEvent, RequestHandler } from './$types';
+import { decodeJwt } from '$lib/jwt';
 
 export const GET: RequestHandler = async ({ locals, url, cookies }: RequestEvent) => {
     const redirectURL = `${url.origin}/callback`;
@@ -29,12 +30,16 @@ export const GET: RequestHandler = async ({ locals, url, cookies }: RequestEvent
     }
 
     try {
-        await locals.pb
-            ?.collection('users')
+        let { meta } = await locals.pb?.collection('users')
             .authWithOAuth2Code(providerName || '', code || '', codeVerifier || '', redirectURL);
+        const currentUserToken = decodeJwt(locals.pb?.authStore.token || '');
+        if (currentUserToken){
+            locals.pb?.collection('users')
+                .update(currentUserToken.id, {name: meta.name.split(" ")[0], avatarUrl: meta.avatarUrl})
+        }
     } catch (err) {
-        console.log('Error logging in with 0Auth user', err);
+        console.log('Error logging in with OAuth user', err);
     }
 
-    throw redirect(303, '/');
+    throw redirect(303, '/interview');
 };

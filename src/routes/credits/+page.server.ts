@@ -66,11 +66,11 @@ export const actions = {
                     },
                 ],
                 mode: 'payment',
-                success_url: isProd ? `https://mockinterview.tech?nonce=${nonce}` : `http://localhost:5173?nonce=${nonce}`,
-                cancel_url: isProd ? `https://mockinterview.tech` : `http://localhost:5173`,
+                success_url: isProd ? `https://mockinterview.tech/interview?nonce=${nonce}` : `http://localhost:5173/interview?nonce=${nonce}`,
+                cancel_url: isProd ? `https://mockinterview.tech/interview` : `http://localhost:5173/interview`,
                 automatic_tax: {enabled: true},
             });
-            throw redirect(303, session.url || 'http://localhost:5173');
+            throw redirect(303, session.url || 'http://localhost:5173/interview');
         }
         
         // todo - validate the slug. if it exists & is valid, bump the credits by however many they purchase
