@@ -23,7 +23,7 @@ export const handle: Handle = async ({ event, resolve }) => {
             httpOnly: true,
             secure: isProd, 
             sameSite: isProd ? 'none' : 'lax',  
-            domain: isProd ? ".indexter.tech" : "localhost" 
+            domain: isProd ? ".mockinterview.tech" : "localhost" 
         })
     );
     return response;

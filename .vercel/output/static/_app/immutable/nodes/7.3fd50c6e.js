@@ -1,0 +1,25 @@
+import{s as ae,n as Q}from"../chunks/scheduler.63fa6192.js";import{S as le,i as ce,g as o,s as c,m as u,h as s,j as H,x as d,c as v,n as p,f as k,k as a,a as ue,y as e}from"../chunks/index.685025e0.js";function de(y){let t,h,X="Privacy Policy:",L,l,V,W,D,E,N,r,C,Z="Introduction",B,Y,A,O,S,m,ee="<b>Information We Collect</b><br/> <i>Personal Information:</i> We may collect your name, email address, phone number, and other personal details when you sign up for our services or interact with our website.<br/> <i>Usage Information:</i> We may collect information about your interactions with our services, such as the pages you visit, your IP address, browser type, and operating system.<br/> <i>Cookies and Tracking:</i> We use cookies and similar tracking technologies to improve your experience and collect information about your online activities.",U,f,te=`<b>How We Use Your Information</b><br/>
+
+We may use your information for various purposes, including providing and improving our services, communicating with you, and ensuring the security of our platform.`,q,b,ie=`<b>Sharing Your Information</b><br/>
+
+We may share your information with trusted third parties, including service providers and partners, to fulfill our business purposes.`,R,_,oe=`<b>Your Choices</b><br/>
+
+You have the right to access, correct, or delete your personal information. You can also opt out of marketing communications.`,j,g,se=`<b>Security</b><br/>
+
+We take reasonable measures to protect your information, but no data transmission over the internet is completely secure. Please take steps to protect your own data as well.`,z,w,re=`<b>Changes to this Privacy Policy</b><br/>
+
+We may update this policy periodically to reflect changes in our practices. Please review the policy regularly.`,F,n,I,ne="Contact Us",$,G,J,K;return{c(){t=o("div"),h=o("h1"),h.textContent=X,L=c(),l=o("div"),V=u(y[0]),W=u(" Privacy Policy"),D=o("br"),E=u(`
+Last Updated: September 15, 2023`),N=c(),r=o("div"),C=o("b"),C.textContent=Z,B=o("br"),Y=u(`
+
+Welcome to `),A=u(y[0]),O=u(` ("we," "our," or "us"). We respect your privacy and are committed to protecting your personal information. 
+This Privacy Policy will inform you about how we collect, use, and safeguard your personal data. 
+By using our services, you consent to the practices described in this policy.`),S=c(),m=o("div"),m.innerHTML=ee,U=c(),f=o("div"),f.innerHTML=te,q=c(),b=o("div"),b.innerHTML=ie,R=c(),_=o("div"),_.innerHTML=oe,j=c(),g=o("div"),g.innerHTML=se,z=c(),w=o("div"),w.innerHTML=re,F=c(),n=o("div"),I=o("b"),I.textContent=ne,$=o("br"),G=u(`
+
+If you have questions or concerns about our Privacy Policy, please contact us at `),J=u(y[1]),K=u("."),this.h()},l(x){t=s(x,"DIV",{class:!0});var i=H(t);h=s(i,"H1",{"data-svelte-h":!0}),d(h)!=="svelte-byhntu"&&(h.textContent=X),L=v(i),l=s(i,"DIV",{class:!0});var M=H(l);V=p(M,y[0]),W=p(M," Privacy Policy"),D=s(M,"BR",{}),E=p(M,`
+Last Updated: September 15, 2023`),M.forEach(k),N=v(i),r=s(i,"DIV",{class:!0});var P=H(r);C=s(P,"B",{"data-svelte-h":!0}),d(C)!=="svelte-prka8s"&&(C.textContent=Z),B=s(P,"BR",{}),Y=p(P,`
+
+Welcome to `),A=p(P,y[0]),O=p(P,` ("we," "our," or "us"). We respect your privacy and are committed to protecting your personal information. 
+This Privacy Policy will inform you about how we collect, use, and safeguard your personal data. 
+By using our services, you consent to the practices described in this policy.`),P.forEach(k),S=v(i),m=s(i,"DIV",{class:!0,"data-svelte-h":!0}),d(m)!=="svelte-u9szi7"&&(m.innerHTML=ee),U=v(i),f=s(i,"DIV",{class:!0,"data-svelte-h":!0}),d(f)!=="svelte-179sb4h"&&(f.innerHTML=te),q=v(i),b=s(i,"DIV",{class:!0,"data-svelte-h":!0}),d(b)!=="svelte-m86kmw"&&(b.innerHTML=ie),R=v(i),_=s(i,"DIV",{class:!0,"data-svelte-h":!0}),d(_)!=="svelte-fxzkp0"&&(_.innerHTML=oe),j=v(i),g=s(i,"DIV",{class:!0,"data-svelte-h":!0}),d(g)!=="svelte-138hjh5"&&(g.innerHTML=se),z=v(i),w=s(i,"DIV",{class:!0,"data-svelte-h":!0}),d(w)!=="svelte-14qovkl"&&(w.innerHTML=re),F=v(i),n=s(i,"DIV",{class:!0});var T=H(n);I=s(T,"B",{"data-svelte-h":!0}),d(I)!=="svelte-e2vyd8"&&(I.textContent=ne),$=s(T,"BR",{}),G=p(T,`
+
+If you have questions or concerns about our Privacy Policy, please contact us at `),J=p(T,y[1]),K=p(T,"."),T.forEach(k),i.forEach(k),this.h()},h(){a(l,"class","svelte-1ipid2w"),a(r,"class","svelte-1ipid2w"),a(m,"class","svelte-1ipid2w"),a(f,"class","svelte-1ipid2w"),a(b,"class","svelte-1ipid2w"),a(_,"class","svelte-1ipid2w"),a(g,"class","svelte-1ipid2w"),a(w,"class","svelte-1ipid2w"),a(n,"class","svelte-1ipid2w"),a(t,"class","legal svelte-1ipid2w")},m(x,i){ue(x,t,i),e(t,h),e(t,L),e(t,l),e(l,V),e(l,W),e(l,D),e(l,E),e(t,N),e(t,r),e(r,C),e(r,B),e(r,Y),e(r,A),e(r,O),e(t,S),e(t,m),e(t,U),e(t,f),e(t,q),e(t,b),e(t,R),e(t,_),e(t,j),e(t,g),e(t,z),e(t,w),e(t,F),e(t,n),e(n,I),e(n,$),e(n,G),e(n,J),e(n,K)},p:Q,i:Q,o:Q,d(x){x&&k(t)}}}function ve(y){return["MockInterview.tech","mockinterview.app@gmail.com"]}class he extends le{constructor(t){super(),ce(this,t,ve,de,ae,{})}}export{he as component};
