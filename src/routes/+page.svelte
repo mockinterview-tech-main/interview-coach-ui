@@ -65,7 +65,7 @@
         <div class="steps">
             <div class="step approach" style="text-align: center;">
                 <p>
-                    Our interview coaching is fine tuned buy hiring managers with experience at top companies including <br/><br/>
+                    Our interview coaching is fine tuned by hiring managers with experience at top companies including <br/><br/>
                     <img width="100px" src={metaLogo} alt="Meta Logo"/>&emsp14;
                     <img width="100px" src={microsoftLogo} alt="Microsoft Logo"/>&emsp14;
                     <img width="150px" src={amazonLogo} alt="Amazon Logo"/>&emsp14;
