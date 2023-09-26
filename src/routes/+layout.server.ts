@@ -1,7 +1,7 @@
 import { redirect } from '@sveltejs/kit';
 import type { LayoutServerLoad } from './$types';
 import { decodeJwt, validateJwt } from '$lib/jwt';
-import { NONCE_SIGNING_SECRET } from '$env/static/private';
+import { VITE_NONCE_SIGNING_SECRET } from '$env/static/private';
 
 export const load: LayoutServerLoad = async ({ locals, url }) => {
     const protectedRoutes = ['interview', 'summary']
@@ -9,7 +9,7 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
     if (!locals.pb?.authStore.isValid && protectedRoutes.includes(url.pathname.split("/").filter(Boolean)[0])) {
         throw redirect(302, '/login')
     }
-    
+
     const currentUserToken = decodeJwt(locals.pb?.authStore.token || '');
     if (currentUserToken){
         let currentUser = await locals.pb?.collection('users').getOne(currentUserToken.id);
