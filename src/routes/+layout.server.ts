@@ -16,7 +16,7 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
         if (currentUser){
             if (currentUser.nonce) {
                 const nonce = url.searchParams.get('nonce')
-                if (validateJwt(currentUser.nonce, NONCE_SIGNING_SECRET)){
+                if (validateJwt(currentUser.nonce, VITE_NONCE_SIGNING_SECRET)){
                     const userToken = decodeJwt(currentUser.nonce)
                     if (userToken.nonce === nonce) {
                         await locals.pb?.collection('users').update(currentUserToken.id, { nonce: '', credits: (currentUser.credits + userToken.credits)});

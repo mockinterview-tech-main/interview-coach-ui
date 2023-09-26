@@ -4,10 +4,10 @@ import { redirect } from "@sveltejs/kit";
 import { stripe } from '$lib/stripe';
 import type { PageServerLoad } from "./$types";
 import { 
-    STRIPE_ID_BEST_PRODUCT, 
-    STRIPE_ID_BETTER_PRODUCT, 
-    STRIPE_ID_GOOD_PRODUCT, 
-    NONCE_SIGNING_SECRET 
+    VITE_STRIPE_ID_BEST_PRODUCT, 
+    VITE_STRIPE_ID_BETTER_PRODUCT, 
+    VITE_STRIPE_ID_GOOD_PRODUCT, 
+    VITE_NONCE_SIGNING_SECRET 
 } from "$env/static/private";
 import { decodeJwt } from '$lib/jwt';
 
@@ -20,9 +20,9 @@ export type Choice = {
 }
 
 const offerings: Array<Choice> = [
-    {sku: "good", price: 5, label: "1 Interview Question", credits: 1, stripeID: STRIPE_ID_GOOD_PRODUCT},
-    {sku: "better", price: 20, label: "5 Interview Questions", credits: 5, stripeID: STRIPE_ID_BETTER_PRODUCT},
-    {sku: "best", price: 30, label: "10 Interview Questions", credits: 10, stripeID: STRIPE_ID_BEST_PRODUCT}
+    {sku: "good", price: 5, label: "1 Interview Question", credits: 1, stripeID: VITE_STRIPE_ID_GOOD_PRODUCT},
+    {sku: "better", price: 20, label: "5 Interview Questions", credits: 5, stripeID: VITE_STRIPE_ID_BETTER_PRODUCT},
+    {sku: "best", price: 30, label: "10 Interview Questions", credits: 10, stripeID: VITE_STRIPE_ID_BEST_PRODUCT}
 ]
 
 export const load: PageServerLoad = async () =>  {
@@ -51,7 +51,7 @@ export const actions = {
         if (chosenOffering) {
             const chosen = JSON.parse(chosenOffering.toString()) as Choice
             const nonce = generateNonce();
-            const nonceToken = jwt.sign({...chosen, nonce}, NONCE_SIGNING_SECRET);
+            const nonceToken = jwt.sign({...chosen, nonce}, VITE_NONCE_SIGNING_SECRET);
 
             const currentUserToken = decodeJwt(locals.pb?.authStore.token || '');
             locals.pb?.collection('users').update(currentUserToken.id, {nonce: nonceToken});
