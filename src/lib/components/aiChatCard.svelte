@@ -51,7 +51,7 @@
                 <input disabled={credits === 0} id="job" type="text" bind:value={jobInfo.job} placeholder="Technical Program Manager"/><br/>
                 <label for="company">Company</label>
                 <input disabled={credits === 0} id="company" type="text" bind:value={jobInfo.company} placeholder="Google"/><br/><br/>
-                <button type="submit">Get Started</button>
+                <button type="submit" disabled={loading}>Get Started</button>
             {/if}
             {#if credits === 0}
                 <div style="display: flex; justify-content: center;"><button on:click={buyCredits}>Buy Credits</button></div>

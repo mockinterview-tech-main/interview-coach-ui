@@ -3,6 +3,7 @@ MAIN_FILE=main.go
 BUILD_DIR=build
 FRONTEND_DIR=../
 OS=darwin
+HEROKU_APP_NAME=mockinterview-users
 
 .PHONY: build
 build:
@@ -22,3 +23,10 @@ frontend-up:
 clean:
 	go clean
 	rm ${BUILD_DIR}/*
+
+.PHONY: deploy
+deploy:
+	docker buildx build --platform linux/amd64 -t $(HEROKU_APP_NAME) . && \
+	docker tag $(HEROKU_APP_NAME) registry.heroku.com/$(HEROKU_APP_NAME)/web && \
+	docker push registry.heroku.com/$(HEROKU_APP_NAME)/web && \
+	heroku container:release web -a $(HEROKU_APP_NAME)

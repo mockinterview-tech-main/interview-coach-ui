@@ -13,7 +13,7 @@
     <div>
         {#if loggedIn}
             <a data-sveltekit-preload-data href="/interview"><button class="primary-button">New Interview</button></a>
-            <a data-sveltekit-preload-data href="/summary"><button class="secondary-button">Review Past Sessions</button></a>
+            <a data-sveltekit-preload-data href="/summary"><button class="secondary-button">Review Sessions</button></a>
         {:else}
             <a href="/login"><button class="primary-button">Get Started!</button></a>
             <a href="/login"><button class="secondary-button">Log In</button></a>

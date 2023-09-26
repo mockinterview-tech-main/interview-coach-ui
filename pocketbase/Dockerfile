@@ -25,4 +25,4 @@ FROM alpine
 WORKDIR /
 COPY --from=build /pb /pb
 EXPOSE 5555
-CMD [ "/pb/pocketbase","serve", "--http=0.0.0.0:5555", "--debug" ]
+CMD /pb/pocketbase serve --http=0.0.0.0:$PORT --debug
