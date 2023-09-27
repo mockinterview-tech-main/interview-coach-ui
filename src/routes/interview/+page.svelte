@@ -137,11 +137,11 @@
 </script>
 
 <div>
-    <div class="aiChat {credits === 0 ? 'solo' : ''}">
+    <div class="ai-chat {credits === 0 ? 'solo' : ''}">
         <AIChatCard credits={credits} loading={loading} endInterview={endInterview} jobInfo={jobInfo} handleJobInfo={handleJobInfo}/>
     </div>
     {#if credits !== 0}
-        <div class="userChat">
+        <div class="user-chat">
             {#if !$interviewQuestion.uuid}
                 {#if questions && !$interviewQuestion.question_text}
                     <QuestionList
@@ -163,18 +163,18 @@
     div {
         padding: 40px 20px;
         display: flex;
-        .aiChat {
+        .ai-chat {
             display: flex;
             flex-direction: column;
             justify-items: center;
             width: 50%;
             max-height: 100vh;
         }
-        .aiChat.solo {
+        .ai-chat.solo {
             width: 100%;
             text-align: center;
         }
-        .userChat {
+        .user-chat {
             display: flex;
             flex-direction: column;
             justify-items: center;
