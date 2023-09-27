@@ -2,9 +2,17 @@
     import { browser } from '$app/environment';
     import type { PageData } from './$types';
     import googleGLogo from '../../lib/assets/googleLogo.svg'
+    import githubLogo from '../../lib/assets/githubLogo.svg'
     export let data: PageData;
 
     let providers = data;
+
+    const logos: { [key: string]: string } = {
+        'google': googleGLogo,
+        'github': githubLogo,
+    }
+
+    const getLogo = (s: string): string => logos[s];
 
     const gotoAuthProvider = (name: string) => {
         if (browser) {
@@ -41,7 +49,7 @@
         <h2>Social Login</h2>
         {#each Object.keys(providers) as provider}
             {#if providers[provider].authProviderState}
-                <button class="social-button" on:click={() => gotoAuthProvider(provider)}><img width="20px" height="20px" src={googleGLogo} alt="Google Logo"/>Login with {provider}</button>
+                <button class="social-button" on:click={() => gotoAuthProvider(provider)}><img width="20px" height="20px" src={logos[provider]} alt="{provider} logo"/>Login with {provider}</button>
             {/if}
         {/each}
     </div>
@@ -97,7 +105,7 @@
                 color: white;
             }
             .social-button {
-                margin: 0px
+                margin: 16px 0px;
             }
         }
         
