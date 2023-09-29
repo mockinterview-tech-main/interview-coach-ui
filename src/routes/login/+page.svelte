@@ -27,7 +27,7 @@
 </script>
 
 <div>
-    <div class="form">
+    <div class="form-container">
         <h2>Sign Up</h2>
         <form method="POST" action="?/signup">
             <label for="email">email address</label><br/><input name="email" type="email" placeholder="email@address.com" required/><br/>
@@ -36,7 +36,7 @@
             <button type="submit">Sign Up</button>
         </form>
     </div>
-    <div class="form">
+    <div class="form-container">
         <h2>Log In</h2>
         <form method="POST" action="?/login">
             <label for="email">email address</label><br/><input name="email" type="email" placeholder="email@address.com" required/><br/>
@@ -45,7 +45,7 @@
         </form>
     </div>
 
-    <div class="form">
+    <div class="form-container">
         <h2>Social Login</h2>
         {#each Object.keys(providers) as provider}
             {#if providers[provider].authProviderState}
@@ -60,52 +60,28 @@
         padding: 60px 20px;
         display: flex;
 
-        .form {
+        .form-container {
             flex-direction: column;
             flex: 1;
-            label {
-                margin-bottom: 5px;
-            }
-            input {
-                width: 50%;
-                line-height: 20px;
-                margin-bottom: 20px;
-                border: 1px solid #A40080;
-                padding: 10px;
-                border-radius: 4px;
-            }
-            input:focus {
-                border: 1px solid #A40080;
-            }
-            
             button {
-                display: flex;
-                align-items: center;
-                padding: 10px 20px;
-                border: 2px solid transparent;
-                cursor: pointer;
-                font-weight: bold;
-                border-radius: 4px;
-                transition: background-color 0.3s, border-color 0.3s;
                 background: none;
-                outline: none;
-                font-size: 16px;
                 border-color: #A40080;
                 color: #333;
+            }
+                
+            button:hover {
+                background-color: #A40080;
+                color: white;
+            }
+
+            .social-button {
+                margin: 16px 0px;
             }
 
             button img {
                 width: 24px;
                 height: 24px;
                 margin-right: 10px;
-            }
-
-            button:hover {
-                background-color: #A40080;
-                color: white;
-            }
-            .social-button {
-                margin: 16px 0px;
             }
         }
         

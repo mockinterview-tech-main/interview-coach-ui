@@ -34,7 +34,7 @@
         <form action="?/purchase" method="POST">
             <h3>{offering.label}</h3>
             <input type="hidden" name="chosenOffering" value={JSON.stringify(offering)} />
-            <button type="submit" id="checkout-button">{offering.label} ${offering.price}.00</button>
+            <button class="secondary-button" type="submit" id="checkout-button">{offering.label} ${offering.price}.00</button>
         </form>
     {/each}
 </div>
@@ -47,31 +47,6 @@
         display: flex;
         align-items: center;
         justify-content: space-around;
-        h3 {
-            text-align: center;
-        }
-        form {
-            button {
-                display: flex;
-                align-items: center;
-                padding: 10px 20px;
-                border: 2px solid transparent;
-                cursor: pointer;
-                font-weight: bold;
-                border-radius: 4px;
-                transition: background-color 0.3s, border-color 0.3s;
-                background: none;
-                outline: none;
-                font-size: 16px;
-                border-color: #A40080;
-                color: #333;
-            }
-
-            button:hover {
-                background-color: #A40080;
-                color: white;
-            }
-        }
     }
     .section {
         padding: 20px 0;
@@ -94,9 +69,6 @@
         border-radius: 8px;
         flex: 1;
         margin: 20px;
-        h3 {
-            text-align: center;
-        }
         ul {
             margin: auto;
             padding: 0;

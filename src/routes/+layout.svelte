@@ -9,8 +9,7 @@
         {#if loggedIn}
             <span><a href="/interview">New Interview</a></span>
             <span><a data-sveltekit-preload-data="hover" href="/summary">Past Interviews</a></span>
-            
-            <div><span>{username}</span><span>{credits} Interviews</span><span><a class="header-cta" href="/credits">Buy More</a></span></div>
+            <div><span>{username}</span><span>{credits} Interviews</span><span><a class="link-cta" href="/credits">Buy More</a></span></div>
         {:else}
             <span><a href="/login">Get Started</a></span>
         {/if}
@@ -25,6 +24,18 @@
 </main>
 
 <style lang="scss">
+    @import "../styles/form.scss";
+    @import "../styles/button.scss";
+    @import "../styles/links.scss";
+
+    :global(h3) {
+        text-align: center;
+    }
+
+    :global(li) {
+        list-style-type: none;
+    }
+
     main {
         font-family: Arial, Helvetica, sans-serif;
         font-size: medium;
@@ -32,6 +43,7 @@
             padding: 0px 20px;
         }
     }
+    
     nav {
         position: fixed;
         left: 0;
@@ -41,14 +53,6 @@
         padding: 20px;
         background-color: #333;
         line-height: 50px;
-
-        .header-cta {
-            color: #FDF56C;
-            text-decoration: none;
-            font-weight: bold;
-            outline: black;
-        }
-
         div {
             float: right;
             margin-right: 40px;
@@ -56,14 +60,6 @@
         }
         span {
             padding: 20px;
-            a {
-                color: #fff;
-                text-decoration: none;
-                transition: color 0.3s ease;
-            }
-            a:hover {
-                color: #FDF56C;
-            }
         }
     }
     footer {
@@ -76,14 +72,6 @@
         padding: 10px;
         span {
             padding: 20px;
-        }
-        a {
-            color: #fff;
-            text-decoration: none;
-            transition: color 0.3s ease;
-        }
-        a:hover {
-            color: #FDF56C;
         }
     }
 </style>

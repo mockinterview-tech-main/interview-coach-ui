@@ -23,7 +23,6 @@
 
 <style lang="scss">
     h3 {
-        text-align: center;
         margin: 25px;
     }
 

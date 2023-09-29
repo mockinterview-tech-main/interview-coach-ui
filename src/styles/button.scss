@@ -1,0 +1,58 @@
+:global(button) {
+    margin-right: 20px;
+    margin-top: 40px;
+    display: flex;
+    align-items: center;
+    padding: 10px 20px;
+    border: 2px solid transparent;
+    cursor: pointer;
+    font-weight: bold;
+    border-radius: 4px;
+    transition: background-color 0.3s, border-color 0.3s;
+    outline: none;
+    font-size: 16px;
+    border-color: #fff;
+    background-color: #A40080;
+    color: #fff;
+}
+
+:global(button:hover) {
+    border-color: #A40080;
+    background-color: #fff;
+    color: #A40080;
+}
+
+:global(.primary-button) {
+    background-color: #A40080;
+    border-color: #FDF56C;
+    color: #FDF56C;
+}
+
+:global(.primary-button):hover {
+    border-color: #A40080;
+    background-color: #fff;
+    color: #A40080;
+}
+
+:global(.secondary-button) {
+    background-color: #A40080;
+    border-color: #fff;
+    color: #fff;
+}
+
+:global(.secondary-button):hover {
+    border-color: #A40080;
+    background-color: #fff;
+    color: #A40080;
+}
+
+:global(.tirtiary-button) {
+    background-color: #fff;
+    border-color: #A40080;
+    color: #A40080;
+}
+
+:global(.tirtiary-button):hover {
+    background-color: #A40080;
+    color: #fff;
+}

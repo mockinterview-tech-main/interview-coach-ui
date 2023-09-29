@@ -1,0 +1,21 @@
+:global(.link-cta) {
+    font-weight: bold;
+    outline: black;
+    color: #FDF56C;
+    transition: color 0.3s ease;
+}
+
+:global(.link-cta:hover) {
+    color: #e302b2;
+}
+
+:global(a) {
+    text-decoration: none;
+    color: #fff;
+    transition: color 0.3s ease;
+}
+
+:global(a:hover) {
+    color: #FDF56C;
+}
+

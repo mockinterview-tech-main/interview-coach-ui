@@ -9,7 +9,7 @@
 <!-- svelte-ignore a11y-click-events-have-key-events -->
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <div on:click class={selected ? "selected summary-list-card" : "summary-list-card"}>
-    <i><strong>{title}</strong></i><br/>
+    <i><strong>{title}</strong></i><br/><br/>
     <i>{subtitle}</i>
 </div>
 
@@ -21,9 +21,8 @@
         background-color: #FE4BDD;
     }
     .summary-list-card {
-        padding: 20px;
+        padding: 10px 20px;
         display: block;
-        text-decoration: none;
         cursor: pointer;
         transition: background-color 0.3s ease;
     }

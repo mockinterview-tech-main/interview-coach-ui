@@ -51,10 +51,10 @@
                 <input disabled={credits === 0} id="job" type="text" bind:value={jobInfo.job} placeholder="e.g. Technical Program Manager"/><br/>
                 <label for="company">Company</label>
                 <input disabled={credits === 0} id="company" type="text" bind:value={jobInfo.company} placeholder="e.g. Google"/><br/><br/>
-                <button type="submit" disabled={!jobInfo.job || !jobInfo.company || loading}>Get Started</button>
+                <button class="tirtiary-button" type="submit" disabled={!jobInfo.job || !jobInfo.company || loading}>Get Started</button>
             {/if}
             {#if credits === 0}
-                <div style="display: flex; justify-content: center;"><button on:click={buyCredits}>Buy Credits</button></div>
+                <div style="display: flex; justify-content: center;"><button class="tirtiary-button" on:click={buyCredits}>Buy Credits</button></div>
             {/if}
         </form>
     {:else}
@@ -71,46 +71,12 @@
 </div>
 
 <style lang="scss">
-    h3 {
-        text-align: center;
-    }
     form {
         max-width: 50%;
         margin: auto;
-        label {
-                margin-bottom: 5px;
-            }
-            input {
-                width: 100%;
-                line-height: 20px;
-                margin-bottom: 20px;
-                border: 1px solid #A40080;
-                padding: 10px;
-                border-radius: 4px;
-            }
-            input:focus {
-                border: 1px solid #A40080;
-            }
-            button {
-                display: flex;
-                align-items: center;
-                padding: 10px 20px;
-                border: 2px solid transparent;
-                cursor: pointer;
-                font-weight: bold;
-                border-radius: 4px;
-                transition: background-color 0.3s, border-color 0.3s;
-                background: none;
-                outline: none;
-                font-size: 16px;
-                border-color: #A40080;
-                color: #333; /* Google's blue color, can adjust if needed */
-            }
-
-            button:hover {
-                background-color: #A40080;
-                color: white;
-            }
+        input {
+            width: 100%;
+        }
     }
 
     #conversationSection {

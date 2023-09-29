@@ -121,31 +121,6 @@
 
 
 <style lang="scss">
-
-    button {
-        margin-right: 20px;
-        margin-top: 40px;
-        display: flex;
-        align-items: center;
-        padding: 10px 20px;
-        border: 2px solid transparent;
-        cursor: pointer;
-        font-weight: bold;
-        border-radius: 4px;
-        transition: background-color 0.3s, border-color 0.3s;
-        outline: none;
-        font-size: 16px;
-        border-color: #fff;
-        background-color: #A40080;
-        color: #fff;
-    }
-
-    button:hover {
-        border-color: #A40080;
-        background-color: #fff;
-        color: #A40080;
-    }
-
     .jumbotron {
         background-image: url('../lib/assets/jumbotron.jpg');
         background-size: cover;
@@ -160,29 +135,6 @@
         }
         div {
             display: flex;
-            a {
-                text-decoration: none;
-            }
-            .primary-button {
-                background-color: #A40080;
-                border-color: #FDF56C;
-                color: #FDF56C;
-            }
-            .primary-button:hover {
-                border-color: #A40080;
-                background-color: #fff;
-                color: #A40080;
-            }
-            .secondary-button {
-                background-color: #A40080;
-                border-color: #fff;
-                color: #fff;
-            }
-            .secondary-button:hover {
-                border-color: #A40080;
-                background-color: #fff;
-                color: #A40080;
-            }
         }
     } 
 
@@ -210,18 +162,12 @@
         border-radius: 8px;
         flex: 1;
         margin: 20px;
-        h3 {
-            text-align: center;
-        }
         ul {
             margin: auto;
             padding: 0;
             li {
                 text-align: center;
             }
-        }
-        a {
-            text-decoration: none;
         }
         button {
             margin: auto;
@@ -239,7 +185,6 @@
     ul {
         list-style-type: none;
         li {
-            text-decoration: none;
             text-align: left;
             margin: 10px 0px;
         }

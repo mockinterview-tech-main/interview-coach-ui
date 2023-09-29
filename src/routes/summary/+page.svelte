@@ -30,7 +30,6 @@
             margin: 20px;
             a {
                 cursor: pointer !important;
-                text-decoration: none !important;
                 color: #A40080 !important;
                 font-weight: bold !important;
             }
