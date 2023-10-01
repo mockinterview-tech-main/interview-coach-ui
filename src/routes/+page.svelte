@@ -2,12 +2,18 @@
     import microsoftLogo from '../lib/assets/microsoftLogo.svg'
     import amazonLogo from '../lib/assets/amazonLogo.svg'
     import metaLogo from '../lib/assets/metaLogo.svg'
+    import Modal from '../lib/components/modal.svelte';
     
+    let showModal: boolean = true;
     export let data;
     const loggedIn = data.loggedIn
 </script>
 
 <section class="jumbotron">
+    <Modal bind:isOpen={showModal}>
+        <h2 style="text-align: center;">Early Bird Special</h2>
+        <p style="text-align: center; font-size: 20px;">Sign up now to get 3 free practice interviews!</p>
+    </Modal>
     <div>
         <h1>Nail Your Next Interview</h1>
         <p>Let us help you make your story as excpetional as you are</p>
