@@ -24,6 +24,7 @@
 </main>
 
 <style lang="scss">
+    @import "@fontsource/inter";
     @import "../styles/form.scss";
     @import "../styles/button.scss";
     @import "../styles/links.scss";
@@ -37,7 +38,7 @@
     }
 
     main {
-        font-family: Arial, Helvetica, sans-serif;
+        font-family: 'inter', Arial, Helvetica, sans-serif;
         font-size: medium;
         nav {
             padding: 0px 20px;
