@@ -8,16 +8,18 @@
 </script>
 
 <section class="jumbotron">
-    <h1>Nail Your Next Interview</h1>
-    <p>Let us help you make your story as excpetional as you are</p>
     <div>
-        {#if loggedIn}
-            <a data-sveltekit-preload-data href="/interview"><button class="primary-button">New Interview</button></a>
-            <a data-sveltekit-preload-data href="/summary"><button class="secondary-button">Review Interviews</button></a>
-        {:else}
-            <a href="/login"><button class="primary-button">Get Started!</button></a>
-            <a href="/login"><button class="secondary-button">Log In</button></a>
-        {/if}
+        <h1>Nail Your Next Interview</h1>
+        <p>Let us help you make your story as excpetional as you are</p>
+        <div class="cta-buttons">
+            {#if loggedIn}
+                <a data-sveltekit-preload-data href="/interview"><button class="primary-button">New Interview</button></a>
+                <a data-sveltekit-preload-data href="/summary"><button class="secondary-button">Review Interviews</button></a>
+            {:else}
+                <a href="/login"><button class="primary-button">Get Started!</button></a>
+                <a href="/login"><button class="secondary-button">Log In</button></a>
+            {/if}
+        </div>
     </div>
 </section>
 
@@ -118,25 +120,57 @@
     </div>
 </section>
 
-
-
 <style lang="scss">
     .jumbotron {
-        background-image: url('../lib/assets/jumbotron.jpg');
-        background-size: cover;
-        background-position: center;
+        position: relative;
         color: #fff;
         padding: 200px 40px;
+        background-color: transparent; /* No direct background on the jumbotron */
+
+        /* Blurred version of the background */
+        &::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: -2; /* Ensure it's below the content */
+            background-image: url('../lib/assets/jumbotron.jpg');
+            background-size: cover;
+            background-position: center;
+            filter: blur(2px);
+        }
+
+        /* Sharp edges with tint */
+        &::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: -1; /* Above the blurred version but below the content */
+            background-image: 
+                linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), 
+                url('../lib/assets/jumbotron.jpg'); 
+            background-size: cover;
+            background-position: center;
+            mask-image: radial-gradient(circle at center, transparent 0%, transparent 75%, black 75.5%, black);
+        }
+
         h1 {
             font-size: 42px;
         }
+        
         p {
             font-size: 24px;
         }
-        div {
+
+        .cta-buttons {
             display: flex;
         }
-    } 
+    }
 
     .section {
         padding: 20px 0;

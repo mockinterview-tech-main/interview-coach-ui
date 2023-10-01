@@ -34,8 +34,14 @@ export const GET: RequestHandler = async ({ locals, url, cookies }: RequestEvent
             .authWithOAuth2Code(providerName || '', code || '', codeVerifier || '', redirectURL);
         const currentUserToken = decodeJwt(locals.pb?.authStore.token || '');
         if (currentUserToken){
-            locals.pb?.collection('users')
-                .update(currentUserToken.id, {name: meta.name.split(" ")[0], avatarUrl: meta.avatarUrl})
+            let userData: { name: string; avatarUrl: string; credits?: number } = {
+                name: meta.name.split(" ")[0],
+                avatarUrl: meta.avatarUrl,
+            };
+            if (meta.isNew) {
+                userData.credits = 3
+            }
+            locals.pb?.collection('users').update(currentUserToken.id, userData)
         }
     } catch (err) {
         console.log('Error logging in with OAuth user', err);

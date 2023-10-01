@@ -4,6 +4,7 @@
     import googleGLogo from '../../lib/assets/googleLogo.svg'
     import githubLogo from '../../lib/assets/githubLogo.svg'
     export let data: PageData;
+    export let form;
 
     let providers = data;
 
@@ -11,8 +12,6 @@
         'google': googleGLogo,
         'github': githubLogo,
     }
-
-    const getLogo = (s: string): string => logos[s];
 
     const gotoAuthProvider = (name: string) => {
         if (browser) {
@@ -26,21 +25,29 @@
     }
 </script>
 
+
+    <p class="error">{#if form?.error}{form.message}{/if}</p>
+
 <div>
     <div class="form-container">
         <h2>Sign Up</h2>
         <form method="POST" action="?/signup">
-            <label for="email">email address</label><br/><input name="email" type="email" placeholder="email@address.com" required/><br/>
-            <label for="password">password</label><br/><input name="password" type="password" placeholder="secret password" required/><br/>
-            <label for="passwordConfirm">confirm password</label><br/><input name="passwordConfirm" type="password" placeholder="secret password" required/><br/>
+            <label for="email">email address</label><br/>
+            <input name="email" type="email" placeholder="email@address.com" required/><br/>
+            <label for="password">password</label><br/>
+            <input name="password" type="password" placeholder="secret password" minlength=8 required/><br/>
+            <label for="passwordConfirm">confirm password</label><br/>
+            <input name="passwordConfirm" type="password" placeholder="secret password" minlength=8 required/><br/>
             <button type="submit">Sign Up</button>
         </form>
     </div>
     <div class="form-container">
         <h2>Log In</h2>
         <form method="POST" action="?/login">
-            <label for="email">email address</label><br/><input name="email" type="email" placeholder="email@address.com" required/><br/>
-            <label for="password">password</label><br/><input name="password" type="password" placeholder="secret passphrase" required/><br/>
+            <label for="email">email address</label><br/>
+            <input name="email" type="email" placeholder="email@address.com" required/><br/>
+            <label for="password">password</label><br/>
+            <input name="password" type="password" placeholder="secret password" required/><br/>
             <button type="submit">Login</button>
         </form>
     </div>
@@ -56,8 +63,14 @@
 </div>
 
 <style lang="scss">
+    .error {
+        padding: 40px;
+        position: absolute;
+        top: 40px;
+        color: red;
+    }
     div {
-        padding: 60px 20px;
+        padding: 70px 20px;
         display: flex;
 
         .form-container {
