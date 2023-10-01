@@ -13,7 +13,7 @@ export const GET: RequestHandler = async ({ locals, url, cookies }: RequestEvent
             if (currentUserToken){
                 let currentUser = await locals.pb?.collection('users').getOne(currentUserToken.id);
                 if (currentUser){
-                    await locals.pb?.collection('users').update(currentUserToken.id, { credits: 3 });
+                    await locals.pb?.collection('users').update(currentUserToken.id, { credits: 1 });
                     throw redirect(303, '/')
                 }
             }

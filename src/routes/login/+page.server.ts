@@ -81,7 +81,6 @@ const loginWithEmailPassword = async (locals: App.Locals, cookies: Cookies, emai
             return fail(e.status, { email, error: true, message: "failed to authenticate" });
         }
         if (e.status >=500){
-            console.log("ASDF")
             return fail(e.status, { email, error: true, message: "authentication server could not be reached" });
         }
     }

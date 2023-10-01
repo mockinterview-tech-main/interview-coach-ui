@@ -12,7 +12,7 @@
 <section class="jumbotron">
     <Modal bind:isOpen={showModal}>
         <h2 style="text-align: center;">Early Bird Special</h2>
-        <p style="text-align: center; font-size: 20px;">Sign up now to get 3 free practice interviews!</p>
+        <p style="text-align: center; font-size: 20px;">Sign up now to get a free practice interview!</p>
     </Modal>
     <div>
         <h1>Nail Your Next Interview</h1>

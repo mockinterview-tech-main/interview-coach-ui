@@ -39,7 +39,7 @@ export const GET: RequestHandler = async ({ locals, url, cookies }: RequestEvent
                 avatarUrl: meta.avatarUrl,
             };
             if (meta.isNew) {
-                userData.credits = 3
+                userData.credits = 1
             }
             locals.pb?.collection('users').update(currentUserToken.id, userData)
         }
