@@ -29,6 +29,7 @@
     }
     .popdown-header:hover {
         background-color: $dark-purple;
+        color: $white;
     }
     .popdown-content {
         max-height: 0;
