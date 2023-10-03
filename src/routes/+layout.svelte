@@ -1,11 +1,12 @@
 <script lang="ts">
+    import LogoFilled from "../lib/assets/logo-filled.svg";
     export let data;
     const {loggedIn, credits, username} = data;
 </script>
 
 <main>
     <nav>
-        <span><a href="/">Home</a></span>
+        <span><a href="/"><img src={LogoFilled}/></a></span>
         {#if loggedIn}
             <span><a href="/interview">New Interview</a></span>
             <span><a data-sveltekit-preload-data="hover" href="/summary">Past Interviews</a></span>
@@ -40,6 +41,9 @@
     main {
         font-family: 'inter', Arial, Helvetica, sans-serif;
         font-size: medium;
+        width: 100%;
+        padding: 0px;
+        margin: 0px;
         nav {
             padding: 0px 20px;
         }
@@ -52,15 +56,21 @@
         width: 100%;
         z-index: 1000;
         padding: 20px;
-        background-color: #333;
+        background-color: $dark-gray;
         line-height: 50px;
         div {
             float: right;
             margin-right: 40px;
-            color: #fff;
+            color: $white;
         }
         span {
             padding: 20px;
+        }
+        img {
+            width: 40px;
+            position: relative;
+            top: 4px;
+            vertical-align: middle;
         }
     }
     footer {
@@ -68,8 +78,8 @@
         left: 0;
         bottom: 0;
         width: 100%;
-        background-color: #333; 
-        color: #fff; 
+        background-color: $dark-gray; 
+        color: $white; 
         padding: 10px;
         span {
             padding: 20px;

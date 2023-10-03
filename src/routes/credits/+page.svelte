@@ -40,6 +40,8 @@
 </div>
 
 <style lang="scss">
+    @import "../../styles/colors.scss";
+    
     h2 {
         padding: 60px 40px;
     }
@@ -63,7 +65,7 @@
     }
 
     .step {
-        background-color: #f5f5f5;
+        background-color: $light-gray;
         flex-direction: column;
         padding: 20px;
         border-radius: 8px;

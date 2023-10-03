@@ -1,3 +1,5 @@
+@import "./colors.scss";
+
 :global(button) {
     margin-right: 20px;
     margin-top: 40px;
@@ -11,48 +13,48 @@
     transition: background-color 0.3s, border-color 0.3s;
     outline: none;
     font-size: 16px;
-    border-color: #fff;
-    background-color: #A40080;
-    color: #fff;
+    border-color: $white;
+    background-color: $dark-purple;
+    color: $white;
 }
 
 :global(button:hover) {
-    border-color: #A40080;
-    background-color: #fff;
-    color: #A40080;
+    border-color: $dark-purple;
+    background-color: $white;
+    color: $dark-purple;
 }
 
 :global(.primary-button) {
-    background-color: #A40080;
-    border-color: #FDF56C;
-    color: #FDF56C;
+    background-color: $dark-purple;
+    border-color: $yellow;
+    color: $yellow;
 }
 
 :global(.primary-button):hover {
-    border-color: #A40080;
-    background-color: #fff;
-    color: #A40080;
+    border-color: $dark-purple;
+    background-color: $white;
+    color: $dark-purple;
 }
 
 :global(.secondary-button) {
-    background-color: #A40080;
-    border-color: #fff;
-    color: #fff;
+    background-color: $dark-purple;
+    border-color: $white;
+    color: $white;
 }
 
 :global(.secondary-button):hover {
-    border-color: #A40080;
-    background-color: #fff;
-    color: #A40080;
+    border-color: $dark-purple;
+    background-color: $white;
+    color: $dark-purple;
 }
 
 :global(.tirtiary-button) {
-    background-color: #fff;
-    border-color: #A40080;
-    color: #A40080;
+    background-color: $white;
+    border-color: $dark-purple;
+    color: $dark-purple;
 }
 
 :global(.tirtiary-button):hover {
-    background-color: #A40080;
-    color: #fff;
+    background-color: $dark-purple;
+    color: $white;
 }

@@ -16,6 +16,8 @@
 </button>
 
 <style lang="scss">
+    @import "../../styles/colors.scss";
+
     button {
         margin: 10px auto;
     }
@@ -26,7 +28,7 @@
         border: none;
         position: relative;
         background-color: #007bff; 
-        color: #fff; 
+        color: $white; 
         border-radius: 50%; 
         cursor: pointer;
         display: flex;
@@ -59,8 +61,8 @@
     /* Style the tooltip */
     .record-button[title]:hover::after {
         content: attr(title);
-        background-color: #333; 
-        color: #fff; 
+        background-color: $dark-gray; 
+        color: $white; 
         padding: 4px 8px; 
         border-radius: 4px; 
         position: absolute;

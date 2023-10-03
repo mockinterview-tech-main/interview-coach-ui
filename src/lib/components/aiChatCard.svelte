@@ -82,6 +82,5 @@
     #conversationSection {
         overflow: scroll;
         margin: 20px;
-        max-height: 500px;
     }
 </style>

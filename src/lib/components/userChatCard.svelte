@@ -37,7 +37,6 @@
     }
     #conversationSection {
         margin: 20px;
-        max-height: 500px;
         flex-direction: column;
         overflow: scroll;
         scroll-behavior: smooth;

@@ -1,3 +1,5 @@
+@import "./colors.scss";
+
 :global(form) {
     :global(label) {
         margin-bottom: 5px;
@@ -7,12 +9,12 @@
         width: 50%;
         line-height: 20px;
         margin-bottom: 20px;
-        border: 1px solid #A40080;
+        border: 1px solid $dark-purple;
         padding: 10px;
         border-radius: 4px;
     }
 
     :global(input:focus) {
-        border: 1px solid #A40080;
+        border: 1px solid $dark-purple;
     }
 }

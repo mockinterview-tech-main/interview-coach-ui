@@ -63,6 +63,7 @@
 </div>
 
 <style lang="scss">
+    @import "../../styles/colors.scss";
     .error {
         padding: 40px;
         position: absolute;
@@ -78,13 +79,13 @@
             flex: 1;
             button {
                 background: none;
-                border-color: #A40080;
-                color: #333;
+                border-color: $dark-purple;
+                color: $dark-gray;
             }
                 
             button:hover {
-                background-color: #A40080;
-                color: white;
+                background-color: $dark-purple;
+                color: $white;
             }
 
             .social-button {

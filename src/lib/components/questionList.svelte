@@ -32,7 +32,6 @@
     }
 
     div {
-        max-height: 500px;
         overflow: scroll;
     }
 </style>

@@ -14,11 +14,12 @@
 </div>
 
 <style lang="scss">
+    @import "../../styles/colors.scss";
     div {
         cursor: pointer;
     }
     .selected {
-        background-color: #FE4BDD;
+        background-color: $light-purple;
     }
     .summary-list-card {
         padding: 10px 20px;
@@ -27,7 +28,7 @@
         transition: background-color 0.3s ease;
     }
     .summary-list-card:hover {
-        background-color: #FE4BDD;
+        background-color: $light-purple;
         cursor: pointer;
     }
 </style>

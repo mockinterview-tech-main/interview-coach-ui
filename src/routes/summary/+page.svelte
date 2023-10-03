@@ -26,26 +26,9 @@
 <style lang="scss">
     div {
         padding: 40px 20px;
-        p {
-            margin: 20px;
-            a {
-                cursor: pointer !important;
-                color: #A40080 !important;
-                font-weight: bold !important;
-            }
-        }
-        a:link {
-            text-decoration: inherit;
-            color: inherit;
-            cursor: auto;
-        }
-
         a:visited {
-            text-decoration: inherit;
             color: inherit;
-            cursor: auto;
         }
-        justify-items: center;
         h1 {
             margin: 40px 20px;
         }
