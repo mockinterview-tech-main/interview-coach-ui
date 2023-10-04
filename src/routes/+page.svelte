@@ -10,7 +10,7 @@
 	import Popdown from '$lib/components/popdown.svelte';
 
     export let data;
-    const loggedIn = data.loggedIn
+    const loggedIn = data.loggedIn;
 </script>
 
 <section class="jumbotron">
@@ -28,6 +28,12 @@
         </div>
     </div>
 </section>
+
+{#if !loggedIn}
+    <div class="announcement-banner">
+        Early Adopter Special: Sign up now and get 3 FREE interview questions!
+    </div>
+{/if}
 
 <div class="info-section">
     <section class="section">
@@ -210,6 +216,15 @@ We engineered mock interview to not only provide detailed and customized feedbac
             display: flex;
             flex-direction: row;
         }
+    }
+
+    .announcement-banner {
+        text-align: center;
+        font-size: large;
+        display: block;
+        line-height: 80px;
+        background-color: $dark-purple;
+        color: $white;
     }
 
     .info-section {

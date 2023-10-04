@@ -1,9 +1,6 @@
 <script lang="ts">
     export let isActive = false;
-
-    const togglePopdown = (e: Event) => {
-        isActive = !isActive;
-    }
+    const togglePopdown = () => isActive = !isActive;
 </script>
 
 <div>
