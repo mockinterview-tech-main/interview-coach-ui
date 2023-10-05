@@ -16,7 +16,7 @@
 <section class="jumbotron">
     <div>
         <h1>Nail Your Next Interview</h1>
-        <p>Let us help you make your story as excpetional as you are</p>
+        <p>Let us help you make your story as exceptional as you are</p>
         <div class="cta-buttons">
             {#if loggedIn}
                 <a data-sveltekit-preload-data href="/interview"><button class="primary-button">New Interview</button></a>
