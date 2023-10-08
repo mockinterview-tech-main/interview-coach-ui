@@ -2,6 +2,8 @@
     import LogoFilled from "../lib/assets/logo-filled.svg";
     export let data;
     const {loggedIn, credits, username} = data;
+
+    const CONTACT_EMAIL = import.meta.env.VITE_CONTACT_INFO;
 </script>
 
 <main>
@@ -21,7 +23,7 @@
         <span><a href="/legal/tos">Terms of Service</a></span>
         <span><a href="/legal/privacy">Privacy Policy</a></span>
         <span><a href="/legal/cookie">Cookie Policy</a></span>
-        <span><a href="mailto:help@mockinterview.tech">Contact Us</a></span>
+        <span><a href="mailto:{CONTACT_EMAIL}">Contact Us</a></span>
     </footer>
 </main>
 

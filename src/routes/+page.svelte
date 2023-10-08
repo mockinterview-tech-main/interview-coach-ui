@@ -11,6 +11,8 @@
 
     export let data;
     const loggedIn = data.loggedIn;
+
+    const CONTACT_EMAIL = import.meta.env.VITE_CONTACT_INFO;
 </script>
 
 <section class="jumbotron">
@@ -130,7 +132,7 @@
             <h3>Live Coaching</h3>
             <p>Contact us for a consultation with one of our interview experts with experience at top paying companies including <b>Microsoft</b>, <b>Amazon</b>, <b>Meta</b>, and more!</p>
             <p>We'll work with you on your career goals and craft an interviewing plan that is perfect for you.</p>
-            <a href="mailto:help@mockinterview.tech"><button>Get in Touch</button></a>
+            <a href="mailto:{CONTACT_EMAIL}"><button>Get in Touch</button></a>
         </div>
     </section>
 
