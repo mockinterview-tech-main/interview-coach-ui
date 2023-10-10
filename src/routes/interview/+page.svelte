@@ -46,14 +46,13 @@
         e.preventDefault();
         if (jobInfo.company && jobInfo.job) {
             confirmDialogOpen = true;
-            await startInterview();
-            confirmDialogOpen = false;
         } else {
             alert("Please tell me what role you're preparing for at which company.")
         }
     }
 
     const startInterview = async () => {
+        confirmDialogOpen = false;
         if (selectedQuestion.data.uuid === '') {
             loading = true;
             let aiQuestion = await getAIQuestion({
