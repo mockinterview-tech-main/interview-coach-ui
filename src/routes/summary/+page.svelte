@@ -2,9 +2,9 @@
 	import ListItem from '$lib/components/listItem.svelte';
 
     export let data;
+    
     const summaries = data.summaries;
     $: summaries
-    console.log(summaries)
 </script>
 
 <div>
@@ -26,12 +26,7 @@
 <style lang="scss">
     div {
         padding: 40px 20px;
-        a:visited {
-            color: inherit;
-        }
-        h1 {
-            margin: 40px 20px;
-        }
+        a:visited { color: inherit; }
+        h1 { margin: 40px 20px; }
     }
-    
 </style>

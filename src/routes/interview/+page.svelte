@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { onMount } from 'svelte';
+    import { onDestroy, onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 
     import { type InterviewQuestion, interviewQuestion } from '$lib/stores/interviewQuestion';
@@ -32,15 +32,17 @@
     $: selectedQuestion
 
     onMount( async () =>{
-        interviewQuestion.set({uuid: "", question_text: ""})
+        interviewQuestion.set({uuid: "", question_text: ""});
         aiChatStore.set([`Lucy: Hi ${username} I'm Lucy and I'll be conducting your mock interview today! Please tell me what role and company you'd like to practice for.`]);
-        userChatStore.set([])
-        outputText.set("")
+        userChatStore.set([]);
+        outputText.set("");
         const result = await getQuestions();
         if (result) {
-            questions = [selectedQuestion.data].concat(result)
+            questions = [selectedQuestion.data].concat(result);
         }
-    })
+    });
+
+    onDestroy(() => outputText.set(""))
 
     const prepareInterview = async (e: Event) => {
         e.preventDefault();
@@ -121,6 +123,7 @@
                         endInterview = true;
                         if ($interviewAnswerStore) {
                             const resp = await buildSummary($interviewAnswerStore.id);
+                            interviewAnswerStore.set(null);
                             if (resp?.summary_text) {
                                 goto(`/summary/${resp.id}`)
                             } else {
