@@ -221,9 +221,7 @@
                 max-width: 50%;
                 margin: auto;
                 margin-top: 30px;
-                input {
-                    width: 100%;
-                }
+                input { width: 100%; }
             }
             display: flex;
             flex-direction: column;
@@ -241,9 +239,7 @@
             justify-items: center;
             width: 50%;
             max-height: 100vh;
-            div {
-                justify-content: flex-end;
-            }
+            div { justify-content: flex-end; }
         }
         .modal-button { display: inline; }
     }

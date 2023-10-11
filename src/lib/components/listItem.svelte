@@ -19,16 +19,19 @@
         cursor: pointer;
     }
     .selected {
-        background-color: $light-purple;
+        background-color: $dark-purple;
+        color: $white;
     }
     .summary-list-card {
         padding: 10px 20px;
         display: block;
         cursor: pointer;
+        border-radius: 4px;
         transition: background-color 0.3s ease;
     }
     .summary-list-card:hover {
-        background-color: $light-purple;
+        background-color: $dark-purple;
+        color: $white;
         cursor: pointer;
     }
 </style>

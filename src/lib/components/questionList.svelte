@@ -6,11 +6,9 @@
     export let options: Array<ListItemData<any>>;
     export let selectedItem: ListItemData<any>;
     
-    $: selectedItem
+    $: selectedItem;
+    const selectItem = (item: ListItemData<any>) => selectedItem = item;
 
-    const selectItem = (item: ListItemData<any>) => { 
-        selectedItem = item;
-    }
 </script>
 
 <h3>User Chat</h3>
@@ -22,16 +20,11 @@
 </div>
 
 <style lang="scss">
-    h3 {
-        margin: 25px;
-    }
+    h3 { margin: 25px; }
+    div { overflow: scroll; }
 
     p {
         text-align: center;
         margin: 25px;
-    }
-
-    div {
-        overflow: scroll;
     }
 </style>
