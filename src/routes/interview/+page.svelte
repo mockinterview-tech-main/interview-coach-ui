@@ -31,23 +31,25 @@
     $: loading
     $: selectedQuestion
 
+    const reset = () => {
+        $interviewQuestion = {uuid: "", question_text: ""};
+        $interviewAnswerStore = null;
+        $currentFollowupStore = null;
+        $outputText = "";
+        $aiChatStore = [];
+        $userChatStore = [];
+    }
+
     onMount( async () =>{
-        interviewQuestion.set({uuid: "", question_text: ""});
-        aiChatStore.set([`Lucy: Hi ${username} I'm Lucy and I'll be conducting your mock interview today! Please tell me what role and company you'd like to practice for.`]);
-        userChatStore.set([]);
-        outputText.set("");
+        reset();
+        $aiChatStore = [`Lucy: Hi ${username} I'm Lucy and I'll be conducting your mock interview today! Please tell me what role and company you'd like to practice for.`];
         const result = await getQuestions();
         if (result) {
             questions = [selectedQuestion.data].concat(result);
         }
     });
 
-    onDestroy(() => {
-        aiChatStore.set([]);
-        outputText.set("");
-        userChatStore.set([]);
-        outputText.set("");
-    });
+    onDestroy(reset);
 
     const prepareInterview = async (e: Event) => {
         e.preventDefault();
@@ -93,55 +95,59 @@
     followupsStore.subscribe((followupList) => nextFollowup = followupGenerator(followupList))
 
     outputText.subscribe(async (answerText) => {
-        try {
-            if($outputText !== ''){
-                userChatStore.set([...$userChatStore, `You: ${answerText}`])
-                loading = true;
-                if(!$interviewAnswerStore){
-                    const result = await answerQuestion({
-                        question_text: $interviewQuestion.question_text,
-                        company: jobInfo.company,
-                        job: jobInfo.job,
-                        answer_text: answerText,
-                    });
-                    if(result){
-                        if (result.errors) {
-                                aiChatStore.set([...$aiChatStore, `Lucy: ${result.errors}`])
-                        } else {
-                            const {answer, followups} = result
-                            interviewAnswerStore.set(answer);
-                            followupsStore.set(followups);
+        if (answerText !== ''){
+            try {
+                if($outputText !== ''){
+                    userChatStore.set([...$userChatStore, `You: ${answerText}`])
+                    loading = true;
+                    if(!$interviewAnswerStore){
+                        const result = await answerQuestion({
+                            question_text: $interviewQuestion.question_text,
+                            company: jobInfo.company,
+                            job: jobInfo.job,
+                            answer_text: answerText,
+                        });
+                        if(result){
+                            if (result.errors) {
+                                    aiChatStore.set([...$aiChatStore, `Lucy: ${result.errors}`])
+                            } else {
+                                const {answer, followups} = result
+                                interviewAnswerStore.set(answer);
+                                followupsStore.set(followups);
+                                const fu = nextFollowup.next();
+                                if (!fu.done) {
+                                    aiChatStore.set([...$aiChatStore, `Lucy: ${fu.value.followup_question_text}`])
+                                    currentFollowupStore.set(fu.value);
+                                }
+                            }
+                        }
+                    } else {
+                        if ($currentFollowupStore){
+                            answerFollowup(answerText, $currentFollowupStore.id)
                             const fu = nextFollowup.next();
                             if (!fu.done) {
                                 aiChatStore.set([...$aiChatStore, `Lucy: ${fu.value.followup_question_text}`])
                                 currentFollowupStore.set(fu.value);
-                            }
-                        }
-                    }
-                } else {
-                    answerFollowup(answerText, $currentFollowupStore.id)
-                    const fu = nextFollowup.next();
-                    if (!fu.done) {
-                        aiChatStore.set([...$aiChatStore, `Lucy: ${fu.value.followup_question_text}`])
-                        currentFollowupStore.set(fu.value);
-                    } else {
-                        endInterview = true;
-                        if ($interviewAnswerStore) {
-                            const resp = await buildSummary($interviewAnswerStore.id);
-                            interviewAnswerStore.set(null);
-                            if (resp?.summary_text) {
-                                goto(`/summary/${resp.id}`)
                             } else {
-                                console.log(resp)
+                                endInterview = true;
+                                if ($interviewAnswerStore) {
+                                    const resp = await buildSummary($interviewAnswerStore.id);
+                                    interviewAnswerStore.set(null);
+                                    if (resp?.summary_text) {
+                                        goto(`/summary/${resp.id}`)
+                                    } else {
+                                        console.log(resp)
+                                    }
+                                }
                             }
                         }
                     }
                 }
+            } catch (error) {
+                console.error('An error occurred:', error);
+            } finally {
+                loading = false;
             }
-        } catch (error) {
-            console.error('An error occurred:', error);
-        } finally {
-            loading = false;
         }
     });
 

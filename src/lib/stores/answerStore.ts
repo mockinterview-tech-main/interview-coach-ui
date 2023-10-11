@@ -19,4 +19,4 @@ export type Followup = {
 
 export const interviewAnswerStore = writable<InterviewAnswer | null>();
 export const followupsStore = writable<Array<Followup>>([]);
-export const currentFollowupStore = writable<Followup>();
+export const currentFollowupStore = writable<Followup | null>();

@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { onMount } from "svelte";
 
-    export let modal;
     export let isOpen: boolean = false;
 
     const closeModal = (e: MouseEvent) => {
@@ -29,7 +28,7 @@
 
 <!-- svelte-ignore a11y-click-events-have-key-events -->
 <!-- svelte-ignore a11y-no-static-element-interactions -->
-<div id="modal-background" on:click={closeModal} bind:this={modal} class={isOpen ? 'show modal' : 'modal'}>
+<div id="modal-background" on:click={closeModal} class={isOpen ? 'show modal' : 'modal'}>
     <div class="modal-content">
         <span id="modal-close-btn" class="close-btn" on:click={closeModal}>&times;</span>
         <slot/>
