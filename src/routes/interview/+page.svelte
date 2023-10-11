@@ -42,7 +42,12 @@
         }
     });
 
-    onDestroy(() => outputText.set(""))
+    onDestroy(() => {
+        aiChatStore.set([]);
+        outputText.set("");
+        userChatStore.set([]);
+        outputText.set("");
+    });
 
     const prepareInterview = async (e: Event) => {
         e.preventDefault();
