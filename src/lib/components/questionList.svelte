@@ -11,8 +11,7 @@
 
 </script>
 
-<h3>User Chat</h3>
-<p>Select "Ask Me Anything" for an AI generated prompt, or select from our list of most common interview questions.</p>
+<p>You can choose from this list of top soft-skills interview questions to work on or select "ask me anything" for a random soft-skills question.</p>
 <div>
     {#each options as option}
         <ListItem selected={option.title === selectedItem.title} title={option.title} subtitle="" on:click={() => selectItem(option)}/>
@@ -20,11 +19,5 @@
 </div>
 
 <style lang="scss">
-    h3 { margin: 25px; }
-    div { overflow: scroll; }
-
-    p {
-        text-align: center;
-        margin: 25px;
-    }
+    p { text-align: center; }
 </style>

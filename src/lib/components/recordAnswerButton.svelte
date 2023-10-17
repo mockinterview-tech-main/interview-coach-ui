@@ -4,58 +4,54 @@
     import { recordingState } from "$lib/stores/recordingState";
 	import { toggleRecording } from "$lib/recorder/toggleRecording";
 
+    import MicFilled from "$lib/assets/icons/mic-filled.svg"
+    import MuteFilled from "$lib/assets/icons/mute-filled.svg"
+
     export let loading: boolean;
+
+    let isDisabled = false;
+    $: { isDisabled = loading || $recordingState === 'transcribing' || !($interviewQuestion.question_text || $currentFollowupStore) }
+    $: isDisabled
 </script>
 
 <button 
-    disabled={loading || $recordingState === 'transcribing' || !($interviewQuestion.question_text || $currentFollowupStore)} 
+    disabled={isDisabled} 
     on:click={toggleRecording}
-    title={$recordingState === 'idle' ? "start recording" : "finish recording"}
+    title={$recordingState === 'idle' ? (isDisabled ? "please wait" : "turn on microphone") : "mute microphone"}
     class={`record-button ${$recordingState === 'recording'? 'flash': ''}`}>
-        {$recordingState === 'idle' ? " ▶️" : "⏹️ "}
+        <!-- svelte-ignore a11y-missing-attribute -->
+        <img width="30px" height="30px" src={$recordingState === 'idle' || isDisabled ? MicFilled : MuteFilled}/>
 </button>
 
 <style lang="scss">
-    @import "../../styles/colors.scss";
+    @import "../styles/colors.scss";
 
-    button {
-        margin: 10px auto;
-    }
-        /* Style the circular button */
+    button { margin: 10px auto; }
+        
     .record-button {
-        width: 50px; 
-        height: 50px;
+        width: 80px; 
+        height: 80px;
         border: none;
         position: relative;
-        background-color: #007bff; 
-        color: $white; 
+        background-color: $dark-purple; 
         border-radius: 50%; 
         cursor: pointer;
         display: flex;
         justify-content: center;
-        align-items: center;
-        font-size: 20px; 
         transition: background-color 0.3s ease; 
     }
 
-    /* Style the button on hover */
-    .record-button:hover {
-        background-color: #0056b3; /* Change the background color on hover */
-    }
+    .record-button:disabled { background-color: red; }
 
-    .flash {
-        animation: flash 1s infinite;
-    }
+    .record-button:disabled:hover {  background-color: red; }
+    
+    .record-button:hover { background-color: $light-purple; }
+    .flash { animation: flash 1s infinite; }
+
     @keyframes flash {
-        0% {
-            background-color: red; /* Change to the first background color */
-        }
-        50% {
-            background-color: blue; /* Change to the second background color */
-        }
-        100% {
-            background-color: red; /* Change back to the first background color */
-        }
+        0% { background-color: $dark-purple; }
+        50% { background-color: $light-purple; }
+        100% { background-color: $dark-purple; }
     }
 
     /* Style the tooltip */

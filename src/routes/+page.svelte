@@ -1,12 +1,12 @@
 <script lang="ts">
-    import microsoftLogo from '../lib/assets/microsoftLogo.svg'
-    import amazonLogo from '../lib/assets/amazonLogo.svg'
-    import metaLogo from '../lib/assets/metaLogo.svg'
-    import clockOutline from '../lib/assets/clock-outline.svg';
-    import bookFilled from '../lib/assets/book-filled.svg';
-    import personFilled from '../lib/assets/person-filled.svg';
-    import separator from '../lib/assets/separator.svg';
-    import rightArrow from '../lib/assets/right-arrow.svg';
+    import microsoftLogo from '$lib/assets/microsoftLogo.svg'
+    import amazonLogo from '$lib/assets/amazonLogo.svg'
+    import metaLogo from '$lib/assets/metaLogo.svg'
+    import clockOutline from '$lib/assets/clock-outline.svg';
+    import bookFilled from '$lib/assets/book-filled.svg';
+    import personFilled from '$lib/assets/person-filled.svg';
+    import separator from '$lib/assets/separator.svg';
+    import rightArrow from '$lib/assets/right-arrow.svg';
 	import Popdown from '$lib/components/popdown.svelte';
 
     export let data;
@@ -170,11 +170,10 @@ We engineered mock interview to not only provide detailed and customized feedbac
 </div>
 
 <style lang="scss">
-    @import "../styles/colors.scss";
+    @import "../lib/styles/colors.scss";
     .jumbotron {
         position: relative;
         color: $white;
-        width: 100%;
         padding: 200px 40px;
         background-color: transparent; /* No direct background on the jumbotron */
 
@@ -187,10 +186,9 @@ We engineered mock interview to not only provide detailed and customized feedbac
             right: 0;
             bottom: 0;
             z-index: -2; /* Ensure it's below the content */
-            background-image: url('../lib/assets/jumbotron.jpg');
+            background-image: url('$lib/assets/jumbotron.jpg');
             background-size: cover;
             background-position: center;
-            filter: blur(2px);
         }
 
         /* Sharp edges with tint */
@@ -203,11 +201,11 @@ We engineered mock interview to not only provide detailed and customized feedbac
             bottom: 0;
             z-index: -1; /* Above the blurred version but below the content */
             background-image: 
-                linear-gradient(rgba(112, 112, 112, 0.5), rgba(27, 27, 27, 0.5)), 
-                url('../lib/assets/jumbotron.jpg'); 
+                linear-gradient(rgba(112, 112, 112, 0.3), rgba(27, 27, 27, 0.3)), 
+                url('$lib/assets/jumbotron.jpg'); 
             background-size: cover;
             background-position: center;
-            mask-image: radial-gradient(circle at center, transparent 0%, transparent 75%, black 75.5%, black);
+            mask-image: radial-gradient(circle at center, transparent 0%, transparent 75%, rgb(41, 41, 41) 75.5%, rgb(110, 110, 110));
         }
 
         h1 { font-size: 42px; }
@@ -239,14 +237,10 @@ We engineered mock interview to not only provide detailed and customized feedbac
             padding: 20px 0;
             max-width: 80%;
             text-align: center;
-            &:last-of-type {
-                padding-bottom: 60px;
-            }
+            &:last-of-type { padding-bottom: 60px; }
         }
 
-        .vl-section {
-            padding: 0px 50px;
-        }
+        .vl-section { padding: 0px 50px; }
 
         .horizontal-sections {
             display: flex;
@@ -261,18 +255,12 @@ We engineered mock interview to not only provide detailed and customized feedbac
             ul {
                 margin: auto;
                 padding: 0;
-                li {
-                    text-align: center;
-                }
+                li { text-align: center; }
             }
-            button {
-                margin: auto;
-            }
+            button { margin: auto; }
         }
 
-        .popdown-header {
-            text-align: left;
-        }
+        .popdown-header { text-align: left; }
 
         .popdown-content {
             text-align: left;
@@ -282,9 +270,7 @@ We engineered mock interview to not only provide detailed and customized feedbac
         .approach {
             background-color: $white;
             justify-content: center;
-            img {
-                margin: 10px;
-            }
+            img { margin: 10px; }
         }
 
         ul {
