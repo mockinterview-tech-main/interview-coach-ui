@@ -15,7 +15,7 @@
 </div>
 
 <style lang="scss">
-    @import "../../styles/colors.scss";
+    @import "../styles/colors.scss";
     .popdown-header {
         width: 100%;
         cursor: pointer;

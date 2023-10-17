@@ -2,18 +2,19 @@
     import { onDestroy, onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 
+    import UserHeadsetDuo from "$lib/assets/icons/user-headset-duo.svg"
+
     import { type InterviewQuestion, interviewQuestion } from '$lib/stores/interviewQuestion';
     import { outputText } from '$lib/stores/recordingState';
     import {type Followup, interviewAnswerStore, followupsStore, currentFollowupStore } from '$lib/stores/answerStore';
-	import { aiChatStore, userChatStore } from '$lib/stores/chatStore';
+	import { conversationStore } from '$lib/stores/chatStore';
 
 	import { answerFollowup, answerQuestion, buildSummary, getAIQuestion, getQuestions } from '$lib/serviceApi';
 
-	import AIChatCard from '$lib/components/aiChatCard.svelte';
 	import RecordAnswerButton from '$lib/components/recordAnswerButton.svelte';
-	import UserChatCard from '$lib/components/userChatCard.svelte';
 	import QuestionList from '$lib/components/questionList.svelte';
 	import Modal from '$lib/components/modal.svelte';
+	import Transcript from '$lib/components/transcript.svelte';
 
     export let data;
     const {credits, username} = data;
@@ -36,13 +37,12 @@
         $interviewAnswerStore = null;
         $currentFollowupStore = null;
         $outputText = "";
-        $aiChatStore = [];
-        $userChatStore = [];
+        $conversationStore = [];
     }
 
     onMount( async () =>{
         reset();
-        $aiChatStore = [`Lucy: Hi ${username} I'm Lucy and I'll be conducting your mock interview today! Please tell me what role and company you'd like to practice for.`];
+        $conversationStore = [`Lucy: Hi ${username} I'm Lucy and I'll be conducting your mock interview today! Please tell me what role and company you'd like to practice for.`];
         const result = await getQuestions();
         if (result) {
             questions = [selectedQuestion.data].concat(result);
@@ -78,8 +78,14 @@
         } else {
             $interviewQuestion = selectedQuestion.data
         }
-        aiChatStore.set([...$aiChatStore, `Lucy: I see you're interviewing as a ${jobInfo.job} at ${jobInfo.company}. Here is your first question 🙂!`])
-        aiChatStore.set([...$aiChatStore, $interviewQuestion.question_text])
+        $conversationStore = [...$conversationStore, `${username || "You"}: I'm interviewing as a ${jobInfo.job} at ${jobInfo.company}.`];
+        $conversationStore = [
+            ...$conversationStore, `Lucy: Great! I'll evaluate this session as if I was someone hiring a ${jobInfo.job} at ${jobInfo.company}.<br/>
+            Before we get started, here's how this will work:<br/>
+            Click the microphone button to un-mute and give your answer. Please mute yourself when you're done speaking so I know you're ready to move on.`
+        ];
+        $conversationStore = [...$conversationStore, `Lucy: Here is your first question: ${$interviewQuestion.question_text}`];
+
         fetch('/interview', {
             method: 'POST',
             credentials: 'include'
@@ -98,7 +104,7 @@
         if (answerText !== ''){
             try {
                 if($outputText !== ''){
-                    userChatStore.set([...$userChatStore, `You: ${answerText}`])
+                    $conversationStore = [...$conversationStore, `${username || "You"}: ${answerText}`];
                     loading = true;
                     if(!$interviewAnswerStore){
                         const result = await answerQuestion({
@@ -109,15 +115,15 @@
                         });
                         if(result){
                             if (result.errors) {
-                                    aiChatStore.set([...$aiChatStore, `Lucy: ${result.errors}`])
+                                    $conversationStore = [...$conversationStore, `Lucy: ${result.errors}`];
                             } else {
                                 const {answer, followups} = result
-                                interviewAnswerStore.set(answer);
-                                followupsStore.set(followups);
+                                $interviewAnswerStore = answer;
+                                $followupsStore = followups;
                                 const fu = nextFollowup.next();
                                 if (!fu.done) {
-                                    aiChatStore.set([...$aiChatStore, `Lucy: ${fu.value.followup_question_text}`])
-                                    currentFollowupStore.set(fu.value);
+                                    $conversationStore = [...$conversationStore, `Lucy: ${fu.value.followup_question_text}`];
+                                    $currentFollowupStore = fu.value;
                                 }
                             }
                         }
@@ -126,13 +132,13 @@
                             answerFollowup(answerText, $currentFollowupStore.id)
                             const fu = nextFollowup.next();
                             if (!fu.done) {
-                                aiChatStore.set([...$aiChatStore, `Lucy: ${fu.value.followup_question_text}`])
-                                currentFollowupStore.set(fu.value);
+                                $conversationStore = [...$conversationStore, `Lucy: ${fu.value.followup_question_text}`];
+                                $currentFollowupStore = fu.value;
                             } else {
                                 endInterview = true;
                                 if ($interviewAnswerStore) {
                                     const resp = await buildSummary($interviewAnswerStore.id);
-                                    interviewAnswerStore.set(null);
+                                    $interviewAnswerStore = null;
                                     if (resp?.summary_text) {
                                         goto(`/summary/${resp.id}`)
                                     } else {
@@ -166,81 +172,124 @@
         <button on:click={startInterview} class="modal-button">Continue</button>
         <button on:click={() => confirmDialogOpen = !confirmDialogOpen} class="modal-button tirtiary-button">Not Now</button>
     </Modal>
-    <div class="ai-chat {credits === 0 ? 'solo' : ''}">
-        <h3>AI Chat</h3>
-        {#if $interviewQuestion.question_text === ""}
-            <p>{$aiChatStore[0]}</p>
-            {#if credits === 0}
-                <p><b>Uh oh, looks like you're out of credits. Please buy more before continuing.</b></p>
-            {/if}
-            <form on:submit={prepareInterview}>
-                {#if credits !== 0}
-                    <label for="job">Job Title</label>
-                    <input disabled={credits === 0} id="job" type="text" bind:value={jobInfo.job} placeholder="e.g. Technical Program Manager"/><br/>
-                    <label for="company">Company</label>
-                    <input disabled={credits === 0} id="company" type="text" bind:value={jobInfo.company} placeholder="e.g. Google"/><br/><br/>
-                    <button class="tirtiary-button" type="submit" disabled={!jobInfo.job || !jobInfo.company || loading}>Get Started</button>
-                {/if}
-                {#if credits === 0}
-                    <div style="display: flex; justify-content: center;"><button class="tirtiary-button" on:click={buyCredits}>Buy Credits</button></div>
-                {/if}
-            </form>
-        {:else}
-            <AIChatCard loading={loading} endInterview={endInterview}/>
+    <div class="call">
+        <h3>Lucy (Interviewer)</h3>
+        <!-- svelte-ignore a11y-img-redundant-alt -->
+        <img src={UserHeadsetDuo} alt="interviewer profile picture"/>
+        <br/>
+        {#if $interviewQuestion.uuid}
+            <div><RecordAnswerButton loading={loading}/></div>
         {/if}
     </div>
-    {#if credits !== 0}
-        <div class="user-chat">
-            {#if !$interviewQuestion.uuid}
-                {#if questions && !$interviewQuestion.question_text}
-                    <QuestionList
-                        bind:selectedItem={selectedQuestion}
-                        options={questions.map( question => ({title: question.question_text, data: question}))} 
-                    />
-                {/if}
+    <div class="transcript">
+            {#if credits === 0}
+                <p><b>Uh oh, looks like you're out of credits. Please buy more before continuing.</b></p>
+                <button class="tirtiary-button" on:click={buyCredits}>Buy Credits</button>
             {:else}
-                <UserChatCard endInterview={endInterview} />
-                {#if !endInterview && (jobInfo.company !== '' || jobInfo.job !== '')}
-                    <div><RecordAnswerButton loading={loading}/></div>
+                <Transcript loading={loading} endInterview={endInterview}/>
+                {#if !$interviewQuestion.uuid}
+                    <div class="setup-form">
+                        <form on:submit={prepareInterview}>
+                            <label for="job">Job Title</label>
+                            <input disabled={credits === 0} id="job" type="text" bind:value={jobInfo.job} placeholder="e.g. Technical Program Manager"/><br/>
+                            <label for="company">Company</label>
+                            <input disabled={credits === 0} id="company" type="text" bind:value={jobInfo.company} placeholder="e.g. Google"/><br/><br/>
+                            <button class="tirtiary-button" type="submit" disabled={!jobInfo.job || !jobInfo.company || loading}>Get Started</button>
+                        </form>
+                        {#if questions && !$interviewQuestion.question_text}
+                            <div>
+                            <QuestionList
+                                bind:selectedItem={selectedQuestion}
+                                options={questions.map( question => ({title: question.question_text, data: question}))} 
+                            />
+                            </div>
+                        {/if}
+                    </div>
                 {/if}
             {/if}
-        </div>
-    {/if}
+    </div>
 </div>
 
 <style lang="scss">
+    @import "../../lib/styles/colors.scss";
+
     div {
-        padding: 40px 20px;
         display: flex;
-        .ai-chat {
-            h3 {
-                margin-top: 25px;
-                margin-bottom: 35px;
-            }
-            form {
-                max-width: 50%;
-                margin: auto;
-                margin-top: 30px;
-                input { width: 100%; }
-            }
-            display: flex;
-            flex-direction: column;
-            justify-items: center;
-            width: 50%;
-            max-height: 100vh;
-        }
-        .ai-chat.solo {
+        flex-direction: column;
+        .call {
             width: 100%;
-            text-align: center;
+            background-color: #6e6e6e;
+            padding: 20px 0px;
+            position: sticky;
+            top: 0;
+            h3 {
+                margin: auto;
+                padding-top: 10px;
+                margin-top: 40px;
+                text-align: center;
+                color: $dark-purple;
+                background-color: white;
+                width: 500px;
+                border-top: 1px solid black;
+                border-left: 1px solid black;
+                border-right: 1px solid black;
+            }
+            img {
+                width: 100px;
+                background-color: white;
+                border-left: 1px solid black;
+                border-right: 1px solid black;
+                border-bottom: 1px solid black;
+                padding: 75px 200px;
+                margin: auto;
+            }
+            @media only screen and (max-width: 1000px) {
+                    img {
+                        height: 50px;
+                        padding: 50px 100px; 
+                    }
+                    h3 {
+                        font-size: 14px;
+                        width: 300px;
+                    }
+            }
         }
-        .user-chat {
-            display: flex;
-            flex-direction: column;
-            justify-items: center;
-            width: 50%;
-            max-height: 100vh;
-            div { justify-content: flex-end; }
+        .transcript {
+            padding: 0px 40px;
+            margin-bottom: 40px;
+            overflow: auto;
+            max-height: 300px;
+            .setup-form {
+                display: flex;
+                flex-direction: row;
+
+                form {
+                    max-width: 25%;
+                    margin: auto;
+                    margin-top: 30px;
+                    height: 100vh;
+                    input { width: 100%; }
+                }
+                div {
+                    margin: 0px auto;
+                    max-width: 75%;
+                }
+
+                @media only screen and (max-width: 1600px) {
+                    form { max-width: 40%; }
+                    div {  max-width: 60%; }
+                }
+                @media only screen and (max-width: 1000px) {
+                    * { font-size: 14px; }
+                    form { max-width: 50%; }
+                    div {  max-width: 50%; }
+                }
+            }
         }
         .modal-button { display: inline; }
+        button {
+            max-width: 135px;
+            margin: auto;
+        }
     }
 </style>

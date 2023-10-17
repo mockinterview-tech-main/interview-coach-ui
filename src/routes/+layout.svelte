@@ -1,5 +1,5 @@
 <script lang="ts">
-    import LogoFilled from "../lib/assets/logo-filled.svg";
+    import LogoFilled from "$lib/assets/logo-filled.svg";
     export let data;
     const {loggedIn, credits, username} = data;
 
@@ -29,17 +29,12 @@
 
 <style lang="scss">
     @import "@fontsource/inter";
-    @import "../styles/form.scss";
-    @import "../styles/button.scss";
-    @import "../styles/links.scss";
+    @import "../lib/styles/form.scss";
+    @import "../lib/styles/button.scss";
+    @import "../lib/styles/links.scss";
 
-    :global(h3) {
-        text-align: center;
-    }
-
-    :global(li) {
-        list-style-type: none;
-    }
+    :global(h3) { text-align: center; }
+    :global(li) { list-style-type: none; }
 
     main {
         font-family: 'inter', Arial, Helvetica, sans-serif;
@@ -47,9 +42,7 @@
         width: 100%;
         padding: 0px;
         margin: 0px;
-        nav {
-            padding: 0px 20px;
-        }
+        nav { padding: 0px 20px; }
     }
     
     nav {
@@ -66,9 +59,7 @@
             margin-right: 40px;
             color: $white;
         }
-        span {
-            padding: 20px;
-        }
+        span { padding: 20px; }
         img {
             width: 40px;
             position: relative;
@@ -84,8 +75,20 @@
         background-color: $dark-gray; 
         color: $white; 
         padding: 10px;
-        span {
-            padding: 20px;
+        span { padding: 20px; }
+    }
+
+    @media only screen and (max-width: 1000px) {
+        * { font-size: 14px; }
+        nav {
+            div {
+                margin-right: 20px;
+            }
+        }
+        footer {
+            span {
+                padding: 10px;
+            }
         }
     }
 </style>

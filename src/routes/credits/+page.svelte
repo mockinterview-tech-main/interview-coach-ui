@@ -40,7 +40,7 @@
 </div>
 
 <style lang="scss">
-    @import "../../styles/colors.scss";
+    @import "$lib/styles/colors.scss";
     
     h2 {
         padding: 60px 40px;

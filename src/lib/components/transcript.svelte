@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { aiChatStore } from "$lib/stores/chatStore";
+    import { conversationStore } from "$lib/stores/chatStore";
 	import { afterUpdate, beforeUpdate } from "svelte";
 
     export let loading: boolean;
@@ -11,7 +11,7 @@
         conversationSectionElementObserver.observe(conversationSectionElement, {childList: true})
     }
 
-    let autoscroll = false;
+    let autoscroll = true;
     let conversationSection: HTMLDivElement;
     beforeUpdate(() => {
 		if (conversationSection) {
@@ -29,14 +29,14 @@
 </script>
 
 <div id="conversationSection" bind:this={conversationSection}>
-    {#each $aiChatStore as part}
-        <p>{part}</p>
+    {#each $conversationStore as part}
+        <p>{@html part}</p>
     {/each}
     {#if loading && !endInterview}
-        <p>Hang on, I'm taking some notes 📝...</p>
+        <p>Lucy: Hang on, I'm taking some notes 📝...</p>
     {/if}
     {#if endInterview}
-        <p>Thank you for your time. Please wait and we'll get you your feedback in a bit 🎉</p>
+        <p>Lucy: Thank you for your time. Please wait and we'll get you your feedback in a bit 🎉</p>
     {/if}
 </div>
 
@@ -45,5 +45,8 @@
         flex-direction: column;
         overflow: scroll;
         scroll-behavior: smooth;
+        p {
+            line-height: 25px;
+        }
     }
 </style>
