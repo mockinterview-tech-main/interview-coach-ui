@@ -1,8 +1,8 @@
 <script lang="ts">
     import { browser } from '$app/environment';
     import type { PageData } from './$types';
-    import googleGLogo from '../$lib/assets/googleLogo.svg'
-    import githubLogo from '../$lib/assets/githubLogo.svg'
+    import googleGLogo from '$lib/assets/googleLogo.svg'
+    import githubLogo from '$lib/assets/githubLogo.svg'
     export let data: PageData;
     export let form;
 
