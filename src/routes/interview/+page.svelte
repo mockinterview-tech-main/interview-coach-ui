@@ -167,46 +167,26 @@
 <div>
     <Modal bind:isOpen={confirmDialogOpen}>
         <h2 style="text-align: center;">Are you ready?</h2>
-        <p>Once the session starts you will have spent 1 token.</p>
-        <p>Leaving the page or refreshing will lose your session</p>
+        <p>Once you begin the interview session one token will be deducted.</p>
+        <p>Leaving the page or refreshing will lose the session</p>
         <button on:click={startInterview} class="modal-button">Continue</button>
         <button on:click={() => confirmDialogOpen = !confirmDialogOpen} class="modal-button tirtiary-button">Not Now</button>
     </Modal>
     <div class="call">
         <h3>Lucy (Interviewer)</h3>
         <!-- svelte-ignore a11y-img-redundant-alt -->
+        <!-- TODO: Getting some DALL-E generated images would be nice-->
         <img src={UserHeadsetDuo} alt="interviewer profile picture"/>
         <br/>
-        {#if $interviewQuestion.uuid}
-            <div><RecordAnswerButton loading={loading}/></div>
-        {/if}
+        <div><RecordAnswerButton loading={loading}/></div>
     </div>
     <div class="transcript">
-            {#if credits === 0}
-                <p><b>Uh oh, looks like you're out of credits. Please buy more before continuing.</b></p>
-                <button class="tirtiary-button" on:click={buyCredits}>Buy Credits</button>
-            {:else}
-                <Transcript loading={loading} endInterview={endInterview}/>
-                {#if !$interviewQuestion.uuid}
-                    <div class="setup-form">
-                        <form on:submit={prepareInterview}>
-                            <label for="job">Job Title</label>
-                            <input disabled={credits === 0} id="job" type="text" bind:value={jobInfo.job} placeholder="e.g. Technical Program Manager"/><br/>
-                            <label for="company">Company</label>
-                            <input disabled={credits === 0} id="company" type="text" bind:value={jobInfo.company} placeholder="e.g. Google"/><br/><br/>
-                            <button class="tirtiary-button" type="submit" disabled={!jobInfo.job || !jobInfo.company || loading}>Get Started</button>
-                        </form>
-                        {#if questions && !$interviewQuestion.question_text}
-                            <div>
-                            <QuestionList
-                                bind:selectedItem={selectedQuestion}
-                                options={questions.map( question => ({title: question.question_text, data: question}))} 
-                            />
-                            </div>
-                        {/if}
-                    </div>
-                {/if}
-            {/if}
+        {#if credits === 0}
+            <p><b>Uh oh, looks like you're out of credits. Please buy more before continuing.</b></p>
+            <button class="tirtiary-button" on:click={buyCredits}>Buy Credits</button>
+        {:else}
+            <Transcript loading={loading} endInterview={endInterview}/>
+        {/if}
     </div>
 </div>
 
@@ -259,32 +239,6 @@
             margin-bottom: 40px;
             overflow: auto;
             max-height: 300px;
-            .setup-form {
-                display: flex;
-                flex-direction: row;
-
-                form {
-                    max-width: 25%;
-                    margin: auto;
-                    margin-top: 30px;
-                    height: 100vh;
-                    input { width: 100%; }
-                }
-                div {
-                    margin: 0px auto;
-                    max-width: 75%;
-                }
-
-                @media only screen and (max-width: 1600px) {
-                    form { max-width: 40%; }
-                    div {  max-width: 60%; }
-                }
-                @media only screen and (max-width: 1000px) {
-                    * { font-size: 14px; }
-                    form { max-width: 50%; }
-                    div {  max-width: 50%; }
-                }
-            }
         }
         .modal-button { display: inline; }
         button {
