@@ -1,0 +1,110 @@
+You are an interview coach helping someone get a job as the role at the company indicated in the following transcript. Analyze the transcript and for each story try to identify the situation, task, action, and result. Then tell me how well each of those areas was covered. Then based on this transcript give a score from 1-5 on how well the candidate exhibits the 14 Amazon leadership principles
+
+
+Kelly: Hi Dominick I'm Kelly and I'll be conducting your mock interview today! Please tell me what role and company you'd like to practice for.
+
+Dominick: Hello, yes, I'll be conducting an interview today to be a software engineer at Google.
+
+Kelly: That's fantastic, Dominick! Google has a highly competitive hiring process so it's great that you're preparing ahead of time. Let's dive in with a common behavioral question for your role. Can you describe a time when you had to solve a difficult problem, and how did you handle it?
+
+Dominick: There's a problem that I'm trying to solve wherein I need to build a product that helps people practice mock interviews for tech companies like Google. So I had to basically start with the idea and then do a ton of market research on my own using LinkedIn collection of surveys to figure out if this was even a viable product. And what I landed on was a speech-to-text, text-to-speech interface with ChatGBT with a little bit of prompt engineering under the hood, and I partnered with a mock interview coach to build out rubrics that can be programmed in as context for the ChatGBT model. So what ended up happening was I built out the front end for this with a simple mute-unmute Zoom call-looking interface and take the speech, transcribe it to text, and then take the text and send that to ChatGBT with this interview context that we pre-programmed in. So that was using a Svelte front end, running some things on SvelteKit with an authentication back end that uses PocketBase because I wasn't expecting a ton of users up front, but even still it can handle 10,000 concurrent connections. So I'm not too worried about that end of things. And then the back end back end where the ChatGBT interface happens is a fast API app written in Python that is just there to take in the text and run it through the LLM prompts and generate a summary that tells the user how well they did. We beta-tested this and ran this by a couple of customer committees, and the feedback was pretty well received. The only things that people were bringing up were user experience tweaks just because we were trying to rush to market. These were all things that we already knew about, but overall somebody ended up paying for it and now we're working on a revision too.
+
+Kelly: Impressive, Dominick. That's quite a comprehensive problem-solving process you undertook. As a follow-up, can you tell me a bit more about how you handled any conflicts or disagreements that came up during this process? Secondly, how did you handle the user experience tweaks? Lastly, how did you feel when someone actually paid for your product for the first time?
+
+Dominick: When it came to handling disagreements, I just worked with my co-founder through some of like the more worst-case scenarios that could possibly happen if we had chosen each one of the things that we were deciding on. So for example, I originally wanted a resume upload piece and my partner did not and we walked through kind of the worst-case cost-benefit analysis of doing the resume upload versus not and we arrived at the conclusion that doing the resume upload didn't really get us a ton of extra benefit when we ran this through just a regular chat GPT UI For the it wouldn't be worth the effort to do it up front. So we're gonna do that as a v2 The user experience tweaks we threw on a road map and managed through like a rudimentary Kanban board and we just slowly worked our way through them We eventually got rid of all of the signup forms and made it a passwordless flow, for example And we done away with asking the user in a typed form how to or what job interview what place they were interviewing for at and for what job they were interviewing and we also Just changed it over to a simple one-button interface Finally when somebody paid it felt good
+
+Kelly: Kelly: Sounds like you effectively deal with discrepancies by walking through all potential scenarios and finding the most effective solution, which is a critical skill for software engineering roles. Now onto the next behavioral question. Can you tell me about a situation where you had to balance multiple tasks or projects at once? How did you go about prioritizing your tasks?
+
+Dominick: At work, I typically have to balance multiple projects when I was an engineering manager. I was also the PM for the data team as well, and our company was ingesting a ton of data to catalog the entire internet, and that data would get sold off to government contractors and state and local governments and anybody that was just trying to protect their cyber infrastructure, which meant that we had a ton of requests coming in from the security research team, we had a ton of requests coming in from enterprise customers, a ton of requests coming in from our government friends, and basically the way I triage this is a very simple how much effort versus the benefit that we get out of it. So if this is something that's going to take months of effort, for example, like the ask to move our entire data pipeline from whatever the setup was when the founder wrote it to a more mature Kafka system, we found that the cost was going to be two or three months of engineering work, and the benefit that we were going to see was a slight speed up, and so that was deprioritized. When a government customer comes along and says that they wanted an additional field because that's going to help them pivot to find Russian servers faster, then that was obviously a very low-hanging fruit that we could have that had an immense benefit to our customers. I tend to just go for a simple cost-benefit analysis for that. You just basically get the data for that, quantify it, and then you present your argument, and then you let somebody else with a higher title override you if that's what they want to do, and then, hey, at least you got your boss to bless your bullshit, right?
+
+Kelly: That's a very pragmatic approach, Dominick, and it's great to hear how you objectively evaluate the benefit versus the effort involved. Can you share more about how this cost-benefit approach affected your relations with different stakeholders? How did you ensure that your team wasn't overwhelmed by the load? Finally, what would you have done differently if you had to do it all over again?
+
+Dominick: Well, that's really the source of the conflict, isn't it? There's other teams that when they're presented with this data, mostly the effort data and estimates from my engineers, they would all pick it apart because all of them felt like they could do the job faster or better with less effort. And that may be true. And at the end of the day, when you're a leader, you have to go to bat for your guys and you have to say, no, this is what my guys told me, if my guys are doing it, these are the estimates you're getting. And frankly, we had a lot of very hard and honest discussions, which ended up resulting in the other managers and the other teams just taking the work because at the end of the day, we're at a startup, we have to move fast. And if they think they can do it better, faster, then great, they just volunteered to do it. And of course, one or two of those projects ended up cratering horribly because they didn't understand the entire scope of the project. And that led to kind of a cultural paradigm shift of essentially whatever that team says that estimates it, they're responsible for it. If they're responsible for it, their estimate is the estimate that goes.
+
+Kelly: Kelly: That's a great perspective, Dominick. Clear communication and transparency always lead to better project outcomes. Now for the final question, let's discuss teamwork. Can you share with me a situation in which you worked on a team that was struggling and what steps you took to address the issue?
+
+Dominick: I see this all the time, especially with interns and more junior engineers, and frankly I enjoy working with juniors a lot more because they're working through something for the first time and that's really the spirit of innovation, isn't it? I had an intern who was struggling trying to get a little pop-up menu into the webpage that would basically take the query in our proprietary query language and turn that into a cURL using our APIs, and she'd never seen CSS before, she'd never seen HTML before, so it got to the point where, first off, I set people up and I say, here's the problem at hand, here's what the final outcome is, do all the research you need, and we'll meet back every day and we'll figure out what you've learned that day and how you think you're going to approach it and I'll poke holes in your approach. They were coming back with things that were way out of left field, they wanted to inject a whole new framework in the front end, and it's not invalid, it's just that they need to learn from this experience, and so I sat down and I said, no, we already have this, this is the operating framework we're using, it's a Jinja2 app served by a Python server and we discussed the framework and its parameters and so that gave her something to research and she came back and we kind of slowly circled the drain on coming to an answer and we finally got the thing in place.
+
+Kelly: That's an excellent example Dominick. It's important to guide and mentor junior members on the team, and with your approach, they can find solutions while gaining more autonomy in their work. Can you elaborate on the impact this had on the rest of the team? Did this process spark any significant changes to the team dynamic? Lastly, was there any specific feedback you received that let you know your approach was effective?
+
+Dominick: Well, the effectiveness of the approach, at least in our company culture, is whether or not it got done. And it did get done. So the approach was considered very effective. It didn't really spark any changes in the dynamic other than I got to manage more interns because the other managers in the team didn't really have the patience to break this down to like a very simple level. That ended up leading me to have to give workshops to other tech leads and other engineering managers into just kind of a patience and structured approach with some of the interns. You can't just kind of throw them into a problem and when they don't solve the problem, you fire them or you counsel them. You just have patience and faith that it will all work out because we were all there once. And a lot of these people, this is their first job out of college. They've been with the company for three years and they don't remember how hard it was because they've never been thrown into the deep end of a different pool. And so like that, that was the kind of coming to Jesus culture moment that we ended up having as a result of that.
+
+Kelly: Kelly: It's very clear that your empathetic and patient attitude towards not just getting the task done, but also making sure your team members learn and grow, has significantly affected the culture in your previous roles. These examples have showcased your strong problem-solving skills, ability to balance multiple tasks, and leadership in team dynamics - all of which are crucial traits for a software engineering role at Google. Thank you, Dominick. We've come to the end of this mock interview. Best of luck with your real interview!
+
+Analyzing Dominick's responses based on the STAR method (Situation, Task, Action, Result) and assessing how well he exhibits the 14 Amazon Leadership Principles:
+
+First Story Analysis (Product Development Project)
+
+Situation: Needed to build a product for practicing mock interviews.
+Task: Conduct market research, develop a speech-to-text/text-to-speech interface with ChatGPT, and build a front end with a Svelte front end and PocketBase backend.
+Action: Conducted research, developed and beta-tested the product, and worked through customer feedback.
+Result: Successfully launched the product with good reception, leading to a paid customer and plans for version 2.
+
+Coverage:
+Situation and Task: Well covered, clearly setting the stage.
+Action: Detailed, showcasing technical skills and decision-making.
+Result: Positive, showing successful implementation and market acceptance.
+
+Amazon Leadership Principles:
+Customer Obsession: Demonstrated by focusing on user feedback.
+Invent and Simplify: Inventing a new product, simplifying the interview practice process.
+Learn and Be Curious: Exhibited through market research and product development.
+Think Big: Creating a unique solution for a common problem.
+Bias for Action: Quickly moving from idea to product development and iteration.
+
+
+Second Story Analysis (Handling Conflicts in Decision-Making)
+
+Situation: Conflict in feature decisions for the product.
+Task: Resolve disagreements and implement user experience improvements.
+Action: Performed a cost-benefit analysis, prioritized tasks, and made pragmatic decisions.
+Result: Successfully resolved disagreements, improved user experience, and felt validation when the product was paid for.
+
+Coverage:
+Situation and Task: Clearly defined, setting up the conflict and resolution goal.
+Action: Strong, showing problem-solving and negotiation skills.
+Result: Positive outcome with user experience improvements and market validation.
+
+Amazon Leadership Principles:
+Deliver Results: Delivering an improved product and gaining a paying customer.
+Ownership: Taking responsibility for decisions and their outcomes.
+Earn Trust: Building trust through effective conflict resolution and team management.
+
+
+
+Third Story Analysis (Balancing Multiple Projects)
+Situation: Balancing multiple requests in a data-centric role.
+Task: Prioritize tasks based on effort vs. benefit.
+Action: Conducted cost-benefit analyses and made strategic decisions.
+Result: Successfully managed various projects, prioritized important tasks, and led cultural changes.
+
+Coverage:
+Situation and Task: Clearly articulated, showcasing a high-responsibility role.
+Action: Demonstrates leadership and analytical skills.
+Result: Shows effective prioritization and team leadership.
+
+Amazon Leadership Principles:
+Are Right, A Lot: Making informed decisions based on data.
+Hire and Develop the Best: Shaping team culture and decision-making.
+Insist on the Highest Standards: Upholding high standards in decision-making processes.
+
+
+Fourth Story Analysis (Mentoring Interns)
+Situation: Working with interns and junior engineers.
+Task: Guide and mentor them on a technical project.
+Action: Provided structured learning, regular feedback, and practical guidance.
+Result: Successful project completion, recognized for effective mentorship, led to cultural shifts in managing interns.
+
+Coverage:
+Situation and Task: Well-defined, highlighting a mentoring role.
+Action: Effective teaching and leadership approach.
+Result: Positive, with successful project completion and a wider impact on company culture.
+
+Amazon Leadership Principles:
+Develops the Best: Demonstrated through mentorship and patience.
+Dive Deep: Engaging deeply in technical and mentorship roles.
+Leadership: Influencing others and fostering a positive work environment.
+Overall Score for Amazon Leadership Principles: 4/5
+
+
+Dominick exhibits many of the Amazon Leadership Principles strongly, particularly in customer obsession, inventing and simplifying, delivering results, ownership, and developing others. Some principles like frugality and operational excellence weren't explicitly mentioned, but overall, his approach aligns well with Amazon's culture.

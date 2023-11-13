@@ -1,6 +1,4 @@
 <script lang="ts">
-    import { interviewQuestion } from "$lib/stores/interviewQuestion";
-    import { currentFollowupStore } from "$lib/stores/answerStore";
     import { recordingState } from "$lib/stores/recordingState";
 	import { toggleRecording } from "$lib/recorder/toggleRecording";
 
@@ -10,7 +8,7 @@
     export let loading: boolean;
 
     let isDisabled = false;
-    $: { isDisabled = loading || $recordingState === 'transcribing' || !($interviewQuestion.question_text || $currentFollowupStore) }
+    $: { isDisabled = loading || $recordingState === 'transcribing' }
     $: isDisabled
 </script>
 

@@ -2,15 +2,16 @@
 	import { onMount } from "svelte";
 
     export let isOpen: boolean = false;
+    export let isIgnorable: boolean = false;
 
     const closeModal = (e: MouseEvent) => {
-        if((e.target as HTMLElement)?.id === 'modal-background' || (e.target as HTMLElement)?.id === 'modal-close-btn'){
+        if(isIgnorable && (e.target as HTMLElement)?.id === 'modal-background' || (e.target as HTMLElement)?.id === 'modal-close-btn'){
             isOpen = false;
         }
     }
 
     const handleEscapeKey = (e: KeyboardEvent) => {
-        if (e.key === 'Escape') {
+        if (e.key === 'Escape' && isIgnorable) {
             isOpen = false;
         }
     }
@@ -18,9 +19,7 @@
     onMount(() => {
         if (typeof document !== "undefined") {
             document.addEventListener('keydown', handleEscapeKey);
-            return () => {
-                document.removeEventListener('keydown', handleEscapeKey);
-            }
+            return () => document.removeEventListener('keydown', handleEscapeKey);
         }
     });
 
@@ -30,7 +29,7 @@
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <div id="modal-background" on:click={closeModal} class={isOpen ? 'show modal' : 'modal'}>
     <div class="modal-content">
-        <span id="modal-close-btn" class="close-btn" on:click={closeModal}>&times;</span>
+        {#if isIgnorable}<span id="modal-close-btn" class="close-btn" on:click={closeModal}>&times;</span>{/if}
         <slot/>
     </div>
 </div>
