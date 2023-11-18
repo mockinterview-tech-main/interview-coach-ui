@@ -14,7 +14,6 @@
     import { interviewAnswerStore, currentFollowupStore } from '$lib/stores/answerStore';
 	import { conversationStore } from '$lib/stores/conversationStore';
 
-
 	import RecordAnswerButton from '$lib/components/recordAnswerButton.svelte';
 	import Modal from '$lib/components/modal.svelte';
 	import Transcript from '$lib/components/transcript.svelte';
@@ -83,7 +82,8 @@
                     method: 'POST',
                     credentials: 'include',
                     body: JSON.stringify({
-                        count: 1,
+                        questionCount: 1,
+                        followupCount: 1,
                         context: $conversationStore.map(part => `${part.participant}: ${part.text}`).join("\n"),
                     })
                 });
