@@ -3,6 +3,8 @@
 	import { goto } from '$app/navigation';
 
     import UserHeadsetDuo from "$lib/assets/icons/user-headset-duo.svg"
+    import Loading from "$lib/assets/icons/loading.svg";
+
     import Lucy from "$lib/assets/profile-pics/lucy.png"
     import Dale from "$lib/assets/profile-pics/dale.png"
     import Kelly from "$lib/assets/profile-pics/kelly.png"
@@ -17,6 +19,7 @@
 	import RecordAnswerButton from '$lib/components/recordAnswerButton.svelte';
 	import Modal from '$lib/components/modal.svelte';
 	import Transcript from '$lib/components/transcript.svelte';
+	import { getSummary, postConversation } from '$lib/serviceApi.js';
 
     const EXCHANGE_END_CODE = import.meta.env.VITE_EXCHANGE_END_CODE;
 
@@ -40,11 +43,13 @@
     let endInterview = false;
     let confirmDialogOpen = true;
     let interviewConfirmed = false;
+    let summaryId = "";
     
     $: jobInfo
     $: endInterview
     $: loading
     $: interviewConfirmed
+    $: summaryId
 
     const reset = () => {
         $interviewQuestion = {uuid: "", question_text: ""};
@@ -91,22 +96,31 @@
                 if (response.ok) {
                     let { text } = await response.json();
 
-                    loading = false;
-
                     if (text.endsWith(EXCHANGE_END_CODE)) {
                         text = text.slice(0, (-1 * EXCHANGE_END_CODE.length));
-                        console.log("interview over - kick off sending the conversation to the conversation service and start the evaluation")
+                        endInterview = true;
+                        // sometimes the model tries to match the format of the conversation and fill in its name like "Mike: Great answer"
+                        // we assume the model doesn't use semicolons in any other way so we lob off the text prior to a semicolon which 
+                        // is typically the interviewer name if thats how the model responds. mid answer semicolons are simply
+                        // replaced with "." which doesn't significantly change the meaning... hence the gymnastics
+                        $conversationStore = [... $conversationStore, {
+                            participant: interviewer.name.split(" ")[0],
+                            text: text.split(": ").filter((part: string) => part != interviewer.name.split(" ")[0]).join(". ")
+                        }];
+                        const rawConversationText = $conversationStore.reduce((a, c) => a + `${c.participant}: ${c.text}\n`, '');
+                        const completedConversation = await postConversation({text: rawConversationText});
+                        if (completedConversation) {
+                            const completeSummary = await getSummary(completedConversation?.summary_id);
+                            loading = false;
+                            summaryId = completeSummary?.id || "";
+                        }
                     }
-                    
-                    // sometimes the model tries to match the format of the conversation and fill in its name like "Mike: Great answer"
-                    // we assume the model doesn't use semicolons in any other way so we lob off the text prior to a semicolon which 
-                    // is typically the interviewer name if thats how the model responds. mid answer semicolons are simply
-                    // replaced with "." which doesn't significantly change the meaning... hence the gymnastics
-                    $conversationStore = [... $conversationStore, {
-                        participant: interviewer.name.split(" ")[0],
-                        text: text.split(": ").filter((part: string) => part != interviewer.name.split(" ")[0]).join(". ")
-                    }];
-
+                    else {
+                        $conversationStore = [... $conversationStore, {
+                            participant: interviewer.name.split(" ")[0],
+                            text: text.split(": ").filter((part: string) => part != interviewer.name.split(" ")[0]).join(". ")
+                        }];
+                    }
                 } else {
                     console.error('Error uploading interview answer');
                     return null;
@@ -142,7 +156,10 @@
             <p><b>Uh oh, looks like you're out of credits. Please buy more before continuing.</b></p>
             <button class="tirtiary-button" on:click={buyCredits}>Buy Credits</button>
         {:else}
-            <Transcript loading={loading} endInterview={endInterview}/>
+            <Transcript loading={loading}/>
+            {#if endInterview}
+                <button on:click={() => goto(`/summary/${summaryId}`)} class="button">Continue</button>
+            {/if}
         {/if}
     </div>
 </div>

@@ -2,11 +2,10 @@
     import { conversationStore } from "$lib/stores/conversationStore";
     import { recordingState } from "$lib/stores/recordingState";
 
-    import Loading from "$lib/assets/icons/loading.svg";
     import { afterUpdate, beforeUpdate } from "svelte";
+	import HorizontalLoader from "./horizontalLoader.svelte";
 
     export let loading: boolean;
-    export let endInterview: boolean;
 
     const conversationSectionElement = document.querySelector('conversationSection');    
     if(conversationSectionElement){
@@ -35,12 +34,10 @@
     {#each $conversationStore as part}
         <p><strong class="strong">{part.participant}</strong>: {@html part.text}</p>
     {/each}
-    {#if loading || $recordingState === 'transcribing' && !endInterview}
-        <img class="loading" alt="loading" src={Loading}/>
-        <p class="loading">{$recordingState === 'transcribing' ? 'transcribing speech...' : 'taking some notes...'}</p>
-    {/if}
-    {#if endInterview}
-        <p>Thank you for your time. Please wait and we'll get you your feedback in a bit 🎉</p>
+    {#if loading || $recordingState === 'transcribing'}
+        <HorizontalLoader size="m" position="c">
+            {$recordingState === 'transcribing' ? 'transcribing speech...' : 'taking some notes...'}
+        </HorizontalLoader>
     {/if}
 </div>
 
@@ -51,11 +48,5 @@
         scroll-behavior: smooth;
         p { line-height: 25px; }
     }
-    .loading {
-        margin: auto;
-        display: block;
-        text-align: center;
-    }
-
     strong { font-weight: 700; }
 </style>

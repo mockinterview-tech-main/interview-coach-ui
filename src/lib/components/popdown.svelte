@@ -16,8 +16,10 @@
 
 <style lang="scss">
     @import "../styles/colors.scss";
+    div {
+        margin: 20px 0px;
+    }
     .popdown-header {
-        width: 100%;
         cursor: pointer;
         padding: 1px 20px;
         border-bottom: 1px solid $dark-purple;
@@ -36,6 +38,7 @@
     }
 
     .active {
-        max-height: 300px; /* or any other max-height that works for your content */
+        max-height: 500px; /* or any other max-height that works for your content */
+        overflow: scroll;
     }
 </style>
