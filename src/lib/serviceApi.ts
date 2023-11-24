@@ -38,7 +38,7 @@ export const postConversation = async (conversation: ConversationRequest): Promi
         });
         if (response.ok) {
             const d = await response.json();
-            return {...d.conversation, ...d.summary_id}
+            return {...d.conversation, summary_id: d.summary_id} as CompletedConversation
         } else {
             console.error('API returned an error: ', response);
             return null;

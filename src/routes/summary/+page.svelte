@@ -6,10 +6,19 @@
 
     export let data;
     let summaries: InterviewSummary[];
-    let unfinishedSummaries: InterviewSummary[] = [];
+    let unfinishedSummaryIds: string[] = [];
     
-    const finishUnfinishedSummaries = async (unfinishedSummaries: InterviewSummary[]) => {
-        const finishedSummaries = await Promise.all(unfinishedSummaries.map(s => getSummary(s.id)));
+    const finishUnfinishedSummaries = async (unfinishedSummaryIds: string[]) => {
+        const finishedSummaries = await Promise.all(unfinishedSummaryIds.map(async s => {
+            if (s) {
+                let x = await getSummary(s);
+                if (x?.summary_text){
+                    let parts = JSON.parse(x?.summary_text);
+                    return {...x, ...parts} as InterviewSummary;
+                }
+                return x
+            }
+        }));
         summaries = [...summaries.filter(s => s.summary_text), ...finishedSummaries.filter((s): s is InterviewSummary => s !== null)];
     }
 
@@ -20,7 +29,7 @@
                     let parts = JSON.parse(summary?.summary_text);
                     return {...summary, ...parts} as InterviewSummary;
                 } else {
-                    unfinishedSummaries = [...unfinishedSummaries, summary]
+                    unfinishedSummaryIds = [...unfinishedSummaryIds, summary.id]
                     return {...summary} as InterviewSummary;
                 }
             } catch (e) {
@@ -29,7 +38,7 @@
             }
         });
     }
-    finishUnfinishedSummaries(unfinishedSummaries);
+    finishUnfinishedSummaries(unfinishedSummaryIds);
     $: summaries
 
 </script>
@@ -52,11 +61,12 @@
         {/if}
         {/each}
     {:else}
-    <p>Past interview evaluations will show up here as you practice. Start a <a href="/interview">new practice session.</a></p>
+    <p class="no-sessions">Past interview evaluations will show up here as you practice. <a href="/interview">Start a new practice session.</a></p>
     {/if}
 </div>
 
 <style lang="scss">
+    @import '../../lib/styles/colors.scss';
     div {
         padding: 40px 20px;
         h1 { margin: 40px 20px; }
@@ -67,6 +77,15 @@
         padding: 5px 20px;
         p {
             padding: 5px 20px;
+        }
+    }
+    .no-sessions {
+        margin-left: 20px;
+        a {
+            display: inline;
+            padding: 0;
+            font-weight: 700;
+            text-decoration: underline;
         }
     }
 </style>

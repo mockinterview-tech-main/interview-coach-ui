@@ -25,7 +25,7 @@
 
 
     export let data;
-    const {credits, username} = data;
+    let {credits, username} = data;
 
     const interviewers = [
         { name: "Lucy Interviewer", pfp: Lucy },
@@ -50,6 +50,7 @@
     $: loading
     $: interviewConfirmed
     $: summaryId
+    $: credits
 
     const reset = () => {
         $interviewQuestion = {uuid: "", question_text: ""};
@@ -67,6 +68,10 @@
         reset();
         confirmDialogOpen = false;
         interviewConfirmed = true;
+        fetch('/interview', {
+            method: 'POST',
+            credentials: 'include'
+        })
         $conversationStore = [{
             participant: interviewer.name.split(" ")[0], 
             text: `Hi ${username} I'm ${interviewer.name.split(" ")[0]} and I'll be conducting your mock interview today! Please tell me what role and company you'd like to practice for.`
@@ -95,7 +100,7 @@
 
                 if (response.ok) {
                     let { text } = await response.json();
-
+                    console.log(text)
                     if (text.endsWith(EXCHANGE_END_CODE)) {
                         text = text.slice(0, (-1 * EXCHANGE_END_CODE.length));
                         endInterview = true;
@@ -136,11 +141,16 @@
 
 <div>
     <Modal bind:isOpen={confirmDialogOpen} isIgnorable={false}>
-        <h2 style="text-align: center;">Are you ready?</h2>
-        <p>Once you begin the interview session one token will be deducted.</p>
-        <p>Leaving the page or refreshing will lose the session</p>
-        <button on:click={confirmInterview} class="modal-button">Continue</button>
-        <button on:click={() => history.back() } class="modal-button tirtiary-button">Not Now</button>
+        {#if credits === 0}
+            <p><b>Uh oh, looks like you're out of credits. Please buy more before continuing.</b></p>
+            <button class="primary-button" on:click={buyCredits}>Buy Credits</button>
+        {:else}
+            <h2 style="text-align: center;">Are you ready?</h2>
+            <p>Once you begin the interview session one token will be deducted.</p>
+            <p>Leaving the page or refreshing will lose the session</p>
+            <button on:click={confirmInterview} class="modal-button">Continue</button>
+            <button on:click={() => history.back() } class="modal-button tirtiary-button">Not Now</button>
+        {/if}
     </Modal>
     <div class="call">
         <h3>{interviewer.name.split(" ")[0]}</h3>
@@ -152,18 +162,12 @@
         {#if interviewConfirmed}<RecordAnswerButton loading={loading}/>{/if}
     </div>
     <div class="transcript">
-        {#if credits === 0}
-            <p><b>Uh oh, looks like you're out of credits. Please buy more before continuing.</b></p>
-            <button class="tirtiary-button" on:click={buyCredits}>Buy Credits</button>
-        {:else}
-            <Transcript loading={loading}/>
-            {#if endInterview}
-                <button on:click={() => goto(`/summary/${summaryId}`)} class="button">Continue</button>
-            {/if}
+        <Transcript loading={loading}/>
+        {#if endInterview && !loading}
+            <button on:click={() => goto(`/summary/${summaryId}`)} class="button">Continue</button>
         {/if}
     </div>
 </div>
-
 <style lang="scss">
     @import "../../lib/styles/colors.scss";
 
