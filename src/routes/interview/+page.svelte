@@ -163,7 +163,7 @@
     <div class="transcript">
         <Transcript loading={loading}/>
         {#if endInterview && !loading}
-            <button on:click={() => goto(`/summary/${summaryId}`)} class="button">Continue{summaryId}</button>
+            <button on:click={() => goto(`/summary/${summaryId}`)} class="button">View Scorecard</button>
         {/if}
     </div>
 </div>
