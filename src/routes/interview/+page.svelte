@@ -100,7 +100,6 @@
 
                 if (response.ok) {
                     let { text } = await response.json();
-                    console.log(text)
                     if (text.endsWith(EXCHANGE_END_CODE)) {
                         text = text.slice(0, (-1 * EXCHANGE_END_CODE.length));
                         endInterview = true;
