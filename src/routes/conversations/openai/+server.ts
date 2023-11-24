@@ -26,7 +26,7 @@ export const POST = async ({request}) => {
         You should ask ${questionCount || 1} common behavioral questions which constitutes the interview for this role.
         For each question, ask no more than ${followupCount || 3} follow up questions. Ask follow up questions one at a time. The exchange should be question & answer.
         Do not prepend your answer with your name or any variation, there is already a system in place for keeping track of who said what.
-        When you have asked all questions and have no more follow up questions and the conversation is over, thank the candidate and end your last sentence with "${VITE_EXCHANGE_END_CODE}".
+        When you have asked all questions and have no more follow up questions, thank the candidate and end your last sentence with "${VITE_EXCHANGE_END_CODE}".
         The next system message is the conversation up until the next answer from the user for historical context.
         `
     }
