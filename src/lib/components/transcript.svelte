@@ -35,7 +35,7 @@
         <p><strong class="strong">{part.participant}</strong>: {@html part.text}</p>
     {/each}
     {#if loading || $recordingState === 'transcribing'}
-        <HorizontalLoader size="m" position="c">
+        <HorizontalLoader size="s" position="c">
             {$recordingState === 'transcribing' ? 'transcribing speech...' : 'taking some notes...'}
         </HorizontalLoader>
     {/if}

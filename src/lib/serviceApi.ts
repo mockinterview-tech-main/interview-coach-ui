@@ -5,26 +5,6 @@ import type { InterviewSummary } from "./stores/summaryStore";
 
 const resumeUrl = import.meta.env["VITE_RESUME_URL"];
 
-export const buildSummary = async (answerId: string): Promise<InterviewSummary | null> => {
-    try {
-        const response = await fetch(`${resumeUrl}/summary`, {
-            method: 'POST',
-            credentials: 'include',
-            body: JSON.stringify({answer_id: answerId})
-        });
-        if (response.ok) {
-            const d = await response.json();
-            return d.feedback as InterviewSummary
-        } else {
-            console.error('API returned an error: ', response);
-            return null;
-        }
-    } catch (error) {
-        console.error('An error occurred:', error);
-        return null;
-    }
-};
-
 type ConversationRequest = {
     text: string;
 }
@@ -76,7 +56,7 @@ export const getSummary = async (summaryId: string): Promise<InterviewSummary | 
         });
         if (response.ok) {
             const d = await response.json();
-            return d.feedback as InterviewSummary
+            return d.summary as InterviewSummary
         } else {
             console.error('API returned an error: ', response);
             return null;

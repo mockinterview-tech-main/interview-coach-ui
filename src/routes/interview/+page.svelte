@@ -158,12 +158,12 @@
             <img src={interviewer.pfp || UserHeadsetDuo}/>
         </div>
         <br/>
-        {#if interviewConfirmed}<RecordAnswerButton loading={loading}/>{/if}
+        {#if interviewConfirmed && !endInterview}<RecordAnswerButton loading={loading}/>{/if}
     </div>
     <div class="transcript">
         <Transcript loading={loading}/>
         {#if endInterview && !loading}
-            <button on:click={() => goto(`/summary/${summaryId}`)} class="button">Continue</button>
+            <button on:click={() => goto(`/summary/${summaryId}`)} class="button">Continue{summaryId}</button>
         {/if}
     </div>
 </div>
