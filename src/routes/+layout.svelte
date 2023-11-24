@@ -1,5 +1,5 @@
 <script lang="ts">
-    import LogoFilled from "$lib/assets/logo-filled.svg";
+    import LogoFilled from "$lib/assets/icons/logo-filled.svg";
     export let data;
     const {loggedIn, credits, username} = data;
 
@@ -8,7 +8,7 @@
 
 <main>
     <nav>
-        <span><a href="/"><img src={LogoFilled}/></a></span>
+        <span><a href="/"><img alt="mockinterview.tech logo" src={LogoFilled}/></a></span>
         {#if loggedIn}
             <span><a href="/interview">New Interview</a></span>
             <span><a data-sveltekit-preload-data="hover" href="/summary">Past Interviews</a></span>

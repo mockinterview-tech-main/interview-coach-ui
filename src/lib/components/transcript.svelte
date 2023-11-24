@@ -1,9 +1,11 @@
 <script lang="ts">
-    import { conversationStore } from "$lib/stores/chatStore";
-	import { afterUpdate, beforeUpdate } from "svelte";
+    import { conversationStore } from "$lib/stores/conversationStore";
+    import { recordingState } from "$lib/stores/recordingState";
+
+    import { afterUpdate, beforeUpdate } from "svelte";
+	import HorizontalLoader from "./horizontalLoader.svelte";
 
     export let loading: boolean;
-    export let endInterview: boolean;
 
     const conversationSectionElement = document.querySelector('conversationSection');    
     if(conversationSectionElement){
@@ -30,13 +32,12 @@
 
 <div id="conversationSection" bind:this={conversationSection}>
     {#each $conversationStore as part}
-        <p>{@html part}</p>
+        <p><strong class="strong">{part.participant}</strong>: {@html part.text}</p>
     {/each}
-    {#if loading && !endInterview}
-        <p>Lucy: Hang on, I'm taking some notes 📝...</p>
-    {/if}
-    {#if endInterview}
-        <p>Lucy: Thank you for your time. Please wait and we'll get you your feedback in a bit 🎉</p>
+    {#if loading || $recordingState === 'transcribing'}
+        <HorizontalLoader size="m" position="c">
+            {$recordingState === 'transcribing' ? 'transcribing speech...' : 'taking some notes...'}
+        </HorizontalLoader>
     {/if}
 </div>
 
@@ -45,8 +46,7 @@
         flex-direction: column;
         overflow: scroll;
         scroll-behavior: smooth;
-        p {
-            line-height: 25px;
-        }
+        p { line-height: 25px; }
     }
+    strong { font-weight: 700; }
 </style>

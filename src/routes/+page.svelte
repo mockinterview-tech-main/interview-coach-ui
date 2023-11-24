@@ -1,12 +1,12 @@
 <script lang="ts">
-    import microsoftLogo from '$lib/assets/microsoftLogo.svg'
-    import amazonLogo from '$lib/assets/amazonLogo.svg'
-    import metaLogo from '$lib/assets/metaLogo.svg'
-    import clockOutline from '$lib/assets/clock-outline.svg';
-    import bookFilled from '$lib/assets/book-filled.svg';
-    import personFilled from '$lib/assets/person-filled.svg';
-    import separator from '$lib/assets/separator.svg';
-    import rightArrow from '$lib/assets/right-arrow.svg';
+    import microsoftLogo from '$lib/assets/logos/microsoftLogo.svg'
+    import amazonLogo from '$lib/assets/logos/amazonLogo.svg'
+    import metaLogo from '$lib/assets/logos/metaLogo.svg'
+    import clockOutline from '$lib/assets/icons/clock-outline.svg';
+    import bookFilled from '$lib/assets/icons/book-filled.svg';
+    import personFilled from '$lib/assets/icons/person-filled.svg';
+    import separator from '$lib/assets/icons/separator.svg';
+    import rightArrow from '$lib/assets/icons/right-arrow.svg';
 	import Popdown from '$lib/components/popdown.svelte';
 
     export let data;

@@ -1,22 +1,15 @@
 export const prerender = false;
 export const ssr = false;
 
-import { getSummary, getAnswer } from '$lib/serviceApi';
+import { getConversation, getSummary } from '$lib/serviceApi';
 
 export const load = async ({params}) => {
     let summary = await getSummary(params.slug);
-    let answer = null;
-    let question = null;
-
-    if(summary?.answer_id){
-        let response = await getAnswer(summary.answer_id);
-        if (response) {
-            answer = response.answer
-            question = response.question
-        }
-    }
+    let conversation = "";
 
     if(summary?.summary_text){
+        let conversationData = await getConversation(summary?.conversation_id);
+        conversation = conversationData?.conversation.text || "Converation not found";
         try {
             let parts = JSON.parse(summary?.summary_text);
             summary = {...summary, ...parts};
@@ -27,6 +20,6 @@ export const load = async ({params}) => {
 
     return {
         summary: summary,
-        answer, question
+        conversation
     }
 }

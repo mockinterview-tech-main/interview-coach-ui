@@ -7,6 +7,8 @@ services:
     # image: 471916540569.dkr.ecr.us-west-2.amazonaws.com/pocketbase
     volumes:
       - ./pocketbase-volume:/pb/pb_data
+    environment:
+      - PORT=5555
     ports:
       - "5555:5555"
     restart: unless-stopped

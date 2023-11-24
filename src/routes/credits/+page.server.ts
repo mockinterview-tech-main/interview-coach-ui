@@ -1,14 +1,16 @@
 import jwt from 'jsonwebtoken';
-
+import Stripe from 'stripe';
 import { redirect } from "@sveltejs/kit";
-import { stripe } from '$lib/stripe';
+
 import type { PageServerLoad } from "./$types";
+
 import { 
     VITE_STRIPE_ID_BEST_PRODUCT, 
     VITE_STRIPE_ID_BETTER_PRODUCT, 
     VITE_STRIPE_ID_GOOD_PRODUCT, 
     VITE_NONCE_SIGNING_SECRET 
 } from "$env/static/private";
+
 import { decodeJwt } from '$lib/jwt';
 
 export type Choice = {
@@ -18,6 +20,10 @@ export type Choice = {
     stripeID: string;
     credits: number;
 }
+
+const stripe = new Stripe(import.meta.env['VITE_STRIPE_SECRET_KEY'], {
+  apiVersion: '2023-08-16',
+});
 
 const offerings: Array<Choice> = [
     {sku: "good", price: 5, label: "1 Interview Question", credits: 1, stripeID: VITE_STRIPE_ID_GOOD_PRODUCT},
@@ -60,7 +66,6 @@ export const actions = {
             const session = await stripe.checkout.sessions.create({
                 line_items: [
                     {
-                        // Provide the exact price ID (for example, pr_1234) of the product you want to sell
                         price: chosen.stripeID,
                         quantity: 1,
                     },
@@ -72,7 +77,5 @@ export const actions = {
             });
             throw redirect(303, session.url || 'http://localhost:5173/interview');
         }
-        
-        // todo - validate the slug. if it exists & is valid, bump the credits by however many they purchase
     },
 }
