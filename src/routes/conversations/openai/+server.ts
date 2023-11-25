@@ -36,6 +36,8 @@ export const POST = async ({request}) => {
         ],
     });
 
+    console.log(resp)
+
     return json({text: resp.choices[0]?.message.content})
 }
 
