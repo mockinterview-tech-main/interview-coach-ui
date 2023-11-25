@@ -36,7 +36,7 @@ export const POST = async ({request}) => {
         ],
     });
 
-    console.log(resp)
+    console.log(resp.choices[0].message, VITE_EXCHANGE_END_CODE)
 
     return json({text: resp.choices[0]?.message.content})
 }
