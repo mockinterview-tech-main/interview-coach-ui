@@ -31,7 +31,7 @@
 </script>
 
 <div id="conversationSection" bind:this={conversationSection}>
-    {#each $conversationStore as part}
+    {#each $conversationStore.parts as part}
         <p><strong class="strong">{part.participant}</strong>: {@html part.text}</p>
     {/each}
     {#if loading || $recordingState === 'transcribing'}
