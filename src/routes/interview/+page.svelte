@@ -184,7 +184,7 @@
             .control-panel {
                 display: flex;
                 flex-direction: row;
-                margin: 0px 400px;
+                margin: 0px 40vw;
             }
             h3 {
                 margin: auto;
