@@ -9,7 +9,7 @@ export const load = async ({params}) => {
 
     if(summary?.summary_text){
         let conversationData = await getConversation(summary?.conversation_id);
-        conversation = conversationData?.conversation.text || "Converation not found";
+        conversation = conversationData?.text || "Converation not found";
         try {
             let parts = JSON.parse(summary?.summary_text);
             summary = {...summary, ...parts};

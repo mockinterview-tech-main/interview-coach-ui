@@ -19,7 +19,8 @@
 	import RecordAnswerButton from '$lib/components/recordAnswerButton.svelte';
 	import Modal from '$lib/components/modal.svelte';
 	import Transcript from '$lib/components/transcript.svelte';
-	import { getSummary, postConversation } from '$lib/serviceApi.js';
+	import { getSummary, postConversation, postSummary, putConversation } from '$lib/serviceApi.js';
+	import EndInterviewButton from '$lib/components/endInterviewButton.svelte';
 
     const EXCHANGE_END_CODE = import.meta.env.VITE_EXCHANGE_END_CODE;
 
@@ -40,13 +41,11 @@
     // Initial Values
     let jobInfo = { company: "", job: "" };
     let loading = false;
-    let endInterview = false;
     let confirmDialogOpen = true;
     let interviewConfirmed = false;
     let summaryId = "";
     
     $: jobInfo
-    $: endInterview
     $: loading
     $: interviewConfirmed
     $: summaryId
@@ -57,7 +56,7 @@
         $interviewAnswerStore = null;
         $currentFollowupStore = null;
         $outputText = "";
-        $conversationStore = [];
+        $conversationStore = {id: null, finished: false, parts: []};
     }
 
     onDestroy(reset);
@@ -70,9 +69,10 @@
         interviewConfirmed = true;
         fetch('/interview', {
             method: 'POST',
-            credentials: 'include'
-        })
-        $conversationStore = [{
+            credentials: 'include',
+            body: JSON.stringify({action: "deduct"})
+        }); // deducts a token and starts the interview
+        $conversationStore.parts = [{
             participant: interviewer.name.split(" ")[0], 
             text: `Hi ${username} I'm ${interviewer.name.split(" ")[0]} and I'll be conducting your mock interview today! Please tell me what role and company you'd like to practice for.`
         }];
@@ -82,58 +82,55 @@
         try {
             if ($outputText !== '') {
                 loading = true;
+                let response: Response;
 
-                $conversationStore = [...$conversationStore, {
+                const newPart = {
                     participant: username || "You",
                     text: $outputText
-                }];
-                
-                const response = await fetch(`/conversations/openai`, {
-                    method: 'POST',
-                    credentials: 'include',
-                    body: JSON.stringify({
-                        questionCount: 1,
-                        followupCount: 1,
-                        context: $conversationStore.map(part => `${part.participant}: ${part.text}`).join("\n"),
-                    })
-                });
+                }
 
-                if (response.ok) {
-                    let { text } = await response.json();
-                    if (text.endsWith(EXCHANGE_END_CODE)) {
-                        text = text.slice(0, (-1 * EXCHANGE_END_CODE.length));
-                        endInterview = true;
-                        // sometimes the model tries to match the format of the conversation and fill in its name like "Mike: Great answer"
-                        // we assume the model doesn't use semicolons in any other way so we lob off the text prior to a semicolon which 
-                        // is typically the interviewer name if thats how the model responds. mid answer semicolons are simply
-                        // replaced with "." which doesn't significantly change the meaning... hence the gymnastics
-                        $conversationStore = [... $conversationStore, {
-                            participant: interviewer.name.split(" ")[0],
-                            text: text.split(": ").filter((part: string) => part != interviewer.name.split(" ")[0]).join(". ")
-                        }];
-                        const rawConversationText = $conversationStore.reduce((a, c) => a + `${c.participant}: ${c.text}\n`, '');
-                        const completedConversation = await postConversation({text: rawConversationText});
-                        if (completedConversation) {
-                            const completeSummary = await getSummary(completedConversation?.summary_id);
-                            loading = false;
-                            summaryId = completeSummary?.id || "";
+                $conversationStore.parts = [...$conversationStore.parts, newPart];
+
+                if (!$conversationStore.id){
+                    const conversationResponse = await postConversation({text: `${newPart.participant}: ${newPart.text}`});
+                    if (conversationResponse) {
+                        $conversationStore = {
+                            id: conversationResponse.id,
+                            finished: false,
+                            parts: [
+                                ...$conversationStore.parts, 
+                                {
+                                    participant: interviewer.name.split(" ")[0], 
+                                    text: conversationResponse.added_part.split(": ").filter((part: string) => part != "Interviewer" || part != interviewer.name.split(" ")[0]).join(". ")
+                                }
+                            ]
                         }
                     }
-                    else {
-                        $conversationStore = [... $conversationStore, {
-                            participant: interviewer.name.split(" ")[0],
-                            text: text.split(": ").filter((part: string) => part != interviewer.name.split(" ")[0]).join(". ")
-                        }];
-                    }
                 } else {
-                    console.error('Error uploading interview answer');
-                    return null;
-                }
+                    const conversationResponse = await putConversation({id: $conversationStore.id, text: `${newPart.participant}: ${newPart.text}`})
+                    if (conversationResponse) {
+                        $conversationStore = {
+                            id: conversationResponse.id,
+                            finished: false,
+                            parts: [
+                                ...$conversationStore.parts, 
+                                {
+                                    participant: interviewer.name.split(" ")[0], 
+                                    text: conversationResponse.added_part.split(": ").filter((part: string) => part != "Interviewer" || part != interviewer.name.split(" ")[0]).join(". ")
+                                }
+                            ]
+                        }
+                        if (conversationResponse.finished) {
+                            $conversationStore.finished = true;
+                            const summary = await postSummary({conversation_id: $conversationStore.id || ""})
+                            summaryId = summary?.id || "";
+                        }
+                    }
+                } 
+                loading = false;
             }
         } catch (error) {
             console.error('An error occurred:', error);
-        } finally {
-            loading = false;
         }
     });
 </script>
@@ -158,11 +155,16 @@
             <img src={interviewer.pfp || UserHeadsetDuo}/>
         </div>
         <br/>
-        {#if interviewConfirmed && !endInterview}<RecordAnswerButton loading={loading}/>{/if}
+        <div class="control-panel">
+        {#if interviewConfirmed && summaryId == ""}
+            <RecordAnswerButton loading={loading}/>
+            <EndInterviewButton loading={loading} conversation_id={$conversationStore.id || ""}/>
+        {/if}
+        </div>
     </div>
     <div class="transcript">
         <Transcript loading={loading}/>
-        {#if endInterview && !loading}
+        {#if summaryId != "" && !loading}
             <button on:click={() => goto(`/summary/${summaryId}`)} class="button">View Scorecard</button>
         {/if}
     </div>
@@ -179,6 +181,11 @@
             padding: 20px 0px;
             position: sticky;
             top: 0;
+            .control-panel {
+                display: flex;
+                flex-direction: row;
+                margin: 0px 400px;
+            }
             h3 {
                 margin: auto;
                 padding-top: 20px;

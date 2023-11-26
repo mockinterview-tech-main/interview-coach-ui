@@ -11,7 +11,7 @@
         <span><a href="/"><img alt="mockinterview.tech logo" src={LogoFilled}/></a></span>
         {#if loggedIn}
             <span><a href="/interview">New Interview</a></span>
-            <span><a data-sveltekit-preload-data="hover" href="/summary">Past Interviews</a></span>
+            <span><a href="/summary">Past Interviews</a></span>
             <div><span>{username}</span><span>{credits} Interviews</span><span><a class="link-cta" href="/credits">Buy More</a></span></div>
         {:else}
             <span><a href="/login">Get Started</a></span>

@@ -1,24 +1,27 @@
-import type { Followup, InterviewAnswer } from "./stores/answerStore";
 import type { CompletedConversation } from "./stores/conversationStore";
-import type { InterviewQuestion } from "./stores/interviewQuestion";
 import type { InterviewSummary } from "./stores/summaryStore";
 
 const resumeUrl = import.meta.env["VITE_RESUME_URL"];
 
 type ConversationRequest = {
     text: string;
+    id?: string | null;
 }
 
-export const postConversation = async (conversation: ConversationRequest): Promise<{id: string, user_id: string, text: string, summary_id: string} | null> => {
+type SummaryizeRequest = {
+    conversation_id: string;
+}
+
+export const postConversation = async (conversation: ConversationRequest): Promise<{id: string, user_id: string, text: string, finished: boolean, added_part: string} | null> => {
     try {
         const response = await fetch(`${resumeUrl}/conversation`, {
             method: 'POST',
             credentials: 'include',
-            body: JSON.stringify({text: conversation.text})
+            body: JSON.stringify({...conversation})
         });
         if (response.ok) {
             const d = await response.json();
-            return {...d.conversation, summary_id: d.summary_id} as CompletedConversation
+            return {...d.conversation, added_part: d.added_part}
         } else {
             console.error('API returned an error: ', response);
             return null;
@@ -29,7 +32,27 @@ export const postConversation = async (conversation: ConversationRequest): Promi
     }
 }
 
-export const getConversation = async (conversationId: string): Promise<{conversation: CompletedConversation} | null> => {
+export const putConversation = async (conversation: ConversationRequest): Promise<{id: string, user_id: string, text: string, finished: boolean, added_part: string} | null> => {
+    try {
+        const response = await fetch(`${resumeUrl}/conversation`, {
+            method: 'PUT',
+            credentials: 'include',
+            body: JSON.stringify({...conversation})
+        });
+        if (response.ok) {
+            const d = await response.json();
+            return {...d.conversation, added_part: d.added_part}
+        } else {
+            console.error('API returned an error: ', response);
+            return null;
+        }
+    } catch (error) {
+        console.error('An error occurred:', error);
+        return null;
+    }
+}
+
+export const getConversation = async (conversationId: string): Promise<{id: string, user_id: string, text: string, finished: boolean} | null> => {
     try {
         const response = await fetch(`${resumeUrl}/conversations/${conversationId}`, {
             method: 'GET',
@@ -37,7 +60,7 @@ export const getConversation = async (conversationId: string): Promise<{conversa
         });
         if (response.ok) {
             const d = await response.json();
-            return { conversation: d.conversation as CompletedConversation }
+            return { ...d.conversation}
         } else {
             console.error('API returned an error: ', response);
             return null;
@@ -81,7 +104,27 @@ export const getSummaries = async (): Promise<Array<InterviewSummary> | null> =>
             return null;
         }
     } catch (error) {
-        console.error('An error occurred:', error);
+        console.error('An error occurred: ', error);
         return null;
     }
 };
+
+export const postSummary = async (summarize_request: SummaryizeRequest): Promise<InterviewSummary | null> => {
+    try {
+        const response = await fetch (`${resumeUrl}/summary`, {
+            method: 'POST',
+            credentials: 'include',
+            body: JSON.stringify({...summarize_request})
+        });
+        if (response.ok) {
+            const d = await response.json();
+            return d.summary as InterviewSummary;
+        } else {
+            console.error('API returned an error: ', response);
+            return null;
+        }
+    } catch (error) {
+        console.error('An error occurred: ', error);
+        return null;
+    }
+}
