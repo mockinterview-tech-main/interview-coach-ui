@@ -14,6 +14,14 @@ export type InterviewSummary = {
     action: SectionGrade
     result: SectionGrade
     overall: SectionGrade
+    collaboration: SectionGrade
+    conflict: SectionGrade
+    influence: SectionGrade
+    change: SectionGrade
+    proactivity: SectionGrade
+    customer: SectionGrade
+    prioritization: SectionGrade
+    complexity: SectionGrade
 };
 
 type SectionGrade = {grade: string, summary: string}

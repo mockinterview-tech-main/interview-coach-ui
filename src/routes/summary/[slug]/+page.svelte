@@ -16,15 +16,7 @@
 <div>
     <h1><i>{$interviewSummaryStore.title || "Your Past Interview"} {new Date($interviewSummaryStore.created_at).toLocaleDateString()} {new Date($interviewSummaryStore.created_at).toLocaleTimeString()}</i></h1>
     <Popdown isActive={true}>
-        <h2 class="popdown-header" slot="popdown-header"><i>Questions Asked</i></h2>
-        <div slot="popdown-content">
-            {#each $interviewSummaryStore.questions as question}
-                <p>{question}</p>
-            {/each}
-        </div>
-    </Popdown>
-    <Popdown isActive={true}>
-        <h2 class="popdown-header" slot="popdown-header"><i>Your S.T.A.R. Report Card</i></h2>
+        <h2 class="popdown-header" slot="popdown-header"><i>S.T.A.R. Report Card</i></h2>
         <div slot="popdown-content">
             <h3>Overall: {$interviewSummaryStore.overall.grade}</h3>
             <p>{$interviewSummaryStore.overall.summary}</p>
@@ -40,6 +32,52 @@
 
             <h3>Result: {$interviewSummaryStore.result.grade}</h3>
             <p>{$interviewSummaryStore.result.summary}</p>
+        </div>
+    </Popdown>
+    {#if 
+        $interviewSummaryStore.collaboration && 
+        $interviewSummaryStore.conflict && 
+        $interviewSummaryStore.influence && 
+        $interviewSummaryStore.change && 
+        $interviewSummaryStore.proactivity && 
+        $interviewSummaryStore.customer && 
+        $interviewSummaryStore.prioritization && 
+        $interviewSummaryStore.complexity}
+    <Popdown isActive={true}>
+        <h2 class="popdown-header" slot="popdown-header"><i>Signals</i></h2>
+        <div slot="popdown-content">
+            <h3>Collaboration: {$interviewSummaryStore.collaboration.grade}</h3>
+            <p>{$interviewSummaryStore.collaboration.summary}</p>
+
+            <h3>Conflict Management: {$interviewSummaryStore.conflict.grade}</h3>
+            <p>{$interviewSummaryStore.conflict.summary}</p>
+
+            <h3>Influence & Leadership: {$interviewSummaryStore.influence.grade}</h3>
+            <p>{$interviewSummaryStore.influence.summary}</p>
+
+            <h3>Chagne Management: {$interviewSummaryStore.change.grade}</h3>
+            <p>{$interviewSummaryStore.change.summary}</p>
+
+            <h3>Proactivity: {$interviewSummaryStore.proactivity.grade}</h3>
+            <p>{$interviewSummaryStore.proactivity.summary}</p>
+
+            <h3>Customer Obsession: {$interviewSummaryStore.customer.grade}</h3>
+            <p>{$interviewSummaryStore.customer.summary}</p>
+
+            <h3>Prioritization: {$interviewSummaryStore.prioritization.grade}</h3>
+            <p>{$interviewSummaryStore.prioritization.summary}</p>
+
+            <h3>Managing Complexity: {$interviewSummaryStore.complexity.grade}</h3>
+            <p>{$interviewSummaryStore.complexity.summary}</p>
+        </div>
+    </Popdown>
+    {/if}
+    <Popdown>
+        <h2 class="popdown-header" slot="popdown-header"><i>Questions Asked</i></h2>
+        <div slot="popdown-content">
+            {#each $interviewSummaryStore.questions as question}
+                <p>{question}</p>
+            {/each}
         </div>
     </Popdown>
     <Popdown>
@@ -67,7 +105,10 @@
         .popdown-content {
             white-space: pre-wrap;
             text-align: left;
-            overflow: scroll;
+            overflow: visible;
+        }
+        .popdown-header {
+            margin: 20px;
         }
     }
 </style>

@@ -38,7 +38,7 @@
     }
 
     .active {
-        max-height: 500px; /* or any other max-height that works for your content */
+        max-height: 1000px; /* or any other max-height that works for your content */
         overflow: scroll;
     }
 </style>

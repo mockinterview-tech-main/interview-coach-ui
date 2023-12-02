@@ -19,7 +19,7 @@
 	import RecordAnswerButton from '$lib/components/recordAnswerButton.svelte';
 	import Modal from '$lib/components/modal.svelte';
 	import Transcript from '$lib/components/transcript.svelte';
-	import { getSummary, postConversation, postSummary, putConversation } from '$lib/serviceApi.js';
+	import { postConversation, postSummary, putConversation } from '$lib/serviceApi.js';
 	import EndInterviewButton from '$lib/components/endInterviewButton.svelte';
 
     const EXCHANGE_END_CODE = import.meta.env.VITE_EXCHANGE_END_CODE;
@@ -74,7 +74,7 @@
         }); // deducts a token and starts the interview
         $conversationStore.parts = [{
             participant: interviewer.name.split(" ")[0], 
-            text: `Hi ${username} I'm ${interviewer.name.split(" ")[0]} and I'll be conducting your mock interview today! Please tell me what role and company you'd like to practice for.`
+            text: `Hi ${username} I'm ${interviewer.name.split(" ")[0]} and I'll be conducting your interview today! Please tell me what role and company you'd like to practice for.`
         }];
     }
 
@@ -92,7 +92,7 @@
                 $conversationStore.parts = [...$conversationStore.parts, newPart];
 
                 if (!$conversationStore.id){
-                    const conversationResponse = await postConversation({text: `${newPart.participant}: ${newPart.text}`});
+                    const conversationResponse = await postConversation({text: `${newPart.text}`});
                     if (conversationResponse) {
                         $conversationStore = {
                             id: conversationResponse.id,
@@ -224,7 +224,7 @@
             }
         }
         .transcript {
-            padding: 0px 40px;
+            padding: 0px 15%;
             margin-bottom: 40px;
             overflow: auto;
         }
