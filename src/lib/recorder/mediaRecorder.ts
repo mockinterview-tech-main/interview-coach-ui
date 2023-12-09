@@ -17,6 +17,7 @@ export const stopRecording = async (): Promise<Blob> => {
 	return new Promise((resolve) => {
 		if (!mediaRecorder) throw new Error('MediaRecorder is not initialized.');
 		mediaRecorder.addEventListener('stop', () => {
+			mediaRecorder?.stream.getTracks().forEach((track) => track.stop());
 			const audioBlob = new Blob(recordedChunks, { type: 'audio/wav' });
 			recordedChunks = [];
 			resolve(audioBlob);
