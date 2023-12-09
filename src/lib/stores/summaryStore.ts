@@ -14,16 +14,10 @@ export type InterviewSummary = {
     action: SectionGrade
     result: SectionGrade
     overall: SectionGrade
-    collaboration: SectionGrade
-    conflict: SectionGrade
-    influence: SectionGrade
-    change: SectionGrade
-    proactivity: SectionGrade
-    customer: SectionGrade
-    prioritization: SectionGrade
-    complexity: SectionGrade
+    focus: SectionGrade & SkillAreaGrade
 };
 
 type SectionGrade = {grade: string, summary: string}
+type SkillAreaGrade = {area: string}
 
 export const interviewSummaryStore = writable<InterviewSummary>();
