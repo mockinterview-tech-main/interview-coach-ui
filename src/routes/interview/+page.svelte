@@ -80,7 +80,18 @@
 
     outputText.subscribe(async () => {
         try {
+            
             if ($outputText !== '') {
+                if ($outputText === 'long answer error') {
+                    const newPart = {
+                        participant: interviewer.name.split(" ")[0], 
+                        text: "Great answer, but a key component of interviewing well is telling impactful stories succinctly. Please try shortening your story."
+                    }
+
+                    $conversationStore.parts = [...$conversationStore.parts, newPart];
+                    return;
+                }
+                
                 loading = true;
                 let response: Response;
 
@@ -226,7 +237,6 @@
         .transcript {
             padding: 0px 15%;
             margin-bottom: 40px;
-            overflow: auto;
         }
         .modal-button { display: inline; }
         button {

@@ -18,6 +18,7 @@ export const toggleRecording = async () => {
             outputText.set(text);
 		} catch (error) {
 			console.error('Error occurred during transcription:', error);
+			outputText.set("long answer error");
 		} finally {
 			recordingState.set('idle');
 		}

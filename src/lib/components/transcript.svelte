@@ -7,7 +7,7 @@
 
     export let loading: boolean;
 
-    const conversationSectionElement = document.querySelector('conversationSection');    
+    const conversationSectionElement = document.querySelector('#conversationSection');    
     if(conversationSectionElement){
         const conversationSectionElementObserver = new MutationObserver(() => conversationSectionElement.scrollTop = conversationSectionElement?.scrollHeight)
         conversationSectionElementObserver.observe(conversationSectionElement, {childList: true})
@@ -44,7 +44,6 @@
 <style lang="scss">
     #conversationSection {
         flex-direction: column;
-        overflow: scroll;
         scroll-behavior: smooth;
         p { line-height: 25px; }
     }

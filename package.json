@@ -27,6 +27,7 @@
 	},
 	"type": "module",
 	"dependencies": {
+		"@breezystack/lamejs": "^1.2.7",
 		"@fontsource/inter": "^5.0.8",
 		"@stripe/stripe-js": "^2.1.6",
 		"@types/jsonwebtoken": "^9.0.3",
