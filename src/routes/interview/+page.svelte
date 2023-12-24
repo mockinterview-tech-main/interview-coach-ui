@@ -82,7 +82,9 @@
         try {
             
             if ($outputText !== '') {
-                if ($outputText === 'long answer error') {
+                debugger
+                if ($outputText.toLocaleLowerCase() === 'long answer error') {
+                    debugger
                     const newPart = {
                         participant: interviewer.name.split(" ")[0], 
                         text: "Great answer, but a key component of interviewing well is telling impactful stories succinctly. Please try shortening your story."
@@ -91,7 +93,7 @@
                     $conversationStore.parts = [...$conversationStore.parts, newPart];
                     return;
                 }
-                
+
                 loading = true;
                 let response: Response;
 
