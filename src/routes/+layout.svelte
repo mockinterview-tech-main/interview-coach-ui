@@ -20,6 +20,7 @@
     <slot/>
     <footer>
         <span>&copy; 2023 EmpowerPro Labs</span>
+        <span><a href="https://medium.com/@mockinterview-tech">Blog</a></span>
         <span><a href="/legal/tos">Terms of Service</a></span>
         <span><a href="/legal/privacy">Privacy Policy</a></span>
         <span><a href="/legal/cookie">Cookie Policy</a></span>
