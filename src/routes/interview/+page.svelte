@@ -21,9 +21,6 @@
 	import { postConversation, postSummary, putConversation } from '$lib/serviceApi.js';
 	import EndInterviewButton from '$lib/components/endInterviewButton.svelte';
 
-    const EXCHANGE_END_CODE = import.meta.env.VITE_EXCHANGE_END_CODE;
-
-
     export let data;
     let {credits, username} = data;
 
@@ -89,9 +86,6 @@
                     return;
                 }
 
-                loading = true;
-                let response: Response;
-
                 const newPart = {
                     participant: username || "You",
                     text: $outputText
@@ -99,28 +93,29 @@
 
                 $conversationStore.parts = [...$conversationStore.parts, newPart];
 
+                loading = true;
+
                 const conversationResponse = $conversationStore.id ? 
                     await putConversation({id: $conversationStore.id, text: `${newPart.participant}: ${newPart.text}`}) : 
                     await postConversation({text: `${newPart.text}`});
 
-                    if (conversationResponse) {
-                        $conversationStore = {
-                            id: conversationResponse.id,
-                            finished: false,
-                            parts: [
-                                ...$conversationStore.parts, 
-                                {
-                                    participant: interviewer.name.split(" ")[0], 
-                                    text: conversationResponse.added_part.split(": ").filter((part: string) => part != "Interviewer" || part != interviewer.name.split(" ")[0]).join(". ")
-                                }
-                            ]
-                        }
-                        if (conversationResponse.finished) {
-                            $conversationStore.finished = true;
-                            const summary = await postSummary({conversation_id: $conversationStore.id || ""})
-                            summaryId = summary?.id || "";
-                        }
+                if (conversationResponse) {
+                    $conversationStore = {
+                        id: conversationResponse.id,
+                        finished: conversationResponse.finished,
+                        parts: [
+                            ...$conversationStore.parts, 
+                            {
+                                participant: interviewer.name.split(" ")[0], 
+                                text: conversationResponse.added_part.split(": ").filter((part: string) => part != "Interviewer" || part != interviewer.name.split(" ")[0]).join(". ")
+                            }
+                        ]
                     }
+                    if (conversationResponse.finished) {
+                        const summary = await postSummary({conversation_id: $conversationStore.id || ""})
+                        summaryId = summary?.id || "";
+                    }
+                }
 
                 loading = false;
             }
@@ -164,6 +159,7 @@
         {/if}
     </div>
 </div>
+
 <style lang="scss">
     @import "../../lib/styles/colors.scss";
 
