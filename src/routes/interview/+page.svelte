@@ -3,7 +3,6 @@
 	import { goto } from '$app/navigation';
 
     import UserHeadsetDuo from "$lib/assets/icons/user-headset-duo.svg"
-    import Loading from "$lib/assets/icons/loading.svg";
 
     import Lucy from "$lib/assets/profile-pics/lucy.png"
     import Dale from "$lib/assets/profile-pics/dale.png"
@@ -80,16 +79,12 @@
 
     outputText.subscribe(async () => {
         try {
-            
             if ($outputText !== '') {
-                debugger
                 if ($outputText.toLocaleLowerCase() === 'long answer error') {
-                    debugger
                     const newPart = {
                         participant: interviewer.name.split(" ")[0], 
                         text: "Great answer, but a key component of interviewing well is telling impactful stories succinctly. Please try shortening your story."
                     }
-
                     $conversationStore.parts = [...$conversationStore.parts, newPart];
                     return;
                 }
