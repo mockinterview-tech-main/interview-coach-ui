@@ -99,23 +99,10 @@
 
                 $conversationStore.parts = [...$conversationStore.parts, newPart];
 
-                if (!$conversationStore.id){
-                    const conversationResponse = await postConversation({text: `${newPart.text}`});
-                    if (conversationResponse) {
-                        $conversationStore = {
-                            id: conversationResponse.id,
-                            finished: false,
-                            parts: [
-                                ...$conversationStore.parts, 
-                                {
-                                    participant: interviewer.name.split(" ")[0], 
-                                    text: conversationResponse.added_part.split(": ").filter((part: string) => part != "Interviewer" || part != interviewer.name.split(" ")[0]).join(". ")
-                                }
-                            ]
-                        }
-                    }
-                } else {
-                    const conversationResponse = await putConversation({id: $conversationStore.id, text: `${newPart.participant}: ${newPart.text}`})
+                const conversationResponse = $conversationStore.id ? 
+                    await putConversation({id: $conversationStore.id, text: `${newPart.participant}: ${newPart.text}`}) : 
+                    await postConversation({text: `${newPart.text}`});
+
                     if (conversationResponse) {
                         $conversationStore = {
                             id: conversationResponse.id,
@@ -134,7 +121,7 @@
                             summaryId = summary?.id || "";
                         }
                     }
-                } 
+
                 loading = false;
             }
         } catch (error) {
