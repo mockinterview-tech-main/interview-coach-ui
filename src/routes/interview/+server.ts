@@ -9,11 +9,13 @@ export const POST: RequestHandler = async ({ locals, request }) => {
         if (currentUser){
             const req = await request.json();
             if (req.action == "deduct"){
-                locals.pb?.collection('users').update(currentUserToken.id, { nonce: '', credits: (currentUser.credits - 1)});
+                currentUser.credits -= 1;
             }
             if (req.action == "add") {
-                locals.pb?.collection('users').update(currentUserToken.id, { nonce: '', credits: (currentUser.credits + 1)});
+                currentUser.credits += 1;
             }
+            locals.pb?.collection('users').update(currentUserToken.id, { nonce: '', ...currentUser});
+            return json({credits: currentUser.credits})
         }
     }
 	return json('');

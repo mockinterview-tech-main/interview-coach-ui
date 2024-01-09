@@ -10,19 +10,16 @@
     import Judy from "$lib/assets/profile-pics/judy.png"
     import Patrick from "$lib/assets/profile-pics/patrick.png"
 
-    import { interviewQuestion } from '$lib/stores/interviewQuestion';
     import { outputText } from '$lib/stores/recordingState';
-    import { interviewAnswerStore, currentFollowupStore } from '$lib/stores/answerStore';
 	import { conversationStore } from '$lib/stores/conversationStore';
 
 	import RecordAnswerButton from '$lib/components/recordAnswerButton.svelte';
-	import Modal from '$lib/components/modal.svelte';
 	import Transcript from '$lib/components/transcript.svelte';
 	import { postConversation, postSummary, putConversation } from '$lib/serviceApi.js';
-	import EndInterviewButton from '$lib/components/endInterviewButton.svelte';
+	import { userStore } from '$lib/stores/userStore.js';
 
     export let data;
-    let {credits, username} = data;
+    let { username } = data;
 
     const interviewers = [
         { name: "Lucy Interviewer", pfp: Lucy },
@@ -32,25 +29,31 @@
         { name: "Patrick Interviewer", pfp: Patrick }
     ]
 
+    const topics = [
+        "Adaptability",
+        "Collaboration",
+        "Customer Focus",
+        "Decision Making",
+        "Influence",
+        "Innovation",
+        "Problem Solving"
+    ];
+
+
     const interviewer = interviewers[Math.floor(Math.random() * interviewers.length)];
 
     // Initial Values
-    let jobInfo = { company: "", job: "" };
     let loading = false;
-    let confirmDialogOpen = true;
     let interviewConfirmed = false;
+    let selectedTopic = "";
     let summaryId = "";
     
-    $: jobInfo
     $: loading
     $: interviewConfirmed
     $: summaryId
-    $: credits
+    $: selectedTopic
 
     const reset = () => {
-        $interviewQuestion = {uuid: "", question_text: ""};
-        $interviewAnswerStore = null;
-        $currentFollowupStore = null;
         $outputText = "";
         $conversationStore = {id: null, finished: false, parts: []};
     }
@@ -59,18 +62,20 @@
 
     const buyCredits = () => goto('/credits');
 
-    const confirmInterview = () => {
+    const confirmInterview = async () => {
         reset();
-        confirmDialogOpen = false;
         interviewConfirmed = true;
-        fetch('/interview', {
+        let creditResponse = await fetch('/interview', {
             method: 'POST',
             credentials: 'include',
             body: JSON.stringify({action: "deduct"})
         }); // deducts a token and starts the interview
+        let creditsBody = await creditResponse.json();
+        $userStore = {credits: creditsBody.credits, ...userStore};
+        console.log($userStore)
         $conversationStore.parts = [{
             participant: interviewer.name.split(" ")[0], 
-            text: `Hi ${username} I'm ${interviewer.name.split(" ")[0]} and I'll be conducting your interview today! Please tell me what role and company you'd like to practice for.`
+            text: `Hi ${username} I'm ${interviewer.name.split(" ")[0]} and I'll be conducting your interview today! I see ${selectedTopic} is your chosen focus area. Please tell me what role and company you'd like to practice for.`
         }];
     }
 
@@ -87,7 +92,7 @@
                 }
 
                 const newPart = {
-                    participant: username || "You",
+                    participant: username || "Me",
                     text: $outputText
                 }
 
@@ -97,7 +102,7 @@
 
                 const conversationResponse = $conversationStore.id ? 
                     await putConversation({id: $conversationStore.id, text: `${newPart.participant}: ${newPart.text}`}) : 
-                    await postConversation({text: `${newPart.text}`});
+                    await postConversation({text: `${newPart.text} and I'd like to talk about ${selectedTopic}`});
 
                 if (conversationResponse) {
                     $conversationStore = {
@@ -126,36 +131,47 @@
 </script>
 
 <div>
-    <Modal bind:isOpen={confirmDialogOpen} isIgnorable={false}>
-        {#if credits === 0}
-            <p><b>Uh oh, looks like you're out of credits. Please buy more before continuing.</b></p>
-            <button class="primary-button" on:click={buyCredits}>Buy Credits</button>
-        {:else}
-            <h2 style="text-align: center;">Are you ready?</h2>
-            <p>Once you begin the interview session one token will be deducted.</p>
-            <p>Leaving the page or refreshing will lose the session</p>
-            <button on:click={confirmInterview} class="modal-button">Continue</button>
-            <button on:click={() => history.back() } class="modal-button tirtiary-button">Not Now</button>
-        {/if}
-    </Modal>
     <div class="call">
         <h3>{interviewer.name.split(" ")[0]}</h3>
         <div class="pfp-container">
             <!-- svelte-ignore a11y-missing-attribute -->
-            <img src={interviewer.pfp || UserHeadsetDuo}/>
+            {#if !interviewConfirmed}
+                <img src={UserHeadsetDuo}/>
+            {:else}
+                <img src={interviewer.pfp || UserHeadsetDuo}/>
+            {/if}
+            
         </div>
         <br/>
         <div class="control-panel">
         {#if interviewConfirmed && summaryId == ""}
             <RecordAnswerButton loading={loading}/>
-            <EndInterviewButton loading={loading} conversation_id={$conversationStore.id || ""}/>
         {/if}
         </div>
     </div>
     <div class="transcript">
-        <Transcript loading={loading}/>
-        {#if summaryId != "" && !loading}
-            <button on:click={() => goto(`/summary/${summaryId}`)} class="button">View Scorecard</button>
+        {#if !interviewConfirmed && $userStore.credits === 0}
+            <p style="text-align: center;">Uh oh, looks like you're out of credits. Please buy more before continuing.</p>
+            <button class="secondary-button" on:click={buyCredits}>Buy Credits</button>
+        {:else if !interviewConfirmed && !selectedTopic}
+            <h2>Select a Focus Area</h2>
+            <p>Most soft skill interviews focus on one of the following topics. Please choose one of the following:</p>
+            <div class="options-container">
+                {#each topics as topic}
+                    <button class="option-button" on:click={() => selectedTopic = topic}>{topic}</button>
+                {/each}
+            </div>
+        {:else if !interviewConfirmed}
+            <h2 style="text-align: center;">Let's Practice {selectedTopic}</h2>
+            <p style="text-align: center;">Once you begin the interview session one token will be deducted.</p>
+            <p style="text-align: center;">Leaving the page or refreshing will lose the session</p>
+            <button on:click={confirmInterview} >Continue</button><br/>
+            <button on:click={() => selectedTopic = ""} class="tirtiary-button">Go Back</button>
+        {:else}
+            <Transcript loading={loading}/>
+            {#if summaryId != "" && !loading}
+                <button on:click={() => goto(`/summary/${summaryId}`)} class="button">View Scorecard</button>
+            {/if}
         {/if}
     </div>
 </div>
@@ -218,10 +234,18 @@
             padding: 0px 15%;
             margin-bottom: 40px;
         }
-        .modal-button { display: inline; }
         button {
             max-width: 135px;
             margin: auto;
+        }
+        .options-container {
+            flex-flow: row wrap;
+            display: flex;
+        }
+        .option-button {
+            min-width: 200px;
+            display: inline-block;
+            margin-top: 10px;
         }
     }
 </style>

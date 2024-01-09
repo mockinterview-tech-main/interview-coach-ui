@@ -1,4 +1,4 @@
-import type { CompletedConversation } from "./stores/conversationStore";
+import type { Stats } from "./stores/statsStore";
 import type { InterviewSummary } from "./stores/summaryStore";
 
 const resumeUrl = import.meta.env["VITE_RESUME_URL"];
@@ -108,6 +108,25 @@ export const getSummaries = async (): Promise<Array<InterviewSummary> | null> =>
         return null;
     }
 };
+
+export const getSummaryStats = async (): Promise<Stats | null> => {
+    try {
+        const response = await fetch(`${resumeUrl}/summary/stats`, {
+            method: 'GET',
+            credentials: 'include',
+        });
+         if (response.ok) {
+            const d = await response.json();
+            return d.summaries as Stats
+        } else {
+            console.error('API returned an error: ', response);
+            return null;
+        }
+    } catch (error) {
+        console.error('An error occurred: ', error);
+        return null;
+    }
+}
 
 export const postSummary = async (summarize_request: SummaryizeRequest): Promise<InterviewSummary | null> => {
     try {

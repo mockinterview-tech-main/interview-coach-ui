@@ -1,16 +1,14 @@
 <script lang="ts">
-    import microsoftLogo from '$lib/assets/logos/microsoftLogo.svg'
-    import amazonLogo from '$lib/assets/logos/amazonLogo.svg'
-    import metaLogo from '$lib/assets/logos/metaLogo.svg'
-    import clockOutline from '$lib/assets/icons/clock-outline.svg';
+    import interviewScreenshot from '$lib/assets/interview-screenshot.png';
+    import setupScreenshot from '$lib/assets/setup-screenshot.png';
+    import target from '$lib/assets/icons/target.svg';
     import bookFilled from '$lib/assets/icons/book-filled.svg';
     import personFilled from '$lib/assets/icons/person-filled.svg';
     import separator from '$lib/assets/icons/separator.svg';
-    import rightArrow from '$lib/assets/icons/right-arrow.svg';
 	import Popdown from '$lib/components/popdown.svelte';
 
     export let data;
-    const loggedIn = data.loggedIn;
+    const {loggedIn} = data;
 
     const CONTACT_EMAIL = import.meta.env.VITE_CONTACT_INFO;
 </script>
@@ -43,7 +41,7 @@
             <h1>Why Us?</h1>
             <div class="vertical-sections">
                 <div class="vl-section">
-                    <p>Get quality interview skills coaching on your schedule at a fraction of the cost with guidance fine-tuned by expert coaches who've helped over 200 people land jobs at top companies.</p>
+                    <p>We believe career mobility should be accessible to all. That's why we use our experience in interviewing and hiring at top companies to give you personalized insights to your stories as hiring managers would see and evaluate them.</p>
                 </div>
             </div>
         </div>
@@ -52,19 +50,29 @@
     <section class="section">
         <div class="horizontal-sections">
             <div class="hz-section">
+                <img width="100px" height="100px" src={personFilled} alt="personalized coaching"/>
+                <h2>Flexible Coaching</h2>
+                <ul>
+                    <li>Get affordable anyime coaching works with your schedule</li>
+                    <li>Personalized score cards in storytelling and core skills focus areas track how well your story improves with each attempt</li>
+                </ul>
+            </div>
+            <div class="hz-section">
                 <img width="100px" height="100px" src={bookFilled} alt="high impact story telling"/>
-                <h2>High Impact Storytelling</h2>
-                <p>Most interviewers expect stories to follow the Situation Task Action Result (STAR) format so our coaches objectively evaluate how well you cover each STAR point and echo it back to you so you see what the interviewer sees and can improve your story.</p>
+                <h2>Storytelling S.T.A.R</h2>
+                <ul>
+                    <li>Craft your story using the Situation Task Action & Result (S.T.A.R.) framework, the prefered framework of hiring managers</li>
+                    <li>See specific areas of your story that need more (or less) details and prepare supporting data and points for the real interview</li>
+                </ul>
             </div>
+            
             <div class="hz-section">
-                <img width="100px" height="100px" src={personFilled} alt="focused coaching"/>
-                <h2>Focused Coaching</h2>
-                <p>See how well you're understood and get actionable advice to strengthen your story to land your dream job with prompts and evaluation rubrics from seasoned experts at Fortune 500 companies.</p>
-            </div>
-            <div class="hz-section">
-                <img width="100px" height="100px" src={clockOutline} alt="progression"/>
-                <h2>Sense of Progression</h2>
-                <p>Get a history of past responses so you can see how well your storytelling improves and highlight trends in areas where you can provide the details that will WOW your next interviewer.</p>
+                <img width="100px" height="100px" src={target} alt="progression"/>
+                <h2>Focused Questions</h2>
+                <ul>
+                    <li>Choose a focus area from grading rubrics used at thousands of companies to interview against</li>
+                    <li>Understand signals that hiring managers use to evaluate you in areas like <strong>collaboration, problem solving, and influence without authority</strong></li>
+                </ul>
             </div>
         </div>
     </section>
@@ -74,22 +82,27 @@
     <section class="section">
         <div class="container">
             <h2>Our Approach</h2>
-            <div class="horizontal-sections">
+            <div style="box-shadow: 5px 5px #EDECF2; margin-bottom: 20px; border: 1px solid #EDECF2" class="horizontal-sections">
                 <div class="hz-section approach" style="text-align: center;">
-                    <p>
-                        Our interview coaching is fine tuned by hiring managers with experience at top companies including <br/><br/>
-                        <img width="100px" src={metaLogo} alt="Meta Logo"/>&emsp14;
-                        <img width="100px" src={microsoftLogo} alt="Microsoft Logo"/>&emsp14;
-                        <img width="150px" src={amazonLogo} alt="Amazon Logo"/>&emsp14;
-                        <br/><br/><b>And More...</b><br/><br/>
-                    </p>
+                    <img width="100%" src={setupScreenshot} alt="Setup Screenshot"/>
                 </div>
-                <div class="hz-section approach" style="line-height: 50px; text-align: left;">
-                    <p><img style="vertical-align: middle;" height="15px" src={rightArrow} alt="rightArrow"/> Get tips on how to be an effective story teller.</p>
-                    <p><img style="vertical-align: middle;" height="15px" src={rightArrow} alt="rightArrow"/> See your responses as hiring managers see them.</p>
-                    <p><img style="vertical-align: middle;" height="15px" src={rightArrow} alt="rightArrow"/> Refine and hone your answers for maximum impact.</p>
+                <div class="hz-section approach" style=" text-align: left;">
+                    <h3>Focus on Skill Areas That Matter to Hiring Managers</h3>
+                    <p>We don't use a question bank and randomly pick questions. We know what interpersonal skills hiring managers truly care about and emphasize story telling in those areas.</p>
+                    <p>Training with us will help you recognize what a hiring manager is really looking for in a question so you can deliver the story that best showcases the skill.</p>
+                    <p>We score you on how well your story showcases skills like collaboration, leadership, and problem solving and let you re-try questions in an area until you feel confident and ready for the interview.</p>
                 </div>
-                
+            </div>
+            <div style="box-shadow: 5px 5px #EDECF2; margin-bottom: 20px; border: 1px solid #EDECF2" class="horizontal-sections">
+                <div class="hz-section approach" style=" text-align: left;">
+                    <h3>Practical Practice</h3>
+                    <p>We encourage speaking and practicing as if you were on a call with a real interviewer to build confidence and muscle memory.</p>
+                    <p>Filler words are filtered out so you can focus on your story's content rather than the mechanics.</p>
+                    <p>Transcripts are saved so you can review them, make changes, and hone your story.</p>
+                </div>
+                <div class="hz-section approach" style="text-align: center;">
+                    <img width="100%" src={interviewScreenshot} alt="Meta Logo"/>
+                </div>
             </div>
         </div>
     </section>
@@ -101,37 +114,33 @@
         <p>All packages come with result summaries. Credits never expire.</p>
         <div class="horizontal-sections">
             <div class="hz-section">
-                <h3>Looking Around $5.00</h3>
+                <h3 style="text-wrap: nowrap;">Looking Around $5.00</h3>
                 <img width="50%" src={separator} alt="separator"/>
                 <ul>
                     <li>1 Interview Question</li>
-                    <li>Best as a refresher on interviewing</li>
                 </ul>
                 <a href={loggedIn ? '/credits' : '/login'}><button>Buy Now</button></a>
             </div>
             <div class="hz-section">
-                <h3>Passive Candidate $20.00</h3>
+                <h3 style="text-wrap: nowrap;">Passive Candidate $20.00</h3>
                 <img width="50%" src={separator} alt="separator"/>
                 <ul>
                     <li>5 Interview Questions</li>
-                    <li>Equivalent to a 2 hour live person coaching session valued at $200.00</li>
                 </ul>
                 <a href={loggedIn ? '/credits' : '/login'}><button>Buy Now</button></a>
             </div>
             <div class="hz-section">
-                <h3>Active Candidate $30.00</h3>
+                <h3 style="text-wrap: nowrap;">Active Candidate $30.00</h3>
                 <img width="50%" src={separator} alt="separator"/>
                 <ul>
                     <li>10 Interview Questions</li>
-                    <li>Best for refining answers to tricky interview questions or preparing for multiple interviews</li>
                 </ul>
                 <a href={loggedIn ? '/credits' : '/login'}><button>Buy Now</button></a>
             </div>
         </div>
         <div class="hz-section">
             <h3>Live Coaching</h3>
-            <p>Contact us for a consultation with one of our interview experts with experience at top paying companies including <b>Microsoft</b>, <b>Amazon</b>, <b>Meta</b>, and more!</p>
-            <p>We'll work with you on your career goals and craft an interviewing plan that is perfect for you.</p>
+            <p>Contact us for a consultation with one of our interview experts and we'll work with you on your career goals and craft an interviewing plan that is perfect for you.</p>
             <a href="mailto:{CONTACT_EMAIL}"><button>Get in Touch</button></a>
         </div>
     </section>
@@ -144,18 +153,20 @@
             <div class="horizontal-sections">
                 <div class="hz-section popdown" style="text-align: center;">
                     <Popdown>
-                        <h3 class="popdown-header" slot="popdown-header">Who is behind mockinterview.tech?</h3>
-                        <p class="popdown-content" slot="popdown-content">Mock Interview was founded by Yijun Wang and Dominick Caponi. 
-Yijun has 9+ years of experience working in tier-1 tech companies as a Technical Program Manager (TPM), in charge of multi-million-dollar programs and responsible for tens of millions users in Alexa and Facebook. She is currently a Senior Technical Program Manager at Amazon, previously at Meta and Microsoft. 
-Dominick is a seasoned technical leader specializing in influencing without authority, and driving products, programs, and teams that deliver business value using Big Data, Machine Learning, and Distributed Systems. He is currently an engineering leader and manager in the startup space for 8+ years, previously at Microsoft.
-Aside from the 2 core founders, Mock Interview has close connections with 10+ hiring experts in the tier-1 companies and startup field, ranging from high-performing Individual Contributors (ICs), senior managers, and executives (with 20+ years of experiences). 
-We strive to bring the most effective evaluation rubrics that make your story telling as exceptional as you are already today.</p>
+                        <h3 class="popdown-header" slot="popdown-header">Do credits expire?</h3>
+                        <p class="popdown-content" slot="popdown-content">No, however we're unable to give refunds at this time.</p>
                     </Popdown>
                     <Popdown>
-                        <h3 class="popdown-header" slot="popdown-header">How do I use mockinterview.tech for best results?</h3>
-                        <p class="popdown-content" slot="popdown-content">Proactive preparation for behavioral interviews is as essential as hard skill focus interviews. It helps transform not just your answers, but optimizing your portrayal of professional prowess through storytelling via the S.T.A.R. technique. Beginning preparation early and doing it often (4 hrs per week if active interviewing) allow you to meticulously align your experiences with the role’s competencies, showcasing a broad spectrum of skills through well-chosen examples. 
-Mock Interview helps you strategically construct narratives that display emotional intelligence and professional sincerity, plus “sell” your highlights at the right time in a time-limiting environment.  
-Consider it a cost-effective way to do add-on behavior interview practices before you can make the best use of any in-person mock interviews which costs from $150 - $300 per session.</p>
+                        <h3 class="popdown-header" slot="popdown-header">Is my data safe and private?</h3>
+                        <p class="popdown-content" slot="popdown-content">Absolutely! Mockinterview.tech was built using the most up to date security and privacy best practices by people who've worked in the cybersecurity industry. We will not transmit any data you give us without your permission.</p>
+                    </Popdown>
+                    <Popdown>
+                        <h3 class="popdown-header" slot="popdown-header">I left my session mid-interview. Can I get my token back?</h3>
+                        <p class="popdown-content" slot="popdown-content">Right now we don't have a self serve way to do that but if you <a href="mailto:{CONTACT_EMAIL}">drop us a line</a> we can get you squared away.</p>
+                    </Popdown>
+                    <Popdown>
+                        <h3 class="popdown-header" slot="popdown-header">How do I shut down my account?</h3>
+                        <p class="popdown-content" slot="popdown-content">We'd be sorry to see you go, however, just <a href="mailto:{CONTACT_EMAIL}">drop us a line</a> we can close out your account including erasure of your data.</p>
                     </Popdown>
                     <Popdown>
                         <h3 class="popdown-header" slot="popdown-header">Why not just use ChatGPT?</h3>
@@ -222,7 +233,7 @@ We engineered mock interview to not only provide detailed and customized feedbac
         text-align: center;
         font-size: large;
         display: block;
-        line-height: 80px;
+        line-height: 30px;
         background-color: $dark-purple;
         color: $white;
     }
@@ -252,10 +263,14 @@ We engineered mock interview to not only provide detailed and customized feedbac
             border-radius: 8px;
             flex: 1;
             margin: 20px;
+            min-width: 200px;
             ul {
                 margin: auto;
                 padding: 0;
-                li { text-align: center; }
+                li {
+                    margin-top: 10px;
+                    display: inline-block;
+                }
             }
             button { margin: auto; }
         }
@@ -265,6 +280,12 @@ We engineered mock interview to not only provide detailed and customized feedbac
         .popdown-content {
             text-align: left;
             line-height: 25px;
+            a {
+                color: $dark-purple;
+            }
+            a:hover {
+                text-decoration: underline;
+            }
         }
 
         .approach {

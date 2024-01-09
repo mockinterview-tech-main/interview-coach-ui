@@ -1,21 +1,72 @@
 <script lang="ts">
     import LogoFilled from "$lib/assets/icons/logo-filled.svg";
+	import { getSummaryStats } from "$lib/serviceApi.js";
+	import { statsStore } from "$lib/stores/statsStore.js";
+	import { userStore } from "$lib/stores/userStore.js";
+	import { onMount } from "svelte";
     export let data;
     const {loggedIn, credits, username} = data;
+
+    $userStore = {credits}
+
+    let navMenu: HTMLElement;
+    $: isNavOpen = false;
+
+    const toggleNav = () => {
+        if(window.matchMedia('(max-width: 750px)').matches) {
+            isNavOpen = !isNavOpen;
+        }
+    }
+
+    const closeNav = (event: MouseEvent): void => {
+        if (navMenu && !navMenu.contains(event.target as Node)) {
+            isNavOpen = false
+        }
+    };
+
+    onMount( async () => {
+        let stats = await getSummaryStats();
+        if (stats) {
+            statsStore.set(stats)
+        }
+        document.addEventListener('click', closeNav)
+    });
 
     const CONTACT_EMAIL = import.meta.env.VITE_CONTACT_INFO;
 </script>
 
 <main>
-    <nav>
-        <span><a href="/"><img alt="mockinterview.tech logo" src={LogoFilled}/></a></span>
-        {#if loggedIn}
-            <span><a href="/interview">New Interview</a></span>
-            <span><a href="/summary">Past Interviews</a></span>
-            <div><span>{username}</span><span>{credits} Interviews</span><span><a class="link-cta" href="/credits">Buy More</a></span></div>
-        {:else}
-            <span><a href="/login">Get Started</a></span>
-        {/if}
+    <nav bind:this={navMenu}>
+        <!-- svelte-ignore a11y-click-events-have-key-events -->
+        <!-- svelte-ignore a11y-no-static-element-interactions -->
+        <span class="hamburger" on:click={toggleNav}><img alt="mockinterview.tech logo" src={LogoFilled}/></span>
+        <!-- svelte-ignore a11y-no-static-element-interactions -->
+        <div class="nav-links" class:open={isNavOpen}>
+            <!-- svelte-ignore a11y-click-events-have-key-events -->
+            <div class="left-nav-links">
+                {#if isNavOpen}
+                    <span class="nav-link" on:click={toggleNav}><a href="/">Home</a></span>
+                {:else}
+                    <span class="nav-link" on:click={toggleNav}><a href="/"><img alt="mockinterview.tech logo" src={LogoFilled}/></a></span>
+                {/if}
+                {#if loggedIn}
+                    <span class="nav-link" on:click={toggleNav}><a href="/interview">New Interview</a></span>
+                    <span class="nav-link" on:click={toggleNav}><a href="/summary">Past Interviews</a></span>
+                {:else}
+                    <span class="nav-link" on:click={toggleNav}><a href="/login">Get Started</a></span>
+                {/if}
+            </div>
+            {#if loggedIn}
+            <!-- svelte-ignore a11y-click-events-have-key-events -->
+            <div class="right-nav-links">
+                <span class="nav-link">{username}</span>
+                <span class="nav-link">{$userStore.credits} Interviews</span>
+                <span class="nav-link" on:click={toggleNav}><a class="link-cta" href="/credits">Buy More</a></span>
+            </div>
+            {/if}
+            
+        </div>
+       
     </nav>
     <slot/>
     <footer>
@@ -52,15 +103,8 @@
         top: 0;
         width: 100%;
         z-index: 1000;
-        padding: 20px;
         background-color: $dark-gray;
         line-height: 50px;
-        div {
-            float: right;
-            margin-right: 40px;
-            color: $white;
-        }
-        span { padding: 20px; }
         img {
             width: 40px;
             position: relative;
@@ -68,8 +112,70 @@
             vertical-align: middle;
         }
     }
+
+
+    .nav-links {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+
+        .left-nav-links, .right-nav-links {
+            display: flex;
+            flex-direction: row;
+        }
+
+        .left-nav-links {
+            align-items: flex-start;
+            .nav-link {
+                margin-left: 20px;
+            }
+        }
+        
+        .right-nav-links {
+            align-items: flex-end;
+            margin-right: 20px;
+            color: $white;
+            .nav-link {
+                margin-right: 20px;
+            }
+        }
+
+        @media only screen and (max-width: 750px) {
+            .left-nav-links, .right-nav-links {
+                flex-direction: column;
+            }
+            .right-nav-links {
+                align-items: flex-start;
+                margin-right: 0px;
+                margin-left: 20px;
+            }
+            display: none;
+            flex-direction: column;
+            position: absolute;
+            background-color: $dark-gray;
+            top: 50px;
+            left: 0;
+            width: 100%;
+            &.open {
+                display: flex;
+                width: 50%;
+                height: 100vh;
+                justify-content: flex-start;
+            }
+        }
+    }
+
+    .hamburger {
+        display: none;
+        @media only screen and (max-width: 750px) {
+            display: inline-block;
+            cursor: pointer;
+        }
+    }
     footer {
         position: fixed;
+        flex-flow: row wrap;
+        display: flex;
         left: 0;
         bottom: 0;
         width: 100%;
@@ -81,12 +187,8 @@
 
     @media only screen and (max-width: 1000px) {
         * { font-size: 14px; }
-        nav {
-            div {
-                margin-right: 20px;
-            }
-        }
         footer {
+            justify-content: space-around;
             span {
                 padding: 10px;
             }

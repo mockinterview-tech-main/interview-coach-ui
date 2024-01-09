@@ -16,11 +16,11 @@
 </script>
 
 <div>
-    <h1><i>{$interviewSummaryStore.title || "Your Past Interview"} {new Date($interviewSummaryStore.created_at).toLocaleDateString()} {new Date($interviewSummaryStore.created_at).toLocaleTimeString()}</i></h1>
+    <h1>{$interviewSummaryStore.title || "Your Past Interview"}</h1>
+    <i>{new Date($interviewSummaryStore.created_at).toLocaleDateString()}</i>
     <Popdown isActive={true}>
-        <h2 class="popdown-header" slot="popdown-header"><i>S.T.A.R. Report Card</i></h2>
+        <h2 class="popdown-header" slot="popdown-header">Storytelling Fundamentals: {$interviewSummaryStore.overall.grade}</h2>
         <div slot="popdown-content">
-            <h3>Overall: {$interviewSummaryStore.overall.grade}</h3>
             <p>{$interviewSummaryStore.overall.summary}</p>
 
             <h3>Situation: {$interviewSummaryStore.situation.grade}</h3>
@@ -38,15 +38,14 @@
     </Popdown>
     {#if $interviewSummaryStore.focus}
     <Popdown isActive={true}>
-        <h2 class="popdown-header" slot="popdown-header"><i>Signals</i></h2>
+        <h2 class="popdown-header" slot="popdown-header">Focus Area {capitalize($interviewSummaryStore.focus.area)}: {$interviewSummaryStore.focus.grade}</h2>
         <div slot="popdown-content">
-            <h3>Focus Area ({capitalize($interviewSummaryStore.focus.area)}): {$interviewSummaryStore.focus.grade}</h3>
             <p>{$interviewSummaryStore.focus.summary}</p>
         </div>
     </Popdown>
     {/if}
     <Popdown>
-        <h2 class="popdown-header" slot="popdown-header"><i>Questions Asked</i></h2>
+        <h2 class="popdown-header" slot="popdown-header">Questions Asked</h2>
         <div slot="popdown-content">
             {#each $interviewSummaryStore.questions as question}
                 <p>{question}</p>
@@ -54,7 +53,7 @@
         </div>
     </Popdown>
     <Popdown>
-        <h2 class="popdown-header" slot="popdown-header"><i>Interview Transcript</i></h2>
+        <h2 class="popdown-header" slot="popdown-header">Interview Transcript</h2>
         <div class="popdown-content" slot="popdown-content">
             {#each conversationText.split("\n") as part}
                 <p>{part}</p>
@@ -64,11 +63,15 @@
 </div>
 
 <style lang="scss">
+    
     div {
         padding: 20px;
         h1 {
             margin-top: 80px;
-            margin-left: 20px;
+            margin-left: 40px;
+        }
+        i {
+            margin-left: 40px;
         }
         h3 {
             display: block;

@@ -8,6 +8,10 @@
 
     let providers = data;
 
+    let isSignup = true;
+
+    const toggleIsSignup = () => isSignup = !isSignup
+
     const logos: { [key: string]: string } = {
         'google': googleGLogo,
         'github': githubLogo,
@@ -25,41 +29,51 @@
     }
 </script>
 
+<p class="error">{#if form?.error}{form.message}{/if}</p>
 
-    <p class="error">{#if form?.error}{form.message}{/if}</p>
-
-<div>
-    <div class="form-container">
-        <h2>Sign Up</h2>
-        <form method="POST" action="?/signup">
-            <label for="email">email address</label><br/>
-            <input name="email" type="email" placeholder="email@address.com" required/><br/>
-            <label for="password">password</label><br/>
-            <input name="password" type="password" placeholder="secret password" minlength=8 required/><br/>
-            <label for="passwordConfirm">confirm password</label><br/>
-            <input name="passwordConfirm" type="password" placeholder="secret password" minlength=8 required/><br/>
-            <button type="submit">Sign Up</button>
-        </form>
+<div class="form-container">
+    <div class="action-selector">
+        <!-- svelte-ignore a11y-click-events-have-key-events -->
+        <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+        <p class={isSignup ? "active-action-tab" : ""} on:click={toggleIsSignup}>Sign Up</p>
+        <!-- svelte-ignore a11y-click-events-have-key-events -->
+        <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+        <p class={isSignup ? "" : "active-action-tab"} on:click={toggleIsSignup}>Log In</p>
     </div>
-    <div class="form-container">
-        <h2>Log In</h2>
-        <form method="POST" action="?/login">
-            <label for="email">email address</label><br/>
-            <input name="email" type="email" placeholder="email@address.com" required/><br/>
-            <label for="password">password</label><br/>
-            <input name="password" type="password" placeholder="secret password" required/><br/>
-            <button type="submit">Login</button>
-        </form>
+    <div class="action-form">
+        {#if isSignup}
+            <form method="POST" action="?/signup">
+                <label for="email">email address</label><br/>
+                <input name="email" type="email" placeholder="email@address.com" required/><br/>
+                <label for="password">password</label><br/>
+                <input name="password" type="password" placeholder="secret password" minlength=8 required/><br/>
+                <label for="passwordConfirm">confirm password</label><br/>
+                <input name="passwordConfirm" type="password" placeholder="secret password" minlength=8 required/><br/>
+                <button type="submit">Sign Up</button>
+            </form>
+        {:else}
+            <form method="POST" action="?/login">
+                <label for="email">email address</label><br/>
+                <input name="email" type="email" placeholder="email@address.com" required/><br/>
+                <label for="password">password</label><br/>
+                <input name="password" type="password" placeholder="secret password" required/><br/>
+                <button type="submit">Login</button>
+            </form>
+        {/if}
     </div>
-
-    <div class="form-container">
-        <h2>Social Login</h2>
-        {#each Object.keys(providers) as provider}
-            {#if providers[provider].authProviderState}
-                <button class="social-button" on:click={() => gotoAuthProvider(provider)}><img width="20px" height="20px" src={logos[provider]} alt="{provider} logo"/>Login with {provider}</button>
-            {/if}
-        {/each}
-    </div>
+    <h3>Connect With</h3>
+        <div class="social-container">
+            {#each Object.keys(providers) as provider}
+                {#if providers[provider].authProviderState}
+                    <!-- svelte-ignore a11y-click-events-have-key-events -->
+                    <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+                    <div>
+                        <img src={logos[provider]} alt="{provider} logo" on:click={() => gotoAuthProvider(provider)}/>
+                        <p>{provider}</p>
+                    </div>
+                {/if}
+            {/each}
+        </div>
 </div>
 
 <style lang="scss">
@@ -70,34 +84,56 @@
         top: 40px;
         color: red;
     }
-    div {
-        padding: 70px 20px;
-        display: flex;
+    .form-container {
+        box-shadow: 5px 5px #EDECF2;
+        border: 1px solid #EDECF2;
+        width: 50%;
+        height: 100%;
+        margin: auto;
+        position: relative;
+        top: 100px;
+        text-align: center;
 
-        .form-container {
-            flex-direction: column;
-            flex: 1;
-            button {
-                background: none;
-                border-color: $dark-purple;
-                color: $dark-gray;
+        .action-selector {
+            display: flex;
+            flex-flow: row nowrap;
+            margin: none;
+            cursor: pointer;
+            border-bottom: 1px solid $dark-purple;
+            p {
+                margin: 0;
+                flex: 1;
+                text-align: center;
+                line-height: 50px;
+                color: $dark-purple;
             }
-                
-            button:hover {
+            p:hover {
                 background-color: $dark-purple;
-                color: $white;
+                color: white;
+                transition: background-color 0.2s ease-in-out;
+                transition: color 0.2s ease-in-out;
             }
-
-            .social-button {
-                margin: 16px 0px;
-            }
-
-            button img {
-                width: 24px;
-                height: 24px;
-                margin-right: 10px;
+            .active-action-tab {
+                background-color: $dark-purple;
+                color: white;
             }
         }
-        
+        .action-form {
+            padding: 20px;
+            button {
+                margin: auto;
+            }
+        }
+        .social-container {
+                display: flex;
+                flex-flow: row wrap;
+                align-items: center;
+                justify-content: space-evenly;
+                img {
+                    cursor: pointer;
+                    width: 50px;
+                    height: 50px;
+                }
+            }
     }
 </style>
