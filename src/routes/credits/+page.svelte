@@ -1,9 +1,6 @@
 <script lang="ts">
     export let data;
     const offerings = data.offerings;
-    let selectedOffering = offerings[0];
-    $: selectedOffering
- 
 </script>
 
 <h2>Choose Your Package</h2>
