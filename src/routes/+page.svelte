@@ -15,7 +15,7 @@
 
 <section class="jumbotron">
     <div>
-        <h1>Nail Your Next Interview</h1>
+        <h1>Be On The Ball In Your Next Interview</h1>
         <p>Let us help you make your story as exceptional as you are</p>
         <div class="cta-buttons">
             {#if loggedIn}
@@ -199,24 +199,7 @@ We engineered mock interview to not only provide detailed and customized feedbac
             z-index: -2; /* Ensure it's below the content */
             background-image: url('$lib/assets/jumbotron.jpg');
             background-size: cover;
-            background-position: center;
-        }
-
-        /* Sharp edges with tint */
-        &::after {
-            content: "";
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            z-index: -1; /* Above the blurred version but below the content */
-            background-image: 
-                linear-gradient(rgba(112, 112, 112, 0.3), rgba(27, 27, 27, 0.3)), 
-                url('$lib/assets/jumbotron.jpg'); 
-            background-size: cover;
-            background-position: center;
-            mask-image: radial-gradient(circle at center, transparent 0%, transparent 75%, rgb(41, 41, 41) 75.5%, rgb(110, 110, 110));
+            background-repeat: no-repeat;
         }
 
         h1 { font-size: 42px; }

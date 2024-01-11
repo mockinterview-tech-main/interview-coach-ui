@@ -212,7 +212,7 @@
                 padding-bottom: 30px;
                 margin: auto;
                 img {
-                    width: 200px;
+                    width: 150px;
                     border-radius: 100px;
                     margin: auto;
                 }

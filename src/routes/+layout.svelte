@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { page } from "$app/stores";
     import LogoFilled from "$lib/assets/icons/logo-filled.svg";
 	import { getSummaryStats } from "$lib/serviceApi.js";
 	import { statsStore } from "$lib/stores/statsStore.js";
@@ -7,10 +8,14 @@
     export let data;
     const {loggedIn, credits, username} = data;
 
+    $: isInterviewPage = $page.url.pathname === '/interview';
+
     $userStore = {credits}
 
     let navMenu: HTMLElement;
     $: isNavOpen = false;
+
+    const logout = () => fetch('/logout');
 
     const toggleNav = () => {
         if(window.matchMedia('(max-width: 750px)').matches) {
@@ -24,10 +29,13 @@
         }
     };
 
+    // establish global state & event listeners
     onMount( async () => {
-        let stats = await getSummaryStats();
-        if (stats) {
-            statsStore.set(stats)
+        if (loggedIn) {
+            let stats = await getSummaryStats();
+            if (stats) {
+                statsStore.set(stats)
+            }
         }
         document.addEventListener('click', closeNav)
     });
@@ -35,7 +43,7 @@
     const CONTACT_EMAIL = import.meta.env.VITE_CONTACT_INFO;
 </script>
 
-<main>
+<div class="container">
     <nav bind:this={navMenu}>
         <!-- svelte-ignore a11y-click-events-have-key-events -->
         <!-- svelte-ignore a11y-no-static-element-interactions -->
@@ -60,25 +68,29 @@
             <!-- svelte-ignore a11y-click-events-have-key-events -->
             <div class="right-nav-links">
                 <span class="nav-link">{username}</span>
+                <span class="nav-link" on:click={logout}><a href="/">logout</a></span>
                 <span class="nav-link">{$userStore.credits} Interviews</span>
                 <span class="nav-link" on:click={toggleNav}><a class="link-cta" href="/credits">Buy More</a></span>
             </div>
             {/if}
             
         </div>
-       
+        
     </nav>
-    <slot/>
-    <footer>
-        <span>&copy; 2024 EmpowerPro Labs</span>
-        <span><a href="https://medium.com/@mockinterview-tech">Blog</a></span>
-        <span><a href="/legal/tos">Terms of Service</a></span>
-        <span><a href="/legal/privacy">Privacy Policy</a></span>
-        <span><a href="/legal/cookie">Cookie Policy</a></span>
-        <span><a href="mailto:{CONTACT_EMAIL}">Contact Us</a></span>
-    </footer>
-</main>
-
+    <main>
+        <slot/>
+    </main>
+    {#if !isInterviewPage}
+        <footer>
+            <span>&copy; 2024 EmpowerPro Labs</span>
+            <span><a href="https://medium.com/@mockinterview-tech">Blog</a></span>
+            <span><a href="/legal/tos">Terms of Service</a></span>
+            <span><a href="/legal/privacy">Privacy Policy</a></span>
+            <span><a href="/legal/cookie">Cookie Policy</a></span>
+            <span><a href="mailto:{CONTACT_EMAIL}">Contact Us</a></span>
+        </footer>
+    {/if}
+</div>
 <style lang="scss">
     @import "@fontsource/inter";
     @import "../lib/styles/form.scss";
@@ -88,13 +100,15 @@
     :global(h3) { text-align: center; }
     :global(li) { list-style-type: none; }
 
-    main {
+    .container {
         font-family: 'inter', Arial, Helvetica, sans-serif;
         font-size: medium;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
         width: 100%;
         padding: 0px;
         margin: 0px;
-        nav { padding: 0px 20px; }
     }
     
     nav {
@@ -111,69 +125,69 @@
             top: 4px;
             vertical-align: middle;
         }
-    }
-
-
-    .nav-links {
-        display: flex;
-        flex-direction: row;
-        justify-content: space-between;
-
-        .left-nav-links, .right-nav-links {
+            .nav-links {
             display: flex;
             flex-direction: row;
-        }
+            justify-content: space-between;
 
-        .left-nav-links {
-            align-items: flex-start;
-            .nav-link {
-                margin-left: 20px;
-            }
-        }
-        
-        .right-nav-links {
-            align-items: flex-end;
-            margin-right: 20px;
-            color: $white;
-            .nav-link {
-                margin-right: 20px;
-            }
-        }
-
-        @media only screen and (max-width: 750px) {
             .left-nav-links, .right-nav-links {
-                flex-direction: column;
-            }
-            .right-nav-links {
-                align-items: flex-start;
-                margin-right: 0px;
-                margin-left: 20px;
-            }
-            display: none;
-            flex-direction: column;
-            position: absolute;
-            background-color: $dark-gray;
-            top: 50px;
-            left: 0;
-            width: 100%;
-            &.open {
                 display: flex;
-                width: 50%;
-                height: 100vh;
-                justify-content: flex-start;
+                flex-direction: row;
+            }
+
+            .left-nav-links {
+                align-items: flex-start;
+                .nav-link {
+                    margin-left: 20px;
+                }
+            }
+            
+            .right-nav-links {
+                align-items: flex-end;
+                margin-right: 20px;
+                color: $white;
+                .nav-link {
+                    margin-right: 20px;
+                }
+            }
+
+            @media only screen and (max-width: 750px) {
+                .left-nav-links, .right-nav-links {
+                    flex-direction: column;
+                }
+                .right-nav-links {
+                    align-items: flex-start;
+                    margin-right: 0px;
+                    margin-left: 20px;
+                }
+                display: none;
+                flex-direction: column;
+                position: absolute;
+                background-color: $dark-gray;
+                top: 50px;
+                left: 0;
+                width: 100%;
+                &.open {
+                    display: flex;
+                    width: 50%;
+                    height: 100vh;
+                    justify-content: flex-start;
+                }
+            }
+        }
+        .hamburger {
+            display: none;
+            @media only screen and (max-width: 750px) {
+                display: inline-block;
+                cursor: pointer;
+                margin-left: 20px;
             }
         }
     }
 
-    .hamburger {
-        display: none;
-        @media only screen and (max-width: 750px) {
-            display: inline-block;
-            cursor: pointer;
-        }
-    }
+    main { flex: 1; }
+    
     footer {
-        position: fixed;
         flex-flow: row wrap;
         display: flex;
         left: 0;
@@ -190,7 +204,7 @@
         footer {
             justify-content: space-around;
             span {
-                padding: 10px;
+                padding: 20px;
             }
         }
     }
