@@ -15,18 +15,14 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
         let currentUser = await locals.pb?.collection('users').getOne(currentUserToken.id);
         if (currentUser){
             if (currentUser.nonce) {
-                const nonceToken = url.searchParams.get('nonce');
-                if (nonceToken) {
-                    if (validateJwt(nonceToken, VITE_NONCE_SIGNING_SECRET)){
-                        const userToken = decodeJwt(currentUser.nonce)
-                        const { nonce } = decodeJwt(nonceToken)
-                        if (userToken.nonce === nonce) {
-                            await locals.pb?.collection('users').update(currentUserToken.id, { nonce: '', credits: (currentUser.credits + userToken.credits)});
-                            currentUser = await locals.pb?.collection('users').getOne(currentUserToken.id);
-                        }
+                const nonce = url.searchParams.get('nonce')
+                if (validateJwt(currentUser.nonce, VITE_NONCE_SIGNING_SECRET)){
+                    const userToken = decodeJwt(currentUser.nonce)
+                    if (userToken.nonce === nonce) {
+                        await locals.pb?.collection('users').update(currentUserToken.id, { nonce: '', credits: (currentUser.credits + userToken.credits)});
+                        currentUser = await locals.pb?.collection('users').getOne(currentUserToken.id);
                     }
                 }
-                
             }
             return {
                 loggedIn: locals.pb?.authStore.isValid,

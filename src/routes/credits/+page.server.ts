@@ -71,7 +71,7 @@ export const actions = {
                     },
                 ],
                 mode: 'payment',
-                success_url: isProd ? `https://mockinterview.tech/interview?nonce=${nonceToken}` : `http://localhost:5173/interview?nonce=${nonceToken}`,
+                success_url: isProd ? `https://mockinterview.tech/interview?nonce=${nonce}` : `http://localhost:5173/interview?nonce=${nonce}`,
                 cancel_url: isProd ? `https://mockinterview.tech/interview` : `http://localhost:5173/interview`,
                 automatic_tax: {enabled: true},
             });
