@@ -1,4 +1,6 @@
 <script lang="ts">
+    import Button from '@smui/button';
+
     import { browser } from '$app/environment';
     import type { PageData } from './$types';
     import googleGLogo from '$lib/assets/logos/googleLogo.svg'
@@ -49,7 +51,7 @@
                 <input name="password" type="password" placeholder="secret password" minlength=8 required/><br/>
                 <label for="passwordConfirm">confirm password</label><br/>
                 <input name="passwordConfirm" type="password" placeholder="secret password" minlength=8 required/><br/>
-                <button type="submit">Sign Up</button>
+                <Button type="submit">Sign Up</Button>
             </form>
         {:else}
             <form method="POST" action="?/login">
@@ -57,7 +59,7 @@
                 <input name="email" type="email" placeholder="email@address.com" required/><br/>
                 <label for="password">password</label><br/>
                 <input name="password" type="password" placeholder="secret password" required/><br/>
-                <button type="submit">Login</button>
+                <Button type="submit">Login</Button>
             </form>
         {/if}
     </div>

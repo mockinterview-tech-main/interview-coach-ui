@@ -5,7 +5,8 @@
     import bookFilled from '$lib/assets/icons/book-filled.svg';
     import personFilled from '$lib/assets/icons/person-filled.svg';
     import separator from '$lib/assets/icons/separator.svg';
-	import Popdown from '$lib/components/popdown.svelte';
+    import Accordion, { Panel, Header, Content } from '@smui-extra/accordion';
+    import Button from '@smui/button';
 
     export let data;
     const {loggedIn} = data;
@@ -17,15 +18,13 @@
     <div>
         <h1>Be On The Ball In Your Next Interview</h1>
         <p>Let us help you make your story as exceptional as you are</p>
-        <div class="cta-buttons">
-            {#if loggedIn}
-                <a data-sveltekit-preload-data href="/interview"><button class="primary-button">New Interview</button></a>
-                <a data-sveltekit-preload-data href="/summary"><button class="secondary-button">Review Interviews</button></a>
-            {:else}
-                <a href="/login"><button class="primary-button">Get Started!</button></a>
-                <a href="/login"><button class="secondary-button">Log In</button></a>
-            {/if}
-        </div>
+        {#if loggedIn}
+            <a data-sveltekit-preload-data href="/interview"><Button>New Interview</Button></a>
+            <a data-sveltekit-preload-data href="/summary"><Button>Review Interviews</Button></a>
+        {:else}
+            <a href="/login"><Button>Get Started!</Button></a>
+            <a href="/login"><Button>Log In</Button></a>
+        {/if}
     </div>
 </section>
 
@@ -119,7 +118,7 @@
                 <ul>
                     <li>1 Interview Question</li>
                 </ul>
-                <a href={loggedIn ? '/credits' : '/login'}><button>Buy Now</button></a>
+                <a href={loggedIn ? '/credits' : '/login'}><Button>Buy Now</Button></a>
             </div>
             <div class="hz-section">
                 <h3 style="text-wrap: nowrap;">Passive Candidate $20.00</h3>
@@ -127,7 +126,7 @@
                 <ul>
                     <li>5 Interview Questions</li>
                 </ul>
-                <a href={loggedIn ? '/credits' : '/login'}><button>Buy Now</button></a>
+                <a href={loggedIn ? '/credits' : '/login'}><Button>Buy Now</Button></a>
             </div>
             <div class="hz-section">
                 <h3 style="text-wrap: nowrap;">Active Candidate $30.00</h3>
@@ -135,13 +134,13 @@
                 <ul>
                     <li>10 Interview Questions</li>
                 </ul>
-                <a href={loggedIn ? '/credits' : '/login'}><button>Buy Now</button></a>
+                <a href={loggedIn ? '/credits' : '/login'}><Button>Buy Now</Button></a>
             </div>
         </div>
         <div class="hz-section">
             <h3>Live Coaching</h3>
             <p>Contact us for a consultation with one of our interview experts and we'll work with you on your career goals and craft an interviewing plan that is perfect for you.</p>
-            <a href="mailto:{CONTACT_EMAIL}"><button>Get in Touch</button></a>
+            <a href="mailto:{CONTACT_EMAIL}"><Button>Get in Touch</Button></a>
         </div>
     </section>
 
@@ -151,29 +150,29 @@
         <div class="container">
             <h2>Frequently Asked Questions</h2>
             <div class="horizontal-sections">
-                <div class="hz-section popdown" style="text-align: center;">
-                    <Popdown>
-                        <h3 class="popdown-header" slot="popdown-header">Do credits expire?</h3>
-                        <p class="popdown-content" slot="popdown-content">No, however we're unable to give refunds at this time.</p>
-                    </Popdown>
-                    <Popdown>
-                        <h3 class="popdown-header" slot="popdown-header">Is my data safe and private?</h3>
-                        <p class="popdown-content" slot="popdown-content">Absolutely! Mockinterview.tech was built using the most up to date security and privacy best practices by people who've worked in the cybersecurity industry. We will not transmit any data you give us without your permission.</p>
-                    </Popdown>
-                    <Popdown>
-                        <h3 class="popdown-header" slot="popdown-header">I left my session mid-interview. Can I get my token back?</h3>
-                        <p class="popdown-content" slot="popdown-content">Right now we don't have a self serve way to do that but if you <a href="mailto:{CONTACT_EMAIL}">drop us a line</a> we can get you squared away.</p>
-                    </Popdown>
-                    <Popdown>
-                        <h3 class="popdown-header" slot="popdown-header">How do I shut down my account?</h3>
-                        <p class="popdown-content" slot="popdown-content">We'd be sorry to see you go, however, just <a href="mailto:{CONTACT_EMAIL}">drop us a line</a> we can close out your account including erasure of your data.</p>
-                    </Popdown>
-                    <Popdown>
-                        <h3 class="popdown-header" slot="popdown-header">Why not just use ChatGPT?</h3>
-                        <p class="popdown-content" slot="popdown-content">We leverage exclusive, interview evaluation metrics honed from years of practical, in-depth experience - an expertise extending beyond what ChatGPT can deliver alone. 
-We engineered mock interview to not only provide detailed and customized feedback, but also to monitor your progress. Mock Interview embodies the essence of hundreds of hours of research and development, converging to forge a best-in-class AI-driven behavioral interview simulator.</p>
-                    </Popdown>
-                </div>
+                <Accordion>
+                    <Panel>
+                        <Header>Do credits expire?</Header>
+                        <Content><p>No, however we're unable to give refunds at this time.</p></Content>
+                    </Panel>
+                    <Panel>
+                        <Header>Is my data safe and private?</Header>
+                        <Content><p>Absolutely! Mockinterview.tech was built using the most up to date security and privacy best practices by people who've worked in the cybersecurity industry. We will not transmit any data you give us without your permission.</p></Content>
+                    </Panel>
+                    <Panel>
+                        <Header>I left my session mid-interview. Can I get my token back?</Header>
+                        <Content><p>Right now we don't have a self serve way to do that but if you <a href="mailto:{CONTACT_EMAIL}">drop us a line</a> we can get you squared away.</p></Content>
+                    </Panel>
+                    <Panel>
+                        <Header>How do I shut down my account?</Header>
+                        <Content><p>We'd be sorry to see you go, however, just <a href="mailto:{CONTACT_EMAIL}">drop us a line</a> we can close out your account including erasure of your data.</p></Content>
+                    </Panel>
+                    <Panel>
+                        <Header>Why not just use ChatGPT?</Header>
+                        <Content><p>We leverage exclusive, interview evaluation metrics honed from years of practical, in-depth experience - an expertise extending beyond what ChatGPT can deliver alone. 
+We engineered mock interview to not only provide detailed and customized feedback, but also to monitor your progress. Mock Interview embodies the essence of hundreds of hours of research and development, converging to forge a best-in-class AI-driven behavioral interview simulator.</p></Content>
+                    </Panel>
+                </Accordion>
             </div>
         </div>
     </section>
@@ -185,6 +184,7 @@ We engineered mock interview to not only provide detailed and customized feedbac
     .jumbotron {
         position: relative;
         color: $white;
+        z-index: 100;
         padding: 200px 40px;
         background-color: transparent; /* No direct background on the jumbotron */
 
@@ -256,19 +256,6 @@ We engineered mock interview to not only provide detailed and customized feedbac
                 }
             }
             button { margin: auto; }
-        }
-
-        .popdown-header { text-align: left; }
-
-        .popdown-content {
-            text-align: left;
-            line-height: 25px;
-            a {
-                color: $dark-purple;
-            }
-            a:hover {
-                text-decoration: underline;
-            }
         }
 
         .approach {

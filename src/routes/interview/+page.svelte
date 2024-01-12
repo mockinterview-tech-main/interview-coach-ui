@@ -1,4 +1,6 @@
 <script lang="ts">
+    import Button from '@smui/button';
+
     import { onDestroy } from 'svelte';
 	import { goto } from '$app/navigation';
 
@@ -152,25 +154,29 @@
     <div class="transcript">
         {#if !interviewConfirmed && $userStore.credits === 0}
             <p style="text-align: center;">Uh oh, looks like you're out of credits. Please buy more before continuing.</p>
-            <button class="secondary-button" on:click={buyCredits}>Buy Credits</button>
+            <div class="options-container" style="flex-direction: column; align-items: center;">
+                <Button on:click={buyCredits}>Buy Credits</Button>
+            </div>
         {:else if !interviewConfirmed && !selectedTopic}
             <h2>Select a Focus Area</h2>
             <p>Most soft skill interviews focus on one of the following topics. Please choose one of the following:</p>
             <div class="options-container">
                 {#each topics as topic}
-                    <button class="option-button" on:click={() => selectedTopic = topic}>{topic}</button>
+                    <Button on:click={() => selectedTopic = topic}>{topic}</Button>
                 {/each}
             </div>
         {:else if !interviewConfirmed}
             <h2 style="text-align: center;">Let's Practice {selectedTopic}</h2>
             <p style="text-align: center;">Once you begin the interview session one token will be deducted.</p>
             <p style="text-align: center;">Leaving the page or refreshing will lose the session</p>
-            <button on:click={confirmInterview} >Continue</button><br/>
-            <button on:click={() => selectedTopic = ""} class="tirtiary-button">Go Back</button>
+            <div class="options-container" style="flex-direction: column; align-items: center;">
+                <Button style="max-width: 135px;" on:click={confirmInterview} >Continue</Button><br/>
+                <Button style="max-width: 135px;" on:click={() => selectedTopic = ""}>Go Back</Button>
+            </div>
         {:else}
             <Transcript loading={loading}/>
             {#if summaryId != "" && !loading}
-                <button on:click={() => goto(`/summary/${summaryId}`)} class="button">View Scorecard</button>
+                <Button on:click={() => goto(`/summary/${summaryId}`)} class="button">View Scorecard</Button>
             {/if}
         {/if}
     </div>
@@ -234,18 +240,9 @@
             padding: 0px 15%;
             margin-bottom: 40px;
         }
-        button {
-            max-width: 135px;
-            margin: auto;
-        }
         .options-container {
             flex-flow: row wrap;
             display: flex;
-        }
-        .option-button {
-            min-width: 200px;
-            display: inline-block;
-            margin-top: 10px;
         }
     }
 </style>

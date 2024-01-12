@@ -1,4 +1,6 @@
 <script lang="ts">
+    import Button from '@smui/button';
+
     export let data;
     const offerings = data.offerings;
 </script>
@@ -31,7 +33,7 @@
         <form action="?/purchase" method="POST">
             <h3>{offering.label}</h3>
             <input type="hidden" name="chosenOffering" value={JSON.stringify(offering)} />
-            <button class="secondary-button" type="submit" id="checkout-button">{offering.label} ${offering.price}.00</button>
+            <Button type="submit" id="checkout-button">{offering.label} ${offering.price}.00</Button>
         </form>
     {/each}
 </div>
