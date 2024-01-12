@@ -185,7 +185,7 @@ We engineered mock interview to not only provide detailed and customized feedbac
     .jumbotron {
         position: relative;
         color: $white;
-        padding: 200px 40px;
+        padding: 200px 20px;
         background-color: transparent; /* No direct background on the jumbotron */
 
         /* Blurred version of the background */
@@ -199,6 +199,7 @@ We engineered mock interview to not only provide detailed and customized feedbac
             z-index: -2; /* Ensure it's below the content */
             background-image: url('$lib/assets/jumbotron.jpg');
             background-size: cover;
+            background-position: center;
             background-repeat: no-repeat;
         }
 
