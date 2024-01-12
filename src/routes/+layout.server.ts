@@ -1,7 +1,6 @@
 import { redirect } from '@sveltejs/kit';
 import type { LayoutServerLoad } from './$types';
-import { decodeJwt, validateJwt } from '$lib/jwt';
-import { VITE_NONCE_SIGNING_SECRET } from '$env/static/private';
+import { decodeJwt } from '$lib/jwt';
 
 export const load: LayoutServerLoad = async ({ locals, url }) => {
     const protectedRoutes = ['interview', 'summary', 'credits']
@@ -16,12 +15,10 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
         if (currentUser){
             if (currentUser.nonce) {
                 const nonce = url.searchParams.get('nonce')
-                if (validateJwt(currentUser.nonce, VITE_NONCE_SIGNING_SECRET)){
-                    const userToken = decodeJwt(currentUser.nonce)
-                    if (userToken.nonce === nonce) {
-                        await locals.pb?.collection('users').update(currentUserToken.id, { nonce: '', credits: (currentUser.credits + userToken.credits)});
-                        currentUser = await locals.pb?.collection('users').getOne(currentUserToken.id);
-                    }
+                const userToken = decodeJwt(currentUser.nonce)
+                if (userToken.nonce === nonce) {
+                    await locals.pb?.collection('users').update(currentUserToken.id, { nonce: '', credits: (currentUser.credits + userToken.credits)});
+                    currentUser = await locals.pb?.collection('users').getOne(currentUserToken.id);
                 }
             }
             return {
