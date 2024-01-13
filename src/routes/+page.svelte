@@ -1,6 +1,7 @@
 <script lang="ts">
     import interviewScreenshot from '$lib/assets/interview-screenshot.png';
     import setupScreenshot from '$lib/assets/setup-screenshot.png';
+    import Card from '@smui/card';
     import target from '$lib/assets/icons/target.svg';
     import bookFilled from '$lib/assets/icons/book-filled.svg';
     import personFilled from '$lib/assets/icons/person-filled.svg';
@@ -17,13 +18,13 @@
 <section class="jumbotron">
     <div>
         <h1>Be On The Ball In Your Next Interview</h1>
-        <p>Let us help you make your story as exceptional as you are</p>
+        <p>Let us help you make your story as exceptional as you are</p><br/><br/>
         {#if loggedIn}
-            <a data-sveltekit-preload-data href="/interview"><Button>New Interview</Button></a>
-            <a data-sveltekit-preload-data href="/summary"><Button>Review Interviews</Button></a>
+            <a data-sveltekit-preload-data href="/interview"><Button class="cta-button jumbo">New Interview</Button></a>
+            <a data-sveltekit-preload-data href="/summary"><Button class="cta-button jumbo">Review Interviews</Button></a>
         {:else}
-            <a href="/login"><Button>Get Started!</Button></a>
-            <a href="/login"><Button>Log In</Button></a>
+            <a href="/login"><Button class="cta-button jumbo">Get Started!</Button></a>
+            <a href="/login"><Button class="cta-button jumbo">Log In</Button></a>
         {/if}
     </div>
 </section>
@@ -76,37 +77,33 @@
         </div>
     </section>
 
-    <img width="50%" src={separator} alt="separator"/>
-
     <section class="section">
         <div class="container">
-            <h2>Our Approach</h2>
-            <div style="box-shadow: 5px 5px #EDECF2; margin-bottom: 20px; border: 1px solid #EDECF2" class="horizontal-sections">
-                <div class="hz-section approach" style="text-align: center;">
+            <Card padded style="display: flex; flex-direction: row;">
+                <div class="hz-section" style="text-align: center;">
                     <img width="100%" src={setupScreenshot} alt="Setup Screenshot"/>
                 </div>
-                <div class="hz-section approach" style=" text-align: left;">
+                <div class="hz-section" style=" text-align: left;">
                     <h3>Focus on Skill Areas That Matter to Hiring Managers</h3>
                     <p>We don't use a question bank and randomly pick questions. We know what interpersonal skills hiring managers truly care about and emphasize story telling in those areas.</p>
                     <p>Training with us will help you recognize what a hiring manager is really looking for in a question so you can deliver the story that best showcases the skill.</p>
                     <p>We score you on how well your story showcases skills like collaboration, leadership, and problem solving and let you re-try questions in an area until you feel confident and ready for the interview.</p>
                 </div>
-            </div>
-            <div style="box-shadow: 5px 5px #EDECF2; margin-bottom: 20px; border: 1px solid #EDECF2" class="horizontal-sections">
-                <div class="hz-section approach" style=" text-align: left;">
+            </Card>
+            <br/><br/>
+            <Card padded style="display: flex; flex-direction: row;">
+                <div class="hz-section" style=" text-align: left;">
                     <h3>Practical Practice</h3>
                     <p>We encourage speaking and practicing as if you were on a call with a real interviewer to build confidence and muscle memory.</p>
                     <p>Filler words are filtered out so you can focus on your story's content rather than the mechanics.</p>
                     <p>Transcripts are saved so you can review them, make changes, and hone your story.</p>
                 </div>
-                <div class="hz-section approach" style="text-align: center;">
+                <div class="hz-section" style="text-align: center;">
                     <img width="100%" src={interviewScreenshot} alt="Meta Logo"/>
                 </div>
-            </div>
+            </Card>
         </div>
     </section>
-
-    <img width="50%" src={separator} alt="separator"/>
     
     <section class="section">
         <h2>Pricing</h2>
@@ -118,7 +115,7 @@
                 <ul>
                     <li>1 Interview Question</li>
                 </ul>
-                <a href={loggedIn ? '/credits' : '/login'}><Button>Buy Now</Button></a>
+                <a href={loggedIn ? '/credits' : '/login'}><Button class="cta-button">Buy Now</Button></a>
             </div>
             <div class="hz-section">
                 <h3 style="text-wrap: nowrap;">Passive Candidate $20.00</h3>
@@ -126,7 +123,7 @@
                 <ul>
                     <li>5 Interview Questions</li>
                 </ul>
-                <a href={loggedIn ? '/credits' : '/login'}><Button>Buy Now</Button></a>
+                <a href={loggedIn ? '/credits' : '/login'}><Button class="cta-button">Buy Now</Button></a>
             </div>
             <div class="hz-section">
                 <h3 style="text-wrap: nowrap;">Active Candidate $30.00</h3>
@@ -134,17 +131,15 @@
                 <ul>
                     <li>10 Interview Questions</li>
                 </ul>
-                <a href={loggedIn ? '/credits' : '/login'}><Button>Buy Now</Button></a>
+                <a href={loggedIn ? '/credits' : '/login'}><Button class="cta-button">Buy Now</Button></a>
             </div>
         </div>
         <div class="hz-section">
             <h3>Live Coaching</h3>
             <p>Contact us for a consultation with one of our interview experts and we'll work with you on your career goals and craft an interviewing plan that is perfect for you.</p>
-            <a href="mailto:{CONTACT_EMAIL}"><Button>Get in Touch</Button></a>
+            <a href="mailto:{CONTACT_EMAIL}"><Button class="cta-button">Get in Touch</Button></a>
         </div>
     </section>
-
-    <img width="50%" src={separator} alt="separator"/>
 
     <section class="section">
         <div class="container">
@@ -152,12 +147,12 @@
             <div class="horizontal-sections">
                 <Accordion>
                     <Panel>
-                        <Header>Do credits expire?</Header>
-                        <Content><p>No, however we're unable to give refunds at this time.</p></Content>
-                    </Panel>
-                    <Panel>
                         <Header>Is my data safe and private?</Header>
                         <Content><p>Absolutely! Mockinterview.tech was built using the most up to date security and privacy best practices by people who've worked in the cybersecurity industry. We will not transmit any data you give us without your permission.</p></Content>
+                    </Panel>
+                    <Panel>
+                        <Header>Do credits expire?</Header>
+                        <Content><p>No, however we're unable to give refunds at this time.</p></Content>
                     </Panel>
                     <Panel>
                         <Header>I left my session mid-interview. Can I get my token back?</Header>
@@ -176,11 +171,18 @@ We engineered mock interview to not only provide detailed and customized feedbac
             </div>
         </div>
     </section>
-
 </div>
 
 <style lang="scss">
     @import "../lib/styles/colors.scss";
+
+    * :global(.cta-button) {
+        margin: auto;
+        border: 1px solid $dark-purple;
+        background-color: $dark-purple;
+        color: white;
+    }
+
     .jumbotron {
         position: relative;
         color: $white;
@@ -203,12 +205,10 @@ We engineered mock interview to not only provide detailed and customized feedbac
         }
 
         h1 { font-size: 42px; }
-        
         p { font-size: 24px; }
-
-        .cta-buttons {
-            display: flex;
-            flex-direction: row;
+        * :global(.jumbo) {
+            padding: 20px;
+            margin-right: 20px;
         }
     }
 
@@ -255,13 +255,6 @@ We engineered mock interview to not only provide detailed and customized feedbac
                     display: inline-block;
                 }
             }
-            button { margin: auto; }
-        }
-
-        .approach {
-            background-color: $white;
-            justify-content: center;
-            img { margin: 10px; }
         }
 
         ul {

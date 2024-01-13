@@ -43,6 +43,7 @@
 
 <style lang="scss">
     #conversationSection {
+        padding: 0 25%;
         flex-direction: column;
         scroll-behavior: smooth;
         p { line-height: 25px; }

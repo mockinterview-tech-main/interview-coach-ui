@@ -1,5 +1,6 @@
 <script lang="ts">
     import Button from '@smui/button';
+    import Card from '@smui/card';
 
     import { browser } from '$app/environment';
     import type { PageData } from './$types';
@@ -33,37 +34,39 @@
 
 <p class="error">{#if form?.error}{form.message}{/if}</p>
 
+
 <div class="form-container">
-    <div class="action-selector">
-        <!-- svelte-ignore a11y-click-events-have-key-events -->
-        <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
-        <p class={isSignup ? "active-action-tab" : ""} on:click={toggleIsSignup}>Sign Up</p>
-        <!-- svelte-ignore a11y-click-events-have-key-events -->
-        <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
-        <p class={isSignup ? "" : "active-action-tab"} on:click={toggleIsSignup}>Log In</p>
-    </div>
-    <div class="action-form">
-        {#if isSignup}
-            <form method="POST" action="?/signup">
-                <label for="email">email address</label><br/>
-                <input name="email" type="email" placeholder="email@address.com" required/><br/>
-                <label for="password">password</label><br/>
-                <input name="password" type="password" placeholder="secret password" minlength=8 required/><br/>
-                <label for="passwordConfirm">confirm password</label><br/>
-                <input name="passwordConfirm" type="password" placeholder="secret password" minlength=8 required/><br/>
-                <Button type="submit">Sign Up</Button>
-            </form>
-        {:else}
-            <form method="POST" action="?/login">
-                <label for="email">email address</label><br/>
-                <input name="email" type="email" placeholder="email@address.com" required/><br/>
-                <label for="password">password</label><br/>
-                <input name="password" type="password" placeholder="secret password" required/><br/>
-                <Button type="submit">Login</Button>
-            </form>
-        {/if}
-    </div>
-    <h3>Connect With</h3>
+    <Card padded>
+        <div class="action-selector">
+            <!-- svelte-ignore a11y-click-events-have-key-events -->
+            <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+            <p class={isSignup ? "active-action-tab" : ""} on:click={toggleIsSignup}>Sign Up</p>
+            <!-- svelte-ignore a11y-click-events-have-key-events -->
+            <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+            <p class={isSignup ? "" : "active-action-tab"} on:click={toggleIsSignup}>Log In</p>
+        </div>
+        <div class="action-form">
+            {#if isSignup}
+                <form method="POST" action="?/signup">
+                    <label for="email">email address</label><br/>
+                    <input name="email" type="email" placeholder="email@address.com" required/><br/>
+                    <label for="password">password</label><br/>
+                    <input name="password" type="password" placeholder="secret password" minlength=8 required/><br/>
+                    <label for="passwordConfirm">confirm password</label><br/>
+                    <input name="passwordConfirm" type="password" placeholder="secret password" minlength=8 required/><br/>
+                    <Button type="submit">Sign Up</Button>
+                </form>
+            {:else}
+                <form method="POST" action="?/login">
+                    <label for="email">email address</label><br/>
+                    <input name="email" type="email" placeholder="email@address.com" required/><br/>
+                    <label for="password">password</label><br/>
+                    <input name="password" type="password" placeholder="secret password" required/><br/>
+                    <Button type="submit">Login</Button>
+                </form>
+            {/if}
+        </div>
+        <h3>Connect With</h3>
         <div class="social-container">
             {#each Object.keys(providers) as provider}
                 {#if providers[provider].authProviderState}
@@ -76,6 +79,7 @@
                 {/if}
             {/each}
         </div>
+    </Card>
 </div>
 
 <style lang="scss">
@@ -87,10 +91,7 @@
         color: red;
     }
     .form-container {
-        box-shadow: 5px 5px #EDECF2;
-        border: 1px solid #EDECF2;
         width: 50%;
-        height: 100%;
         margin: auto;
         position: relative;
         top: 100px;
@@ -120,12 +121,7 @@
                 color: white;
             }
         }
-        .action-form {
-            padding: 20px;
-            button {
-                margin: auto;
-            }
-        }
+        .action-form { padding: 20px; }
         .social-container {
                 display: flex;
                 flex-flow: row wrap;
