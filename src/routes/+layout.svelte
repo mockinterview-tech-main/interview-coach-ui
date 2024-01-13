@@ -68,9 +68,8 @@
             <!-- svelte-ignore a11y-click-events-have-key-events -->
             <div class="right-nav-links">
                 <span class="nav-link">{username}</span>
+                <span class="nav-link"><a href="/credits">{$userStore.credits} Interviews</a></span>
                 <span class="nav-link" on:click={logout}><a href="/">logout</a></span>
-                <span class="nav-link">{$userStore.credits} Interviews</span>
-                <span class="nav-link" on:click={toggleNav}><a class="link-cta" href="/credits">Buy More</a></span>
             </div>
             {/if}
             
@@ -115,7 +114,7 @@
     .container {
         font-family: 'inter', Arial, Helvetica, sans-serif;
         font-size: medium;
-        min-height: 100vh;
+        min-height: 110vh;
         display: flex;
         flex-direction: column;
         width: 100%;
@@ -137,7 +136,7 @@
             top: 4px;
             vertical-align: middle;
         }
-            .nav-links {
+        .nav-links {
             display: flex;
             flex-direction: row;
             justify-content: space-between;
@@ -149,18 +148,14 @@
 
             .left-nav-links {
                 align-items: flex-start;
-                .nav-link {
-                    margin-left: 20px;
-                }
+                .nav-link { margin-left: 20px; }
             }
-            
+        
             .right-nav-links {
                 align-items: flex-end;
                 margin-right: 20px;
                 color: $white;
-                .nav-link {
-                    margin-right: 20px;
-                }
+                .nav-link { margin-right: 20px; }
             }
 
             @media only screen and (max-width: 750px) {
@@ -214,10 +209,9 @@
     @media only screen and (max-width: 1000px) {
         * { font-size: 14px; }
         footer {
-            justify-content: space-around;
-            span {
-                padding: 20px;
-            }
+            justify-content: flex-start;
+            align-content: flex-start;
+            span { padding: 10px; }
         }
     }
 </style>

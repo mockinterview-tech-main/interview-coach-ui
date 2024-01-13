@@ -1,80 +1,90 @@
 <script lang="ts">
+    import Card, {PrimaryAction} from '@smui/card';
+
     export let data;
+
     const offerings = data.offerings;
+
+    const initPurchase = (sku: string) => {
+        if(document){
+            const form = document.getElementById(sku);
+            if (form && form instanceof HTMLFormElement) {
+                form.submit();
+            }
+        }
+    }
 </script>
 
-<h2>Choose Your Package</h2>
-<section class="section">
-    <div class="steps">
-        <div class="step">
-            <h3>Looking Around $5.00</h3>
-            <ul>
-                <li>Best as a refresher on interviewing</li>
-            </ul>
-        </div>
-        <div class="step">
-            <h3>Passive Candidate $20.00</h3>
-            <ul>
-                <li>Equivalent to a 2 hour live person coaching session valued at $200.00</li>
-            </ul>
-        </div>
-        <div class="step">
-            <h3>Active Candidate $30.00</h3>
-            <ul>
-                <li>Best for refining answers to tricky interview questions or preparing for multiple interviews</li>
-            </ul>
-        </div>
-    </div>
+<section class="jumbotron">
+    <h1>Buy Interview Credits</h1>
 </section>
+
 <div>
     {#each offerings as offering}
-        <form action="?/purchase" method="POST">
-            <h3>{offering.label}</h3>
-            <input type="hidden" name="chosenOffering" value={JSON.stringify(offering)} />
-            <button class="secondary-button" type="submit" id="checkout-button">{offering.label} ${offering.price}.00</button>
-        </form>
+        <Card class="pay-card">
+            <PrimaryAction on:click={ () => {initPurchase(offering.sku)} }>
+                <form id="{offering.sku}" action="?/purchase" method="POST">
+                    <h3>{offering.label}</h3>
+                    <p>{offering.description}</p>
+                    <input type="hidden" name="chosenOffering" value={JSON.stringify(offering)} />
+                    <h3 class="price-tag">${offering.price}.00</h3>
+                </form>
+            </PrimaryAction>
+        </Card>
     {/each}
 </div>
 
 <style lang="scss">
     @import "$lib/styles/colors.scss";
-    
-    h2 {
-        padding: 60px 40px;
+
+    .jumbotron {
+        h1 { 
+            font-size: 42px; 
+            padding-left: 40px;
+        }
+        position: relative;
+        color: $white;
+        z-index: 100;
+        padding: 200px 0px;
+        margin-bottom: 50px;
+        width: 100vw;
+        background-color: transparent; /* No direct background on the jumbotron */
+
+        /* Blurred version of the background */
+        &::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: -2; /* Ensure it's below the content */
+            background-image: url('$lib/assets/jumbotron.jpg');
+            background-size: cover;
+            background-position: center;
+        }
+
     }
+    
     div {
         display: flex;
-        align-items: center;
         justify-content: space-around;
-    }
-    .section {
-        padding: 20px 0;
-        text-align: center;
-        &:last-of-type {
-            padding-bottom: 60px;
+        flex-flow: row wrap;
+        align-items: center;
+        form {
+            flex: 1;
+            overflow: hidden;
+            width: 300px;
+            padding: 20px;
+            text-align: center;
         }
     }
 
-    .steps {
-        display: flex;
-        flex-wrap: wrap;
-        justify-content: space-around;
-    }
-
-    .step {
-        background-color: $light-gray;
-        flex-direction: column;
-        padding: 20px;
-        border-radius: 8px;
-        flex: 1;
-        margin: 20px;
-        ul {
-            margin: auto;
-            padding: 0;
-            list-style-type: none;
-            li {
+    @media only screen and (max-width: 1020px) {
+        div {
+            flex-flow: column nowrap;
+            & :global(.pay-card) {
                 margin: 10px;
-                text-align: center;
             }
         }
     }
