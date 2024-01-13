@@ -197,8 +197,9 @@
     @media only screen and (max-width: 1000px) {
         * { font-size: 14px; }
         footer {
-            justify-content: space-around;
-            span { padding: 20px; }
+            justify-content: flex-start;
+            align-content: flex-start;
+            span { padding: 10px; }
         }
     }
 </style>

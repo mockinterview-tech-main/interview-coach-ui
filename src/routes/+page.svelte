@@ -5,7 +5,6 @@
     import target from '$lib/assets/icons/target.svg';
     import bookFilled from '$lib/assets/icons/book-filled.svg';
     import personFilled from '$lib/assets/icons/person-filled.svg';
-    import separator from '$lib/assets/icons/separator.svg';
     import Accordion, { Panel, Header, Content } from '@smui-extra/accordion';
     import Button from '@smui/button';
 
@@ -15,166 +14,149 @@
     const CONTACT_EMAIL = import.meta.env.VITE_CONTACT_INFO;
 </script>
 
-<section class="jumbotron">
-    <div>
-        <h1>Be On The Ball In Your Next Interview</h1>
-        <p>Let us help you make your story as exceptional as you are</p><br/><br/>
-        {#if loggedIn}
-            <a data-sveltekit-preload-data href="/interview"><Button class="cta-button jumbo">New Interview</Button></a>
-            <a data-sveltekit-preload-data href="/summary"><Button class="cta-button jumbo">Review Interviews</Button></a>
-        {:else}
-            <a href="/login"><Button class="cta-button jumbo">Get Started!</Button></a>
-            <a href="/login"><Button class="cta-button jumbo">Log In</Button></a>
-        {/if}
-    </div>
-</section>
+<div class="frontpage-container">
+    <section class="jumbotron">
+        <div>
+            <h1>Nail Your Next Interview</h1>
+            <p>Make your stories as exceptional as you</p><br/><br/>
+            {#if loggedIn}
+                <a data-sveltekit-preload-data href="/interview"><Button class="cta-button jumbo">New Interview</Button></a>
+                <a data-sveltekit-preload-data href="/summary"><Button class="cta-button jumbo">Review Interviews</Button></a>
+            {:else}
+                <a href="/login"><Button class="cta-button jumbo">Get Started!</Button></a>
+                <a href="/login"><Button class="cta-button jumbo">Log In</Button></a>
+            {/if}
+        </div>
+    </section>
 
-{#if !loggedIn}
-    <div class="announcement-banner">
-        Early Adopter Special: Sign up now and get 3 FREE interview questions!
-    </div>
-{/if}
+    {#if !loggedIn}
+        <div class="announcement-banner">
+            Early Adopter Special: Sign up now and get 3 FREE interview questions!
+        </div>
+    {/if}
 
-<div class="info-section">
-    <section class="section">
-        <div class="container">
+    <div class="info-section">
+        <section class="section">
             <h1>Why Us?</h1>
             <div class="vertical-sections">
                 <div class="vl-section">
-                    <p>We believe career mobility should be accessible to all. That's why we use our experience in interviewing and hiring at top companies to give you personalized insights to your stories as hiring managers would see and evaluate them.</p>
+                    <p>Craft and curate stories that get to the heart of what interviewers actually care about.</p>
+                    <p>Efficiently hone your practice telling stories about select soft-skill traits rather than answering random questions.</p>
                 </div>
             </div>
-        </div>
-    </section>
+        </section>
 
-    <section class="section">
-        <div class="horizontal-sections">
-            <div class="hz-section">
-                <img width="100px" height="100px" src={personFilled} alt="personalized coaching"/>
-                <h2>Flexible Coaching</h2>
-                <ul>
-                    <li>Get affordable anyime coaching works with your schedule</li>
-                    <li>Personalized score cards in storytelling and core skills focus areas track how well your story improves with each attempt</li>
-                </ul>
-            </div>
-            <div class="hz-section">
-                <img width="100px" height="100px" src={bookFilled} alt="high impact story telling"/>
-                <h2>Storytelling S.T.A.R</h2>
-                <ul>
-                    <li>Craft your story using the Situation Task Action & Result (S.T.A.R.) framework, the prefered framework of hiring managers</li>
-                    <li>See specific areas of your story that need more (or less) details and prepare supporting data and points for the real interview</li>
-                </ul>
-            </div>
-            
-            <div class="hz-section">
-                <img width="100px" height="100px" src={target} alt="progression"/>
-                <h2>Focused Questions</h2>
-                <ul>
-                    <li>Choose a focus area from grading rubrics used at thousands of companies to interview against</li>
-                    <li>Understand signals that hiring managers use to evaluate you in areas like <strong>collaboration, problem solving, and influence without authority</strong></li>
-                </ul>
-            </div>
-        </div>
-    </section>
-
-    <section class="section">
-        <div class="container">
-            <Card padded style="display: flex; flex-direction: row;">
-                <div class="hz-section" style="text-align: center;">
-                    <img width="100%" src={setupScreenshot} alt="Setup Screenshot"/>
+        <section class="section">
+            <div class="horizontal-sections">
+                <div class="hz-section">
+                    <img width="100px" height="100px" src={bookFilled} alt="high impact story telling"/>
+                    <h2>Storytelling S.T.A.R</h2>
+                    <ul>
+                        <li>Practice the Situation Task Action & Result (S.T.A.R.) framework, the prefered framework of hiring managers</li>
+                        <li>See specific areas of your story that need more (or less) details and prepare supporting data and points for the real interview</li>
+                    </ul>
                 </div>
-                <div class="hz-section" style=" text-align: left;">
+                <div class="hz-section">
+                    <img width="100px" height="100px" src={target} alt="progression"/>
+                    <h2>Focused Topics</h2>
+                    <ul>
+                        <li>Choose a focus area from grading rubrics used at thousands of companies to interview against</li>
+                        <li>Emphasize signals that hiring managers look for rather than random interview questions</li>
+                    </ul>
+                </div>
+                <div class="hz-section">
+                    <img width="100px" height="100px" src={personFilled} alt="personalized coaching"/>
+                    <h2>Flexible Coaching</h2>
+                    <ul>
+                        <li>Get affordable anyime coaching works with your schedule</li>
+                        <li>Personalized score cards in storytelling and core skills focus areas track how well your story improves with each attempt</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <section class="section">
+            <Card padded class="features-card">
+                <img src={setupScreenshot} alt="Setup Screenshot"/>
+                <div style=" text-align: left;">
                     <h3>Focus on Skill Areas That Matter to Hiring Managers</h3>
                     <p>We don't use a question bank and randomly pick questions. We know what interpersonal skills hiring managers truly care about and emphasize story telling in those areas.</p>
-                    <p>Training with us will help you recognize what a hiring manager is really looking for in a question so you can deliver the story that best showcases the skill.</p>
-                    <p>We score you on how well your story showcases skills like collaboration, leadership, and problem solving and let you re-try questions in an area until you feel confident and ready for the interview.</p>
+                    <p>Learn to recognize what a hiring manager is really looking for in a question so you can deliver the story that best showcases the skill.</p>
+                    <p>We score you on how well your story exhibits skills like collaboration, leadership, and problem solving so you can hone your story before the big day.</p>
                 </div>
             </Card>
             <br/><br/>
-            <Card padded style="display: flex; flex-direction: row;">
-                <div class="hz-section" style=" text-align: left;">
+            <Card padded class="features-card">
+                <div style=" text-align: left;">
                     <h3>Practical Practice</h3>
-                    <p>We encourage speaking and practicing as if you were on a call with a real interviewer to build confidence and muscle memory.</p>
-                    <p>Filler words are filtered out so you can focus on your story's content rather than the mechanics.</p>
+                    <p>Practice as if you were on a call with a real interviewer to build confidence and muscle memory.</p>
+                    <p>Focus on content rather than mechanics.</p>
                     <p>Transcripts are saved so you can review them, make changes, and hone your story.</p>
                 </div>
-                <div class="hz-section" style="text-align: center;">
-                    <img width="100%" src={interviewScreenshot} alt="Meta Logo"/>
-                </div>
+                <img src={interviewScreenshot} alt="Interview Screenshot"/>
             </Card>
-        </div>
-    </section>
-    
-    <section class="section">
-        <h2>Pricing</h2>
-        <p>All packages come with result summaries. Credits never expire.</p>
-        <div class="horizontal-sections">
-            <div class="hz-section">
-                <h3 style="text-wrap: nowrap;">Looking Around $5.00</h3>
-                <img width="50%" src={separator} alt="separator"/>
-                <ul>
-                    <li>1 Interview Question</li>
-                </ul>
-                <a href={loggedIn ? '/credits' : '/login'}><Button class="cta-button">Buy Now</Button></a>
+        </section>
+        
+        <section class="section">
+            <h2>Pricing</h2>
+            <p>All packages come with result summaries. Credits never expire.</p>
+            <div class="horizontal-sections price-section">
+                <div class="hz-section price">
+                    <h3 style="text-wrap: nowrap;">Looking Around $5.00</h3>
+                    <p>1 Interview Question</p>
+                    <a href={loggedIn ? '/credits' : '/login'}><Button class="cta-button">Buy Now</Button></a>
+                </div>
+                <div class="hz-section price">
+                    <h3 style="text-wrap: nowrap;">Passive Candidate $20.00</h3>
+                    <p>5 Interview Questions</p>
+                    <a href={loggedIn ? '/credits' : '/login'}><Button class="cta-button">Buy Now</Button></a>
+                </div>
+                <div class="hz-section price">
+                    <h3 style="text-wrap: nowrap;">Active Candidate $30.00</h3>
+                    <p>10 Interview Questions</p>
+                    <a href={loggedIn ? '/credits' : '/login'}><Button class="cta-button">Buy Now</Button></a>
+                </div>
             </div>
             <div class="hz-section">
-                <h3 style="text-wrap: nowrap;">Passive Candidate $20.00</h3>
-                <img width="50%" src={separator} alt="separator"/>
-                <ul>
-                    <li>5 Interview Questions</li>
-                </ul>
-                <a href={loggedIn ? '/credits' : '/login'}><Button class="cta-button">Buy Now</Button></a>
+                <h3>Live Coaching</h3>
+                <p>Contact us for a consultation with one of our interview experts and we'll work with you on your career goals and craft an interviewing plan that is perfect for you.</p>
+                <a href="mailto:{CONTACT_EMAIL}"><Button class="cta-button">Get in Touch</Button></a>
             </div>
-            <div class="hz-section">
-                <h3 style="text-wrap: nowrap;">Active Candidate $30.00</h3>
-                <img width="50%" src={separator} alt="separator"/>
-                <ul>
-                    <li>10 Interview Questions</li>
-                </ul>
-                <a href={loggedIn ? '/credits' : '/login'}><Button class="cta-button">Buy Now</Button></a>
-            </div>
-        </div>
-        <div class="hz-section">
-            <h3>Live Coaching</h3>
-            <p>Contact us for a consultation with one of our interview experts and we'll work with you on your career goals and craft an interviewing plan that is perfect for you.</p>
-            <a href="mailto:{CONTACT_EMAIL}"><Button class="cta-button">Get in Touch</Button></a>
-        </div>
-    </section>
+        </section>
 
-    <section class="section">
-        <div class="container">
+        <section class="section">
             <h2>Frequently Asked Questions</h2>
-            <div class="horizontal-sections">
-                <Accordion>
-                    <Panel>
-                        <Header>Is my data safe and private?</Header>
-                        <Content><p>Absolutely! Mockinterview.tech was built using the most up to date security and privacy best practices by people who've worked in the cybersecurity industry. We will not transmit any data you give us without your permission.</p></Content>
-                    </Panel>
-                    <Panel>
-                        <Header>Do credits expire?</Header>
-                        <Content><p>No, however we're unable to give refunds at this time.</p></Content>
-                    </Panel>
-                    <Panel>
-                        <Header>I left my session mid-interview. Can I get my token back?</Header>
-                        <Content><p>Right now we don't have a self serve way to do that but if you <a href="mailto:{CONTACT_EMAIL}">drop us a line</a> we can get you squared away.</p></Content>
-                    </Panel>
-                    <Panel>
-                        <Header>How do I shut down my account?</Header>
-                        <Content><p>We'd be sorry to see you go, however, just <a href="mailto:{CONTACT_EMAIL}">drop us a line</a> we can close out your account including erasure of your data.</p></Content>
-                    </Panel>
-                    <Panel>
-                        <Header>Why not just use ChatGPT?</Header>
-                        <Content><p>We leverage exclusive, interview evaluation metrics honed from years of practical, in-depth experience - an expertise extending beyond what ChatGPT can deliver alone. 
-We engineered mock interview to not only provide detailed and customized feedback, but also to monitor your progress. Mock Interview embodies the essence of hundreds of hours of research and development, converging to forge a best-in-class AI-driven behavioral interview simulator.</p></Content>
-                    </Panel>
-                </Accordion>
-            </div>
-        </div>
-    </section>
+            <Accordion>
+                <Panel>
+                    <Header>Is my data safe and private?</Header>
+                    <Content><p>Absolutely! Mockinterview.tech was built using the most up to date security and privacy best practices by people who've worked in the cybersecurity industry. We will not transmit any data you give us without your permission.</p></Content>
+                </Panel>
+                <Panel>
+                    <Header>Do credits expire?</Header>
+                    <Content><p>No, however we're unable to give refunds at this time.</p></Content>
+                </Panel>
+                <Panel>
+                    <Header>I left my session mid-interview. Can I get my token back?</Header>
+                    <Content><p>Right now we don't have a self serve way to do that but if you <a href="mailto:{CONTACT_EMAIL}">drop us a line</a> we can get you squared away.</p></Content>
+                </Panel>
+                <Panel>
+                    <Header>How do I shut down my account?</Header>
+                    <Content><p>We'd be sorry to see you go, however, just <a href="mailto:{CONTACT_EMAIL}">drop us a line</a> we can close out your account including erasure of your data.</p></Content>
+                </Panel>
+                <Panel>
+                    <Header>Why not just use ChatGPT?</Header>
+                    <Content><p>We leverage exclusive, interview evaluation metrics honed from years of practical, in-depth experience - an expertise extending beyond what ChatGPT can deliver alone. 
+    We engineered mock interview to not only provide detailed and customized feedback, but also to monitor your progress. Mock Interview embodies the essence of hundreds of hours of research and development, converging to forge a best-in-class AI-driven behavioral interview simulator.</p></Content>
+                </Panel>
+            </Accordion>
+        </section>
+    </div>
 </div>
 
 <style lang="scss">
     @import "../lib/styles/colors.scss";
+
+    p, li { line-height: 1.5em; }
 
     * :global(.cta-button) {
         margin: auto;
@@ -183,11 +165,18 @@ We engineered mock interview to not only provide detailed and customized feedbac
         color: white;
     }
 
+    .frontpage-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
     .jumbotron {
         position: relative;
         color: $white;
         z-index: 100;
-        padding: 200px 40px;
+        padding: 200px 0px;
+        width: 100vw;
         background-color: transparent; /* No direct background on the jumbotron */
 
         /* Blurred version of the background */
@@ -201,24 +190,49 @@ We engineered mock interview to not only provide detailed and customized feedbac
             z-index: -2; /* Ensure it's below the content */
             background-image: url('$lib/assets/jumbotron.jpg');
             background-size: cover;
-            background-repeat: no-repeat;
         }
 
+        div { padding: 0 40px; }
         h1 { font-size: 42px; }
         p { font-size: 24px; }
         * :global(.jumbo) {
             padding: 20px;
             margin-right: 20px;
+            margin-top: 20px;
         }
     }
 
     .announcement-banner {
         text-align: center;
+        padding: 20px;
         font-size: large;
         display: block;
-        line-height: 30px;
+        width: 100%;
         background-color: $dark-purple;
         color: $white;
+    }
+
+    * :global(.features-card) {
+        display: flex; 
+        justify-content: space-around; 
+        flex-wrap: wrap;
+        flex-direction: row;
+        align-items: center;
+        
+        & :global(img) {
+            max-width: 40%;
+            min-width: 300px;
+            min-height: 200px;
+        }
+        & :global(div) {
+            min-width: 300px;
+            max-width: 40%;
+        }
+
+        @media only screen and (max-width: 500px) {
+            & :global(img) { display: none}
+            padding: 20px;
+        }
     }
 
     .info-section {
@@ -226,6 +240,7 @@ We engineered mock interview to not only provide detailed and customized feedbac
         flex-direction: column;
         width: 100%;
         align-items: center;
+        max-width: 1500px;
         .section {
             align-items: center;
             padding: 20px 0;
@@ -240,19 +255,28 @@ We engineered mock interview to not only provide detailed and customized feedbac
             display: flex;
             flex-wrap: wrap;
             justify-content: space-around;
+            .hz-section {
+                flex: 1;
+                margin: 20px;
+                box-sizing: border-box;
+                width: 300px;
+                ul {
+                    flex: 1;
+                    margin: auto;
+                    padding: 0;
+                    li {
+                        margin-top: 10px;
+                        display: inline-block;
+                    }
+                }
+            }
         }
-
-        .hz-section {
-            border-radius: 8px;
-            flex: 1;
-            margin: 20px;
-            min-width: 200px;
-            ul {
-                margin: auto;
-                padding: 0;
-                li {
-                    margin-top: 10px;
-                    display: inline-block;
+        @media only screen and (max-width: 1020px) {
+            .horizontal-sections {
+                flex-direction: column;
+                align-items: center;
+                ul, & :global(.price) {
+                    margin: 10px;
                 }
             }
         }

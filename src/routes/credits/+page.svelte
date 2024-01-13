@@ -1,20 +1,35 @@
 <script lang="ts">
-    import Button from '@smui/button';
-    import Card from '@smui/card';
+    import Card, {PrimaryAction} from '@smui/card';
 
     export let data;
+
     const offerings = data.offerings;
+
+    const initPurchase = (sku: string) => {
+        if(document){
+            const form = document.getElementById(sku);
+            if (form && form instanceof HTMLFormElement) {
+                form.submit();
+            }
+        }
+    }
 </script>
 
-<h2>Buy Interview Credits</h2>
+<section class="jumbotron">
+    <h1>Buy Interview Credits</h1>
+</section>
+
 <div>
     {#each offerings as offering}
-        <Card style="margin: 10px;" padded>
-            <form action="?/purchase" method="POST">
-                <h3>{offering.label}</h3>
-                <input type="hidden" name="chosenOffering" value={JSON.stringify(offering)} />
-                <Button class="buy-button" type="submit" id="checkout-button">${offering.price}.00</Button>
-            </form>
+        <Card class="pay-card">
+            <PrimaryAction on:click={ () => {initPurchase(offering.sku)} }>
+                <form id="{offering.sku}" action="?/purchase" method="POST">
+                    <h3>{offering.label}</h3>
+                    <p>{offering.description}</p>
+                    <input type="hidden" name="chosenOffering" value={JSON.stringify(offering)} />
+                    <h3 class="price-tag">${offering.price}.00</h3>
+                </form>
+            </PrimaryAction>
         </Card>
     {/each}
 </div>
@@ -22,26 +37,56 @@
 <style lang="scss">
     @import "$lib/styles/colors.scss";
 
-    * :global(.buy-button) {
-        margin: auto;
-        border: 1px solid $dark-purple;
-        background-color: $dark-purple;
-        color: white;
+    .jumbotron {
+        h1 { 
+            font-size: 42px; 
+            padding-left: 40px;
+        }
+        position: relative;
+        color: $white;
+        z-index: 100;
+        padding: 200px 0px;
+        margin-bottom: 50px;
+        width: 100vw;
+        background-color: transparent; /* No direct background on the jumbotron */
+
+        /* Blurred version of the background */
+        &::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: -2; /* Ensure it's below the content */
+            background-image: url('$lib/assets/jumbotron.jpg');
+            background-size: cover;
+            background-position: center;
+        }
+
     }
     
     div {
         display: flex;
         justify-content: space-around;
-        flex-direction: row;
-        flex-wrap: wrap;
+        flex-flow: row wrap;
+        align-items: center;
         form {
+            flex: 1;
             overflow: hidden;
-            min-width: 300px;
-            padding: 10px;
+            width: 300px;
+            padding: 20px;
             text-align: center;
-            text-wrap: nowrap;
         }
     }
-    h2 { padding: 60px 40px; }
+
+    @media only screen and (max-width: 1020px) {
+        div {
+            flex-flow: column nowrap;
+            & :global(.pay-card) {
+                margin: 10px;
+            }
+        }
+    }
 
 </style>

@@ -196,6 +196,7 @@
         display: flex;
         flex-direction: column;
         .call {
+            z-index: 1;
             width: 100%;
             background-color: #6e6e6e;
             padding: 20px 0px;
@@ -237,8 +238,9 @@
                 }
                 .pfp-container {
                     width: 300px;
+                    padding: 10px 0px;
                     img {
-                        width: 100px;
+                        width: 80px;
                     }
                 }
             }

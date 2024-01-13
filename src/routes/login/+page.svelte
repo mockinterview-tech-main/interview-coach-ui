@@ -48,25 +48,24 @@
         <div class="action-form">
             {#if isSignup}
                 <form method="POST" action="?/signup">
-                    <label for="email">email address</label><br/>
-                    <input name="email" type="email" placeholder="email@address.com" required/><br/>
+                    <label for="email">email</label><br/>
+                    <input name="email" type="email" placeholder="email" required/><br/>
                     <label for="password">password</label><br/>
-                    <input name="password" type="password" placeholder="secret password" minlength=8 required/><br/>
-                    <label for="passwordConfirm">confirm password</label><br/>
-                    <input name="passwordConfirm" type="password" placeholder="secret password" minlength=8 required/><br/>
-                    <Button type="submit">Sign Up</Button>
+                    <input name="password" type="password" placeholder="password" minlength=8 required/><br/>
+                    <label for="passwordConfirm">confirm</label><br/>
+                    <input name="passwordConfirm" type="password" placeholder="password" minlength=8 required/><br/>
+                    <Button class="cta-button" type="submit">Sign Up</Button>
                 </form>
             {:else}
                 <form method="POST" action="?/login">
-                    <label for="email">email address</label><br/>
-                    <input name="email" type="email" placeholder="email@address.com" required/><br/>
+                    <label for="email">email</label><br/>
+                    <input name="email" type="email" placeholder="email" required/><br/>
                     <label for="password">password</label><br/>
-                    <input name="password" type="password" placeholder="secret password" required/><br/>
-                    <Button type="submit">Login</Button>
+                    <input name="password" type="password" placeholder="password" required/><br/>
+                    <Button class="cta-button" type="submit">Login</Button>
                 </form>
             {/if}
         </div>
-        <h3>Connect With</h3>
         <div class="social-container">
             {#each Object.keys(providers) as provider}
                 {#if providers[provider].authProviderState}
@@ -101,6 +100,7 @@
             display: flex;
             flex-flow: row nowrap;
             margin: none;
+            text-wrap: nowrap;
             cursor: pointer;
             border-bottom: 1px solid $dark-purple;
             p {
@@ -108,7 +108,7 @@
                 flex: 1;
                 text-align: center;
                 line-height: 50px;
-                color: $dark-purple;
+                color: $light-purple;
             }
             p:hover {
                 background-color: $dark-purple;
@@ -121,17 +121,24 @@
                 color: white;
             }
         }
-        .action-form { padding: 20px; }
-        .social-container {
-                display: flex;
-                flex-flow: row wrap;
-                align-items: center;
-                justify-content: space-evenly;
-                img {
-                    cursor: pointer;
-                    width: 50px;
-                    height: 50px;
-                }
+        .action-form { 
+            padding: 20px 0px; 
+            text-align: center;
+            & :global(.cta-button) {
+                margin: auto
             }
+        }
+        .social-container {
+            display: flex;
+            flex-flow: row wrap;
+            align-items: center;
+            justify-content: space-evenly;
+            img {
+                cursor: pointer;
+                width: 50px;
+                height: 50px;
+                
+            }
+        }
     }
 </style>
