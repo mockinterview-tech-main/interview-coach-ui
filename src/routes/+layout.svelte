@@ -102,7 +102,7 @@
     .container {
         font-family: 'inter', Arial, Helvetica, sans-serif;
         font-size: medium;
-        min-height: 100vh;
+        min-height: 110vh;
         display: flex;
         flex-direction: column;
         width: 100%;
