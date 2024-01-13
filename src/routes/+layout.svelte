@@ -96,6 +96,18 @@
     @import "../lib/styles/button.scss";
     @import "../lib/styles/links.scss";
 
+    :global(html, body) {
+        width: 100%;
+        height: 100%;
+        padding: 0;
+        margin: 0;
+        overflow-x: hidden;
+    }
+
+    * {
+        min-width: 0;
+    }
+
     :global(h3) { text-align: center; }
     :global(li) { list-style-type: none; }
 
