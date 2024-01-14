@@ -3,7 +3,7 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 
 export const POST: RequestHandler = async ({ locals, request }) => {
-     const currentUserToken = decodeJwt(locals.pb?.authStore.token || '');
+    const currentUserToken = decodeJwt(locals.pb?.authStore.token || '');
     if (currentUserToken){
         let currentUser = await locals.pb?.collection('users').getOne(currentUserToken.id);
         if (currentUser){
