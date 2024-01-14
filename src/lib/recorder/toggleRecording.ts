@@ -1,4 +1,4 @@
-import { audioSrc, outputText, recordingState } from '$lib/stores/recordingState';
+import { outputText, recordingState } from '$lib/stores/recordingState';
 import { transcribeAudioWithWhisperApi } from '$lib/transcribeAudioWhisper';
 import { get } from 'svelte/store';
 import { startRecording, stopRecording } from './mediaRecorder';
@@ -12,7 +12,6 @@ export const toggleRecording = async () => {
 	} else {
 		try {
 			const audioBlob = await stopRecording();
-			audioSrc.set(URL.createObjectURL(audioBlob));
 			recordingState.set('transcribing');
 			const text = await transcribeAudioWithWhisperApi(audioBlob);
             outputText.set(text);
