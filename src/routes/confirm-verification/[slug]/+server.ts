@@ -2,7 +2,7 @@ import { redirect } from '@sveltejs/kit';
 import type { RequestEvent, RequestHandler } from './$types';
 import { decodeJwt } from '$lib/jwt';
 
-export const GET: RequestHandler = async ({ locals, url, cookies }: RequestEvent) => {
+export const GET: RequestHandler = async ({ locals, url }: RequestEvent) => {
     const urlParts = url.toString().split('/')
     const token = urlParts[urlParts.length - 1]
 
