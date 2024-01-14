@@ -9,12 +9,3 @@ export const decodeJwt = (token: string): any => {
         return null;
     }
 }
-
-export const validateJwt = (token: string, secret: string): any => {
-    try {
-        const valid = jwt.verify(token, secret)
-        return valid
-    } catch (e) {
-        console.error('Invalid token: ', e)
-    }
-}
