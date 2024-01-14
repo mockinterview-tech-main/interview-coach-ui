@@ -13,7 +13,12 @@ export const toggleRecording = async () => {
 		try {
 			const audioBlob = await stopRecording();
 			recordingState.set('transcribing');
-			const text = await transcribeAudioWithWhisperApi(audioBlob);
+			const response = await fetch("/transcription", {
+				method: "POST",
+				credentials: "include",
+				body: audioBlob
+			});
+			const {text} = await response.json();
             outputText.set(text);
 		} catch (error) {
 			console.error('Error occurred during transcription:', error);
