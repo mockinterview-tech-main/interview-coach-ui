@@ -1,5 +1,4 @@
 import { outputText, recordingState } from '$lib/stores/recordingState';
-import { transcribeAudioWithWhisperApi } from '$lib/transcribeAudioWhisper';
 import { get } from 'svelte/store';
 import { startRecording, stopRecording } from './mediaRecorder';
 

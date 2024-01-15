@@ -16,6 +16,7 @@
 	import { conversationStore } from '$lib/stores/conversationStore';
 
 	import RecordAnswerButton from '$lib/components/recordAnswerButton.svelte';
+    import TTSButton from '$lib/components/ttsButton.svelte';
 	import Transcript from '$lib/components/transcript.svelte';
 	import { postConversation, postSummary, putConversation } from '$lib/serviceApi.js';
 	import { userStore } from '$lib/stores/userStore.js';
@@ -47,11 +48,13 @@
     // Initial Values
     let loading = false;
     let interviewConfirmed = false;
+    let ttsEnabled = true
     let selectedTopic = "";
     let summaryId = "";
     
     $: loading
     $: interviewConfirmed
+    $: ttsEnabled
     $: summaryId
     $: selectedTopic
 
@@ -63,6 +66,7 @@
     onDestroy(reset);
 
     const buyCredits = () => goto('/credits');
+    const toggleTTS = () => ttsEnabled = !ttsEnabled;
 
     const confirmInterview = async () => {
         reset();
@@ -73,12 +77,26 @@
             body: JSON.stringify({action: "deduct"})
         }); // deducts a token and starts the interview
         let creditsBody = await creditResponse.json();
+
+        const text = `Hi ${username} I'm ${interviewer.name.split(" ")[0]} and I'll be conducting your interview today! I see you chose ${selectedTopic} as your focus area. Please tell me what role and company you'd like to practice for.`;
+        
         $userStore = {credits: creditsBody.credits, ...userStore};
-        console.log($userStore)
-        $conversationStore.parts = [{
-            participant: interviewer.name.split(" ")[0], 
-            text: `Hi ${username} I'm ${interviewer.name.split(" ")[0]} and I'll be conducting your interview today! I see ${selectedTopic} is your chosen focus area. Please tell me what role and company you'd like to practice for.`
-        }];
+        $conversationStore.parts = [{ participant: interviewer.name.split(" ")[0], text }];
+        if(ttsEnabled){
+            let text = $conversationStore.parts[$conversationStore.parts.length-1].text;
+            const response = await fetch("/tts", {
+                method: "POST",
+                credentials: "include",
+                body: JSON.stringify({text, interviewer: interviewer.name.split(" ")[0]})
+            });
+            const r = await response.blob();
+            const audioUrl = URL.createObjectURL(r);
+            const audioPlayer: HTMLAudioElement = document.getElementById("audioPlayer");
+            if (audioPlayer){
+                audioPlayer.src = audioUrl
+                audioPlayer.play();
+            }
+        }
     }
 
     outputText.subscribe(async () => {
@@ -118,6 +136,22 @@
                             }
                         ]
                     }
+                    
+                    if(ttsEnabled){
+                        let text = $conversationStore.parts[$conversationStore.parts.length-1].text;
+                        const response = await fetch("/tts", {
+                            method: "POST",
+                            credentials: "include",
+                            body: JSON.stringify({text, interviewer: interviewer.name.split(" ")[0]})
+                        });
+                        const r = await response.blob();
+                        const audioUrl = URL.createObjectURL(r);
+                        const audioPlayer: HTMLAudioElement = document.getElementById("audioPlayer");
+                        if (audioPlayer){
+                            audioPlayer.src = audioUrl
+                            audioPlayer.play();
+                        }
+                    }
                     if (conversationResponse.finished) {
                         const summary = await postSummary({conversation_id: $conversationStore.id || ""})
                         summaryId = summary?.id || "";
@@ -133,6 +167,7 @@
 </script>
 
 <div>
+    <audio id="audioPlayer"></audio>
     <div class="call">
         <h3>{interviewer.name.split(" ")[0]}</h3>
         <div class="pfp-container">
@@ -148,6 +183,7 @@
         <div class="control-panel">
         {#if interviewConfirmed && summaryId == ""}
             <RecordAnswerButton loading={loading}/>
+            <TTSButton on:click={toggleTTS} ttsEnabled={ttsEnabled}/>
         {/if}
         </div>
     </div>
