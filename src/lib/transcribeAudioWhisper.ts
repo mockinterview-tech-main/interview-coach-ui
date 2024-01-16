@@ -4,7 +4,7 @@ export const transcribeAudioWithWhisperApi = async (audioBlob: Blob): Promise<st
      const openaiKey = import.meta.env["VITE_OPENAI_API_KEY"];
 	// Check if the size is less than 25MB
 	// if (audioBlob.size > 25 * 1024 * 1024){
-		audioBlob = await compressAudioBlob(audioBlob);
+		// audioBlob = await compressAudioBlob(audioBlob);
 	// 	if (audioBlob.size > 25 * 1024 * 1024)
 	// 		throw new Error ("[ERROR] Given answer is too long")
 	// }
