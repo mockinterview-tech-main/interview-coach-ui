@@ -48,7 +48,7 @@
     // Initial Values
     let loading = false;
     let interviewConfirmed = false;
-    let ttsEnabled = true
+    let ttsEnabled = false;
     let selectedTopic = "";
     let summaryId = "";
     
@@ -82,21 +82,21 @@
         
         $userStore = {credits: creditsBody.credits, ...userStore};
         $conversationStore.parts = [{ participant: interviewer.name.split(" ")[0], text }];
-        if(ttsEnabled){
-            let text = $conversationStore.parts[$conversationStore.parts.length-1].text;
-            const response = await fetch("/tts", {
-                method: "POST",
-                credentials: "include",
-                body: JSON.stringify({text, interviewer: interviewer.name.split(" ")[0]})
-            });
-            const r = await response.blob();
-            const audioUrl = URL.createObjectURL(r);
-            const audioPlayer: HTMLAudioElement = document.getElementById("audioPlayer");
-            if (audioPlayer){
-                audioPlayer.src = audioUrl
-                audioPlayer.play();
-            }
-        }
+        // if(ttsEnabled){
+        //     let text = $conversationStore.parts[$conversationStore.parts.length-1].text;
+        //     const response = await fetch("/tts", {
+        //         method: "POST",
+        //         credentials: "include",
+        //         body: JSON.stringify({text, interviewer: interviewer.name.split(" ")[0]})
+        //     });
+        //     const r = await response.blob();
+        //     const audioUrl = URL.createObjectURL(r);
+        //     const audioPlayer: HTMLAudioElement = document.getElementById("audioPlayer");
+        //     if (audioPlayer){
+        //         audioPlayer.src = audioUrl
+        //         audioPlayer.play();
+        //     }
+        // }
     }
 
     outputText.subscribe(async () => {
@@ -137,21 +137,21 @@
                         ]
                     }
                     
-                    if(ttsEnabled){
-                        let text = $conversationStore.parts[$conversationStore.parts.length-1].text;
-                        const response = await fetch("/tts", {
-                            method: "POST",
-                            credentials: "include",
-                            body: JSON.stringify({text, interviewer: interviewer.name.split(" ")[0]})
-                        });
-                        const r = await response.blob();
-                        const audioUrl = URL.createObjectURL(r);
-                        const audioPlayer: HTMLAudioElement = document.getElementById("audioPlayer");
-                        if (audioPlayer){
-                            audioPlayer.src = audioUrl
-                            audioPlayer.play();
-                        }
-                    }
+                    // if(ttsEnabled){
+                    //     let text = $conversationStore.parts[$conversationStore.parts.length-1].text;
+                    //     const response = await fetch("/tts", {
+                    //         method: "POST",
+                    //         credentials: "include",
+                    //         body: JSON.stringify({text, interviewer: interviewer.name.split(" ")[0]})
+                    //     });
+                    //     const r = await response.blob();
+                    //     const audioUrl = URL.createObjectURL(r);
+                    //     const audioPlayer: HTMLAudioElement = document.getElementById("audioPlayer");
+                    //     if (audioPlayer){
+                    //         audioPlayer.src = audioUrl
+                    //         audioPlayer.play();
+                    //     }
+                    // }
                     if (conversationResponse.finished) {
                         const summary = await postSummary({conversation_id: $conversationStore.id || ""})
                         summaryId = summary?.id || "";
@@ -196,7 +196,7 @@
         <div class="control-panel">
         {#if interviewConfirmed && summaryId == ""}
             <RecordAnswerButton loading={loading}/>
-            <TTSButton on:click={toggleTTS} ttsEnabled={ttsEnabled}/>
+            <!-- <TTSButton on:click={toggleTTS} ttsEnabled={ttsEnabled}/> -->
         {/if}
         </div>
     </div>
