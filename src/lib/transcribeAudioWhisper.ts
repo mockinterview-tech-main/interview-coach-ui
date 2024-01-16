@@ -1,14 +1,6 @@
-import * as lamejs from "@breezystack/lamejs";
 
 export const transcribeAudioWithWhisperApi = async (audioBlob: Blob): Promise<string> => {
      const openaiKey = import.meta.env["VITE_OPENAI_API_KEY"];
-	// Check if the size is less than 25MB
-	// if (audioBlob.size > 25 * 1024 * 1024){
-		// audioBlob = await compressAudioBlob(audioBlob);
-	// 	if (audioBlob.size > 25 * 1024 * 1024)
-	// 		throw new Error ("[ERROR] Given answer is too long")
-	// }
-
 	if (!openaiKey) 
         throw new Error("[ERROR] Unable to contact OpenAI")
 
@@ -23,30 +15,11 @@ export const transcribeAudioWithWhisperApi = async (audioBlob: Blob): Promise<st
 		body: formData
 	});
 
-	const data = await response.json();
-	console.log("ASDF", data)
 	if (!response.ok) 
-        throw new Error(data.error || 'Error transcribing the audio');
+        throw new Error(response.toString() || 'Error transcribing the audio');
+
+	const data = await response.json();
 
 	return data.text;
 }
 
-const compressAudioBlob = async (audioBlob: Blob): Promise<Blob> => {
-	return new Promise((resolve, reject) => {
-		const r = new FileReader();
-		r.onload = () => {
-			let data = r.result as ArrayBuffer;
-			if (data.byteLength % 2 !== 0) {
-				// If not, create a new ArrayBuffer with the correct length
-				data = data.slice(0, data.byteLength - 1);
-			}
-			const mp3Encoder = new lamejs.Mp3Encoder(1, 44100, 128); // Mono channel, 44100 Hz, 128 kbps
-			
-			const mp3Data = mp3Encoder.encodeBuffer(new Int16Array(data));
-			mp3Encoder.flush();
-			resolve(new Blob([mp3Data], { type: 'audio/mp3' }));
-		};
-		r.onerror = (error) => reject(error);
-		r.readAsArrayBuffer(audioBlob);
-	})
-}
