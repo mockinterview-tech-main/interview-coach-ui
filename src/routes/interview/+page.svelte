@@ -155,6 +155,19 @@
                     if (conversationResponse.finished) {
                         const summary = await postSummary({conversation_id: $conversationStore.id || ""})
                         summaryId = summary?.id || "";
+                        if (summaryId === "") {
+                            $conversationStore = {
+                                id: conversationResponse.id,
+                                finished: conversationResponse.finished,
+                                parts: [
+                                    ...$conversationStore.parts, 
+                                    {
+                                        participant: interviewer.name.split(" ")[0], 
+                                        text: "Looks like this analysis is taking a while. Check back on your past interviews later. Thank you for your patience."
+                                    }
+                                ]
+                            }
+                        }
                     }
                 }
 
@@ -211,8 +224,11 @@
             </div>
         {:else}
             <Transcript loading={loading}/>
-            {#if summaryId != "" && !loading}
+            {#if $conversationStore.finished && summaryId != "" && !loading}
                 <Button class="cta-button" on:click={() => goto(`/summary/${summaryId}`)}>View Scorecard</Button>
+            {/if}
+            {#if $conversationStore.finished && summaryId === "" && !loading}
+                <Button class="cta-button" on:click={() => goto(`/summary`)}>Previous Interviews</Button>
             {/if}
         {/if}
     </div>
