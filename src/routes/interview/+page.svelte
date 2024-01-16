@@ -224,12 +224,14 @@
             </div>
         {:else}
             <Transcript loading={loading}/>
+            <div style="flex-direction: column; align-items: center;">
             {#if $conversationStore.finished && summaryId != "" && !loading}
                 <Button class="cta-button" on:click={() => goto(`/summary/${summaryId}`)}>View Scorecard</Button>
             {/if}
             {#if $conversationStore.finished && summaryId === "" && !loading}
                 <Button class="cta-button" on:click={() => goto(`/summary`)}>Previous Interviews</Button>
             {/if}
+            </div>
         {/if}
     </div>
 </div>
