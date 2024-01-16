@@ -3,11 +3,11 @@ import * as lamejs from "@breezystack/lamejs";
 export const transcribeAudioWithWhisperApi = async (audioBlob: Blob): Promise<string> => {
      const openaiKey = import.meta.env["VITE_OPENAI_API_KEY"];
 	// Check if the size is less than 25MB
-	if (audioBlob.size > 25 * 1024 * 1024){
+	// if (audioBlob.size > 25 * 1024 * 1024){
 		audioBlob = await compressAudioBlob(audioBlob);
-		if (audioBlob.size > 25 * 1024 * 1024)
-			throw new Error ("[ERROR] Given answer is too long")
-	}
+		// if (audioBlob.size > 25 * 1024 * 1024)
+		// 	throw new Error ("[ERROR] Given answer is too long")
+	// }
 
 	if (!openaiKey) 
         throw new Error("[ERROR] Unable to contact OpenAI")
@@ -26,7 +26,7 @@ export const transcribeAudioWithWhisperApi = async (audioBlob: Blob): Promise<st
 	const data = await response.json();
 
 	if (!response.ok) 
-        throw new Error(data.error || 'Error transcribing the audio');
+        throw new Error(data || 'Error transcribing the audio');
 
 	return data.text;
 }
