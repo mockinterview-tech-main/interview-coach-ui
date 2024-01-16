@@ -24,7 +24,7 @@ export const transcribeAudioWithWhisperApi = async (audioBlob: Blob): Promise<st
 	});
 
 	const data = await response.json();
-
+	console.log("ASDF", data)
 	if (!response.ok) 
         throw new Error(data.error || 'Error transcribing the audio');
 
