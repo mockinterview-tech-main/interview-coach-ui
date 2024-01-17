@@ -147,3 +147,27 @@ export const postSummary = async (summarize_request: SummaryizeRequest): Promise
         return null;
     }
 }
+
+export const postTranscription = async (audioBlob: Blob): Promise<string | null> => {
+    try {
+        const mp3File = new File([audioBlob], 'recording.mp3');
+        const formData = new FormData();
+        formData.append('file', mp3File);
+        
+        const response = await fetch(`${resumeUrl}/transcription`, {
+            method: "POST",
+            credentials: "include",
+            body: formData
+        });
+        if (response.ok) {
+            const d = await response.json();
+            return d.text;
+        } else {
+            console.error('API returned an error: ', response);
+            return null;
+        }
+    } catch (error) {
+        console.error('An error occurred: ', error);
+        return null;
+    }
+}

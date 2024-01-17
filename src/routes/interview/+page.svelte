@@ -111,6 +111,15 @@
                     return;
                 }
 
+                if ($outputText.toLocaleLowerCase() === 'bad transcription error') {
+                    const newPart = {
+                        participant: interviewer.name.split(" ")[0], 
+                        text: "I'm sorry I didn't quite get that. Could you please say again?"
+                    }
+                    $conversationStore.parts = [...$conversationStore.parts, newPart];
+                    return;
+                }
+
                 const newPart = {
                     participant: username || "Me",
                     text: $outputText

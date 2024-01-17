@@ -3,6 +3,7 @@ import * as lamejs from "@breezystack/lamejs";
 import { outputText, recordingState } from '$lib/stores/recordingState';
 import { get } from 'svelte/store';
 import { startRecording, stopRecording } from './mediaRecorder';
+import { postTranscription } from "$lib/serviceApi";
 
 export const toggleRecording = async () => {
 	const recordingStateValue = get(recordingState);
@@ -20,13 +21,12 @@ export const toggleRecording = async () => {
 				if (audioBlob.size > 25 * 1024 * 1024)
 					throw new Error ("[ERROR] Given answer is too long")
 			}
-			const response = await fetch("/transcription", {
-				method: "POST",
-				credentials: "include",
-				body: audioBlob
-			});
-			const {text} = await response.json();
-            outputText.set(text);
+			const text = await postTranscription(audioBlob);
+			if (text){
+            	outputText.set(text);
+			} else {
+				outputText.set("bad transcription error");
+			}
 		} catch (error) {
 			console.error('Error occurred during transcription:', error);
 			outputText.set("long answer error");
