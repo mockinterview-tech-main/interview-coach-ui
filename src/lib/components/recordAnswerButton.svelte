@@ -24,7 +24,13 @@
 <style lang="scss">
     @import "../styles/colors.scss";
 
-    button { margin: 10px auto; }
+    button { 
+        margin: 10px auto;
+        img {
+            min-width: 30px;
+            min-height: 30px;
+        }
+    }
         
     .record-button {
         width: 80px; 

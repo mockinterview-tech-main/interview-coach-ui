@@ -15,7 +15,13 @@
 <style lang="scss">
     @import "../styles/colors.scss";
 
-    button { margin: 10px auto; }
+    button { 
+        margin: auto;
+        img {
+            min-width: 30px;
+            min-height: 30px;
+        }
+    }
         
     .tts-button {
         width: 80px; 

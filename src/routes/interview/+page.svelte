@@ -66,7 +66,31 @@
     onDestroy(reset);
 
     const buyCredits = () => goto('/credits');
-    const toggleTTS = () => ttsEnabled = !ttsEnabled;
+    const toggleTTS = () => {
+        ttsEnabled = !ttsEnabled;
+        processTTS()
+    }
+
+    const processTTS = async () => {
+        const audioPlayer: HTMLAudioElement = document.getElementById("audioPlayer");
+        if(audioPlayer){
+            if(ttsEnabled){
+                let text = $conversationStore.parts[$conversationStore.parts.length-1].text;
+                const response = await fetch("/tts", {
+                    method: "POST",
+                    credentials: "include",
+                    body: JSON.stringify({text, interviewer: interviewer.name.split(" ")[0]})
+                });
+                const r = await response.blob();
+                const audioUrl = URL.createObjectURL(r);
+                audioPlayer.src = audioUrl
+                console.log(audioUrl)
+                await audioPlayer.play();
+            } else {
+                audioPlayer.pause();
+            }
+        }
+    }
 
     const confirmInterview = async () => {
         reset();
@@ -82,21 +106,9 @@
         
         $userStore = {credits: creditsBody.credits, ...userStore};
         $conversationStore.parts = [{ participant: interviewer.name.split(" ")[0], text }];
-        // if(ttsEnabled){
-        //     let text = $conversationStore.parts[$conversationStore.parts.length-1].text;
-        //     const response = await fetch("/tts", {
-        //         method: "POST",
-        //         credentials: "include",
-        //         body: JSON.stringify({text, interviewer: interviewer.name.split(" ")[0]})
-        //     });
-        //     const r = await response.blob();
-        //     const audioUrl = URL.createObjectURL(r);
-        //     const audioPlayer: HTMLAudioElement = document.getElementById("audioPlayer");
-        //     if (audioPlayer){
-        //         audioPlayer.src = audioUrl
-        //         audioPlayer.play();
-        //     }
-        // }
+        if(ttsEnabled){
+            processTTS()
+        }
     }
 
     outputText.subscribe(async () => {
@@ -146,21 +158,9 @@
                         ]
                     }
                     
-                    // if(ttsEnabled){
-                    //     let text = $conversationStore.parts[$conversationStore.parts.length-1].text;
-                    //     const response = await fetch("/tts", {
-                    //         method: "POST",
-                    //         credentials: "include",
-                    //         body: JSON.stringify({text, interviewer: interviewer.name.split(" ")[0]})
-                    //     });
-                    //     const r = await response.blob();
-                    //     const audioUrl = URL.createObjectURL(r);
-                    //     const audioPlayer: HTMLAudioElement = document.getElementById("audioPlayer");
-                    //     if (audioPlayer){
-                    //         audioPlayer.src = audioUrl
-                    //         audioPlayer.play();
-                    //     }
-                    // }
+                    if(ttsEnabled){
+                        processTTS()
+                    }
                     if (conversationResponse.finished) {
                         const summary = await postSummary({conversation_id: $conversationStore.id || ""})
                         summaryId = summary?.id || "";
@@ -205,7 +205,7 @@
         <div class="control-panel">
         {#if interviewConfirmed && summaryId == ""}
             <RecordAnswerButton loading={loading}/>
-            <!-- <TTSButton on:click={toggleTTS} ttsEnabled={ttsEnabled}/> -->
+            <TTSButton on:click={toggleTTS} ttsEnabled={ttsEnabled}/>
         {/if}
         </div>
     </div>
@@ -268,7 +268,8 @@
             .control-panel {
                 display: flex;
                 flex-direction: row;
-                margin: 0px 40vw;
+                margin: 0px 30vw;
+                justify-content: space-around;
             }
             h3 {
                 margin: auto;
