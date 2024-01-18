@@ -84,7 +84,6 @@
                 const r = await response.blob();
                 const audioUrl = URL.createObjectURL(r);
                 audioPlayer.src = audioUrl
-                console.log(audioUrl)
                 await audioPlayer.play();
             } else {
                 audioPlayer.pause();
