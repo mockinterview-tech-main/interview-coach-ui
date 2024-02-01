@@ -103,17 +103,17 @@
             <div class="horizontal-sections price-section">
                 <div class="hz-section price">
                     <h3 style="text-wrap: nowrap;">Looking Around $5.00</h3>
-                    <p>1 Interview Question</p>
+                    <p>3 Interview Questions</p>
                     <a href={loggedIn ? '/credits' : '/login'}><Button class="cta-button">Buy Now</Button></a>
                 </div>
                 <div class="hz-section price">
-                    <h3 style="text-wrap: nowrap;">Passive Candidate $20.00</h3>
-                    <p>5 Interview Questions</p>
+                    <h3 style="text-wrap: nowrap;">Passive Candidate $10.00</h3>
+                    <p>6 Interview Questions</p>
                     <a href={loggedIn ? '/credits' : '/login'}><Button class="cta-button">Buy Now</Button></a>
                 </div>
                 <div class="hz-section price">
-                    <h3 style="text-wrap: nowrap;">Active Candidate $30.00</h3>
-                    <p>10 Interview Questions</p>
+                    <h3 style="text-wrap: nowrap;">Active Candidate $15.00</h3>
+                    <p>12 Interview Questions</p>
                     <a href={loggedIn ? '/credits' : '/login'}><Button class="cta-button">Buy Now</Button></a>
                 </div>
             </div>
