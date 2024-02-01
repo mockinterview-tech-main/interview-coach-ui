@@ -27,9 +27,9 @@ const stripe = new Stripe(import.meta.env['VITE_STRIPE_SECRET_KEY'], {
 });
 
 const offerings: Array<Choice> = [
-    {sku: "good", price: 5, label: "1 Interview Question", description: "Just trying out the product", credits: 1, stripeID: VITE_STRIPE_ID_GOOD_PRODUCT},
-    {sku: "better", price: 20, label: "5 Interview Questions", description: "Equivalent to a $200 in-person coaching session", credits: 5, stripeID: VITE_STRIPE_ID_BETTER_PRODUCT},
-    {sku: "best", price: 30, label: "10 Interview Questions", description: "Perfect for dialing in the perfect answer or preparing for the dream job", credits: 10, stripeID: VITE_STRIPE_ID_BEST_PRODUCT}
+    {sku: "good", price: 5, label: "3 Interview Questions", description: "Just trying out the product", credits: 3, stripeID: VITE_STRIPE_ID_GOOD_PRODUCT},
+    {sku: "better", price: 10, label: "6 Interview Questions", description: "Equivalent to a $200 in-person coaching session", credits: 6, stripeID: VITE_STRIPE_ID_BETTER_PRODUCT},
+    {sku: "best", price: 15, label: "12 Interview Questions", description: "Perfect for dialing in the perfect answer or preparing for the dream job", credits: 12, stripeID: VITE_STRIPE_ID_BEST_PRODUCT}
 ]
 
 export const load: PageServerLoad = async () =>  {
