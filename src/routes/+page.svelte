@@ -31,7 +31,7 @@
 
     {#if !loggedIn}
         <div class="announcement-banner">
-            Early Adopter Special: Sign up now and get 3 FREE interview questions!
+            Want Free Interviews? Do one interview and tell us about your experience!
         </div>
     {/if}
 

@@ -38,14 +38,11 @@ export const GET: RequestHandler = async ({ locals, url, cookies }: RequestEvent
                 name: meta.name.split(" ")[0],
                 avatarUrl: meta.avatarUrl,
             };
-            if (meta.isNew) {
-                userData.credits = 3
-            }
             locals.pb?.collection('users').update(currentUserToken.id, userData)
         }
     } catch (err) {
         console.log('Error logging in with OAuth user', err);
+    } finally {
+        throw redirect(303, '/interview');
     }
-
-    throw redirect(303, '/interview');
 };
