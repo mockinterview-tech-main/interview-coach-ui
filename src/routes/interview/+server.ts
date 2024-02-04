@@ -6,7 +6,7 @@ export const POST: RequestHandler = async ({ locals, request }) => {
     const currentUserToken = decodeJwt(locals.pb?.authStore.token || '');
     if (currentUserToken){
         let currentUser = await locals.pb?.collection('users').getOne(currentUserToken.id);
-        if (currentUser){
+        if (currentUser && !currentUser.subscriptionID){
             const req = await request.json();
             if (req.action == "deduct"){
                 currentUser.credits -= 1;

@@ -8,12 +8,16 @@ import {
     VITE_STRIPE_ID_BEST_PRODUCT, 
     VITE_STRIPE_ID_BETTER_PRODUCT, 
     VITE_STRIPE_ID_GOOD_PRODUCT, 
-    VITE_NONCE_SIGNING_SECRET 
+    VITE_NONCE_SIGNING_SECRET, 
+    VITE_STRIPE_ID_ALA_CARTE,
+    VITE_STRIPE_ID_SUBSCRIPTION,
+    VITE_STRIPE_MANAGE_LINK
 } from "$env/static/private";
 
 import { decodeJwt } from '$lib/jwt';
 
 export type Choice = {
+    type: "subscription" | "payment";
     sku: string;
     price: number;
     label: string;
@@ -27,13 +31,12 @@ const stripe = new Stripe(import.meta.env['VITE_STRIPE_SECRET_KEY'], {
 });
 
 const offerings: Array<Choice> = [
-    {sku: "good", price: 5, label: "3 Interview Questions", description: "Just trying out the product", credits: 3, stripeID: VITE_STRIPE_ID_GOOD_PRODUCT},
-    {sku: "better", price: 10, label: "6 Interview Questions", description: "Equivalent to a $200 in-person coaching session", credits: 6, stripeID: VITE_STRIPE_ID_BETTER_PRODUCT},
-    {sku: "best", price: 15, label: "12 Interview Questions", description: "Perfect for dialing in the perfect answer or preparing for the dream job", credits: 12, stripeID: VITE_STRIPE_ID_BEST_PRODUCT}
+    {type: "payment", sku: "alacarte", price: 2, label: "Single Interview", description: "Just trying out the product", credits: 1, stripeID: VITE_STRIPE_ID_ALA_CARTE},
+    {type: "subscription", sku: "subscription", price: 20, label: "Monthly Subscription", description: "As many interviews as you like. Billed monthly. Cancel anytime.", credits: 0, stripeID: VITE_STRIPE_ID_SUBSCRIPTION},
 ]
 
 export const load: PageServerLoad = async () =>  {
-    return { offerings } 
+    return { offerings, manageLink: VITE_STRIPE_MANAGE_LINK } 
 }
 
 const generateNonce = (length = 24) => {
@@ -55,7 +58,6 @@ export const actions = {
         }
         const rawData = await request.formData();
         const chosenOffering = rawData.get('chosenOffering');
-
         if (chosenOffering) {
             const chosen = JSON.parse(chosenOffering.toString()) as Choice
             const nonce = generateNonce();
@@ -65,6 +67,7 @@ export const actions = {
             locals.pb?.collection('users').update(currentUserToken.id, {nonce: nonceToken});
 
             const isProd = process.env.NODE_ENV === 'production' ? true : false;
+
             const session = await stripe.checkout.sessions.create({
                 line_items: [
                     {
@@ -72,7 +75,7 @@ export const actions = {
                         quantity: 1,
                     },
                 ],
-                mode: 'payment',
+                mode: chosen.type,
                 success_url: isProd ? `https://mockinterview.tech/interview?nonce=${nonce}` : `http://localhost:5173/interview?nonce=${nonce}`,
                 cancel_url: isProd ? `https://mockinterview.tech/interview` : `http://localhost:5173/interview`,
                 automatic_tax: {enabled: true},

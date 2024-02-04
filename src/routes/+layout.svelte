@@ -6,11 +6,11 @@
 	import { userStore } from "$lib/stores/userStore.js";
 	import { onMount } from "svelte";
     export let data;
-    const {loggedIn, credits, username} = data;
+    const {loggedIn, credits, username, subscriptionID} = data;
 
     $: isInterviewPage = $page.url.pathname === '/interview';
 
-    $userStore = {credits}
+    $userStore = {credits, subscriptionID}
 
     let navMenu: HTMLElement;
     $: isNavOpen = false;
@@ -68,7 +68,11 @@
             <!-- svelte-ignore a11y-click-events-have-key-events -->
             <div class="right-nav-links">
                 <span class="nav-link">{username}</span>
-                <span class="nav-link"><a href="/credits">{$userStore.credits} Interviews</a></span>
+                {#if subscriptionID}
+                    <span class="nav-link"><a href="/credits">Active Subscription</a></span>
+                {:else}
+                    <span class="nav-link"><a href="/credits">{$userStore.credits} Interviews</a></span>
+                {/if}
                 <span class="nav-link" on:click={logout}><a href="/">logout</a></span>
             </div>
             {/if}
