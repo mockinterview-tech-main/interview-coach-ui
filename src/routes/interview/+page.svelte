@@ -209,7 +209,7 @@
         </div>
     </div>
     <div class="transcript">
-        {#if !interviewConfirmed && $userStore.credits === 0}
+        {#if !interviewConfirmed && $userStore.credits === 0 && !$userStore.subscriptionID}
             <p style="text-align: center;">Uh oh, looks like you're out of credits. Please buy more before continuing.</p>
             <div class="options-container" style="flex-direction: column; align-items: center;">
                 <Button class="cta-button" on:click={buyCredits}>Buy Credits</Button>
@@ -224,7 +224,9 @@
             </div>
         {:else if !interviewConfirmed}
             <h2 style="text-align: center;">Let's Practice {selectedTopic}</h2>
-            <p style="text-align: center;">Once you begin the interview session one token will be deducted.</p>
+            {#if !$userStore.subscriptionID}
+                <p style="text-align: center;">Once you begin the interview session one token will be deducted.</p>
+            {/if}
             <p style="text-align: center;">Leaving the page or refreshing will lose the session</p>
             <div class="options-container" style="flex-direction: column; align-items: center;">
                 <Button class="cta-button" style="max-width: 135px;" on:click={confirmInterview} >Continue</Button><br/>

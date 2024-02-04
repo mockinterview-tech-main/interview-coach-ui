@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
+    import { userStore } from '$lib/stores/userStore';
     import Card, {PrimaryAction} from '@smui/card';
 
     export let data;
@@ -16,22 +18,39 @@
 </script>
 
 <section class="jumbotron">
-    <h1>Buy Interview Credits</h1>
+    {#if $userStore.subscriptionID}
+        <h1>Manage Subscription</h1>
+    {:else}
+        <h1>Buy Interview Credits</h1>
+    {/if}
 </section>
 
 <div>
-    {#each offerings as offering}
-        <Card class="pay-card">
-            <PrimaryAction on:click={ () => {initPurchase(offering.sku)} }>
-                <form id="{offering.sku}" action="?/purchase" method="POST">
-                    <h3>{offering.label}</h3>
-                    <p>{offering.description}</p>
-                    <input type="hidden" name="chosenOffering" value={JSON.stringify(offering)} />
-                    <h3 class="price-tag">${offering.price}.00</h3>
-                </form>
-            </PrimaryAction>
-        </Card>
-    {/each}
+    {#if $userStore.subscriptionID}
+        <div>
+            <Card class="pay-card">
+                <PrimaryAction on:click={() => {goto(data.manageLink)}}>
+                <div>
+                    <h3>Manage Subscription</h3>
+                    <p>Subscriptions are managed through Stripe. You'll log in with them to manage your payment information and subscription details.</p>
+                </div>
+                </PrimaryAction>
+            </Card>
+        </div>
+    {:else}
+        {#each offerings as offering}
+            <Card class="pay-card">
+                <PrimaryAction on:click={ () => {initPurchase(offering.sku)} }>
+                    <form id="{offering.sku}" action="?/purchase" method="POST">
+                        <h3>{offering.label}</h3>
+                        <p>{offering.description}</p>
+                        <input type="hidden" name="chosenOffering" value={JSON.stringify(offering)} />
+                        <h3 class="price-tag">${offering.price}.00</h3>
+                    </form>
+                </PrimaryAction>
+            </Card>
+        {/each}
+    {/if}
 </div>
 
 <style lang="scss">
@@ -45,7 +64,7 @@
         position: relative;
         color: $white;
         z-index: 100;
-        padding: 200px 0px;
+        padding: 100px 0px;
         margin-bottom: 50px;
         width: 100vw;
         background-color: transparent; /* No direct background on the jumbotron */
@@ -63,7 +82,6 @@
             background-size: cover;
             background-position: center;
         }
-
     }
     
     div {
@@ -71,7 +89,7 @@
         justify-content: space-around;
         flex-flow: row wrap;
         align-items: center;
-        form {
+        form, div {
             flex: 1;
             overflow: hidden;
             width: 300px;
