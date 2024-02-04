@@ -102,25 +102,20 @@
             <p>All packages come with result summaries. Credits never expire.</p>
             <div class="horizontal-sections price-section">
                 <div class="hz-section price">
-                    <h3 style="text-wrap: nowrap;">Looking Around $5.00</h3>
-                    <p>3 Interview Questions</p>
+                    <h3 style="text-wrap: nowrap;">Single Session - $2.00</h3>
+                    <p>1 Deep Dive Interview Question</p>
                     <a href={loggedIn ? '/credits' : '/login'}><Button class="cta-button">Buy Now</Button></a>
                 </div>
                 <div class="hz-section price">
-                    <h3 style="text-wrap: nowrap;">Passive Candidate $10.00</h3>
-                    <p>6 Interview Questions</p>
+                    <h3 style="text-wrap: nowrap;">Subscription Plan - $20.00</h3>
+                    <p>Unlimited Questions</p>
                     <a href={loggedIn ? '/credits' : '/login'}><Button class="cta-button">Buy Now</Button></a>
                 </div>
                 <div class="hz-section price">
-                    <h3 style="text-wrap: nowrap;">Active Candidate $15.00</h3>
-                    <p>12 Interview Questions</p>
-                    <a href={loggedIn ? '/credits' : '/login'}><Button class="cta-button">Buy Now</Button></a>
+                    <h3 style="text-wrap: nowrap;">Live Coaching - Call Us</h3>
+                    <p>Customized Live Interview Coaching</p>
+                    <a href="mailto:{CONTACT_EMAIL}"><Button class="cta-button">Get in Touch!</Button></a>
                 </div>
-            </div>
-            <div class="hz-section">
-                <h3>Live Coaching</h3>
-                <p>Contact us for a consultation with one of our interview experts and we'll work with you on your career goals and craft an interviewing plan that is perfect for you.</p>
-                <a href="mailto:{CONTACT_EMAIL}"><Button class="cta-button">Get in Touch</Button></a>
             </div>
         </section>
 
