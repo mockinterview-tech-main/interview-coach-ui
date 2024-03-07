@@ -33,6 +33,7 @@
     ]
 
     const topics = [
+        "Specific Question",
         "Adaptability",
         "Collaboration",
         "Customer Focus",
@@ -101,7 +102,15 @@
         }); // deducts a token and starts the interview
         let creditsBody = await creditResponse.json();
 
-        const text = `Hi ${username} I'm ${interviewer.name.split(" ")[0]} and I'll be conducting your interview today! I see you chose ${selectedTopic} as your focus area. Please tell me what role and company you'd like to practice for.`;
+        let text = `Hi ${username} I'm ${interviewer.name.split(" ")[0]} and I'll be conducting your interview today! `
+        
+        if (selectedTopic !== 'Specific Question'){
+            text += `I see you chose ${selectedTopic} as your focus area. `
+        }
+        text += `Please tell me what role and company you'd like to practice for. `
+        if (selectedTopic === 'Specific Question'){
+            text += `Also since you want to go over a specific question, please tell me the question you'd like to practice.`
+        }
         
         $userStore = {credits: creditsBody.credits, ...userStore};
         $conversationStore.parts = [{ participant: interviewer.name.split(" ")[0], text }];
@@ -203,8 +212,8 @@
         <br/>
         <div class="control-panel">
         {#if interviewConfirmed && summaryId == ""}
-            <RecordAnswerButton loading={loading}/>
             <TTSButton on:click={toggleTTS} ttsEnabled={ttsEnabled}/>
+            <RecordAnswerButton loading={loading}/>
         {/if}
         </div>
     </div>
@@ -216,10 +225,14 @@
             </div>
         {:else if !interviewConfirmed && !selectedTopic}
             <h2>Select a Focus Area</h2>
-            <p>Most soft skill interviews focus on one of the following topics. Please choose one of the following:</p>
+            <p>Most soft skill interviews focus on one of the following topics. To practice a specific question like "Tell me about yourself." choose Specific Topic:</p>
             <div class="options-container">
                 {#each topics as topic}
-                    <Button class="cta-button" on:click={() => selectedTopic = topic}>{topic}</Button>
+                    {#if topic !== "Specific Question"}
+                        <Button class="cta-button" on:click={() => selectedTopic = topic}>{topic}</Button>
+                    {:else}
+                        <Button class="cta-button specific-topic" on:click={() => selectedTopic = topic}>{topic}</Button>
+                    {/if}
                 {/each}
             </div>
         {:else if !interviewConfirmed}
@@ -253,6 +266,13 @@
         border: 1px solid $dark-purple;
         background-color: $dark-purple;
         color: white;
+        width: 200px;
+    }
+
+    :global(.specific-topic) {
+        border: 1px solid $yellow !important;
+        background-color: $dark-purple !important;
+        color: $dark-purple;
         width: 200px;
     }
 
