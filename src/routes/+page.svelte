@@ -17,7 +17,7 @@
 <div class="frontpage-container">
     <section class="jumbotron">
         <div>
-            <h1>Nail Your Next Interview</h1>
+            <h1>The Missing Interview Dress Rehearsal</h1>
             <p>Make your stories as exceptional as you</p><br/><br/>
             {#if loggedIn}
                 <a data-sveltekit-preload-data href="/interview"><Button class="cta-button jumbo">New Interview</Button></a>
@@ -68,7 +68,7 @@
                     <img width="100px" height="100px" src={personFilled} alt="personalized coaching"/>
                     <h2>Flexible Coaching</h2>
                     <ul>
-                        <li>Get affordable anyime coaching works with your schedule</li>
+                        <li>Get affordable practice works with your schedule</li>
                         <li>Personalized score cards in storytelling and core skills focus areas track how well your story improves with each attempt</li>
                     </ul>
                 </div>
@@ -89,9 +89,9 @@
             <Card padded class="features-card">
                 <div style=" text-align: left;">
                     <h3>Practical Practice</h3>
-                    <p>Practice as if you were on a call with a real interviewer to build confidence and muscle memory.</p>
-                    <p>Focus on content rather than mechanics.</p>
-                    <p>Transcripts are saved so you can review them, make changes, and hone your story.</p>
+                    <p>We're a dress rehearsal for your interview in an objective, judgement-free environment.</p>
+                    <p>Focus on your story and your message.</p>
+                    <p>Transcripts are saved and accessable forever so you can review them, make changes, and hone your story.</p>
                 </div>
                 <img src={interviewScreenshot} alt="Interview Screenshot"/>
             </Card>
