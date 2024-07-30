@@ -1,6 +1,6 @@
 import { writable } from 'svelte/store';
 
-export type ConversationPart = {participant: string; text: string};
+export type ConversationPart = {participant: string; text: string, speakingTime?: string | null};
 export type Conversation = {
     id?: string | null;
     finished: boolean;

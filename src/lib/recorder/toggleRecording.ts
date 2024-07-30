@@ -4,34 +4,35 @@ import { outputText, recordingState } from '$lib/stores/recordingState';
 import { get } from 'svelte/store';
 import { startRecording, stopRecording } from './mediaRecorder';
 import { postTranscription } from "$lib/serviceApi";
+import { millisecondsToMinuteSecondString } from "$lib/utils/time";
 
 export const toggleRecording = async () => {
 	const recordingStateValue = get(recordingState);
-    
 	if (recordingStateValue === 'idle') {
 		await startRecording();
 		recordingState.set('recording');
-	} else {
+	} 
+	if (recordingStateValue === 'recording') {
 		try {
-			let audioBlob = await stopRecording();
+			let [audioBlob, elapsedTime] = await stopRecording();
 			recordingState.set('transcribing');
 			// Check if the size is less than 25MB
 			if (audioBlob.size > 25 * 1024 * 1024){
 				audioBlob = await compressAudioBlob(audioBlob);
 				if (audioBlob.size > 25 * 1024 * 1024)
-					throw new Error ("[ERROR] Given answer is too long")
+					throw new Error (`[ERROR] Given answer is too long. Speaking time: ${elapsedTime}`)
 			}
 			const text = await postTranscription(audioBlob);
 			if (text){
-            	outputText.set(text);
+        outputText.set(`{"time": "${millisecondsToMinuteSecondString(elapsedTime)}"} ${text}`);
 			} else {
 				outputText.set("bad transcription error");
 			}
 		} catch (error) {
-			console.error('Error occurred during transcription:', error);
-			outputText.set("long answer error");
+				console.error('Error occurred during transcription:', error);
+				outputText.set("long answer error");
 		} finally {
-			recordingState.set('idle');
+				recordingState.set('idle');
 		}
 	}
 }

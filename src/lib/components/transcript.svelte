@@ -1,23 +1,26 @@
 <script lang="ts">
-    import { conversationStore } from "$lib/stores/conversationStore";
-    import { recordingState } from "$lib/stores/recordingState";
+	import { conversationStore } from '$lib/stores/conversationStore';
+	import { recordingState } from '$lib/stores/recordingState';
 
-    import { afterUpdate, beforeUpdate } from "svelte";
-	import HorizontalLoader from "./horizontalLoader.svelte";
+	import { afterUpdate, beforeUpdate } from 'svelte';
+	import HorizontalLoader from './horizontalLoader.svelte';
 
-    export let loading: boolean;
+	export let loading: boolean;
 
-    const conversationSectionElement = document.querySelector('#conversationSection');    
-    if(conversationSectionElement){
-        const conversationSectionElementObserver = new MutationObserver(() => conversationSectionElement.scrollTop = conversationSectionElement?.scrollHeight)
-        conversationSectionElementObserver.observe(conversationSectionElement, {childList: true})
-    }
+	const conversationSectionElement = document.querySelector('#conversationSection');
+	if (conversationSectionElement) {
+		const conversationSectionElementObserver = new MutationObserver(
+			() => (conversationSectionElement.scrollTop = conversationSectionElement?.scrollHeight)
+		);
+		conversationSectionElementObserver.observe(conversationSectionElement, { childList: true });
+	}
 
-    let autoscroll = true;
-    let conversationSection: HTMLDivElement;
-    beforeUpdate(() => {
+	let autoscroll = true;
+	let conversationSection: HTMLDivElement;
+	beforeUpdate(() => {
 		if (conversationSection) {
-			const scrollableDistance = conversationSection.scrollHeight - conversationSection.offsetHeight;
+			const scrollableDistance =
+				conversationSection.scrollHeight - conversationSection.offsetHeight;
 			autoscroll = conversationSection.scrollTop > scrollableDistance - 20;
 		}
 	});
@@ -27,26 +30,60 @@
 			conversationSection.scrollTo(0, conversationSection.scrollHeight);
 		}
 	});
-
 </script>
 
 <div id="conversationSection" bind:this={conversationSection}>
-    {#each $conversationStore.parts as part}
-        <p><strong class="strong">{part.participant}</strong>: {@html part.text}</p>
-    {/each}
-    {#if loading || $recordingState === 'transcribing'}
-        <HorizontalLoader size="s" position="c">
-            {$recordingState === 'transcribing' ? 'transcribing speech...' : 'taking some notes...'}
-        </HorizontalLoader>
-    {/if}
+	{#each $conversationStore.parts as part}
+		{#if part.participant.split(' ')[1] == 'Interviewer'}
+			<p class="ai-text">{@html part.text}</p>
+		{:else}
+			<p class="user-text">
+				{@html part.text}
+				{#if part.speakingTime}
+					<br /><br />
+					<span>speaking time: {@html part.speakingTime}</span>
+				{/if}
+			</p>
+		{/if}
+	{/each}
+	{#if loading || $recordingState === 'transcribing'}
+		<HorizontalLoader size="s" position="c">
+			{$recordingState === 'transcribing' ? 'transcribing speech...' : 'taking some notes...'}
+		</HorizontalLoader>
+	{/if}
 </div>
 
 <style lang="scss">
-    #conversationSection {
-        padding: 0 25%;
-        flex-direction: column;
-        scroll-behavior: smooth;
-        p { line-height: 25px; }
-    }
-    strong { font-weight: 700; }
+	@import '../styles/colors.scss';
+
+	#conversationSection {
+		padding: 0 25%;
+		display: flex;
+		margin-top: 1em;
+		flex-direction: column;
+		scroll-behavior: smooth;
+		p {
+			line-height: 25px;
+			padding: 1em;
+			margin: 1em;
+			border-radius: 1em;
+			display: inline-block;
+			max-width: 80%;
+			border: 1px solid black;
+			width: fit-content;
+			box-sizing: border-box;
+		}
+		.ai-text {
+			text-align: left;
+			background-color: $dark-purple;
+			color: white;
+			align-self: flex-start;
+		}
+		.user-text {
+			text-align: right;
+			background-color: white;
+			color: black;
+			align-self: flex-end;
+		}
+	}
 </style>
