@@ -10,6 +10,7 @@ export type OutputType = { [key: string]: {
 
 export const load: PageServerLoad<OutputType> = async ({ locals, url, cookies }) => {
     const authToken = cookies.get('pb_auth');
+    console.log("ASDF", authToken)
     if (authToken) {
         throw redirect(302, '/')
     }
