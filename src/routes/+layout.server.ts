@@ -14,6 +14,7 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
     }
 
     const userAuthSession = decodeJwt(locals.pb?.authStore.token || '');
+    console.log("token: ", locals.pb?.authStore.token, "valid: ", locals.pb?.authStore.isValid, "calculated: ", userAuthSession)
     if (userAuthSession){
         let currentUser = await locals.pb?.collection('users').getOne(userAuthSession.id);
         if (currentUser){
