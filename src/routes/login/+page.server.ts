@@ -8,9 +8,9 @@ export type OutputType = { [key: string]: {
     authCodeVerifier: string;
 }};
 
-export const load: PageServerLoad<OutputType> = async ({ locals, url, cookies }) => {
+export const load: PageServerLoad<OutputType> = async ({ locals, url, cookies, request }) => {
     const authToken = cookies.get('pb_auth');
-    console.log("ASDF", authToken)
+    console.log("ASDF", url, request.referrer)
     if (authToken) {
         throw redirect(302, '/')
     }

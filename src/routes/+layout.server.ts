@@ -9,10 +9,7 @@ const stripe = new Stripe(import.meta.env['VITE_STRIPE_SECRET_KEY'], {
 
 export const load: LayoutServerLoad = async ({ locals, url }) => {
     const protectedRoutes = ['interview', 'summary', 'credits']
-    console.log("ASDF", !locals.pb?.authStore.isValid, protectedRoutes.includes(url.pathname.split("/").filter(Boolean)[0]), url.pathname.split("/").filter(Boolean)[0])
-    console.log("QWER", !locals.pb?.authStore.isValid && protectedRoutes.includes(url.pathname.split("/").filter(Boolean)[0]))
     if (!locals.pb?.authStore.isValid && protectedRoutes.includes(url.pathname.split("/").filter(Boolean)[0])) {
-        console.log("SHOULD NOT BE HERE")
         throw redirect(302, '/login')
     }
 
