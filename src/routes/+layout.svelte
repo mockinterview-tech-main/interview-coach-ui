@@ -63,7 +63,9 @@
 				{/if}
 				{#if loggedIn}
 					<span class="nav-link" on:click={toggleNav}><a href="/interview">New Interview</a></span>
-					<span class="nav-link" on:click={toggleNav}><a href="/summary">Past Interviews</a></span>
+					<span class="nav-link" on:click={toggleNav}
+						><a data-sveltekit-preload-data href="/summary">Past Interviews</a></span
+					>
 				{:else}
 					<span class="nav-link" on:click={toggleNav}><a href="/login">Get Started</a></span>
 				{/if}

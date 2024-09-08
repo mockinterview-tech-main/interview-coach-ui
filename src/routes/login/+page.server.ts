@@ -8,7 +8,7 @@ export type OutputType = { [key: string]: {
     authCodeVerifier: string;
 }};
 
-export const load: PageServerLoad<OutputType> = async ({ locals, url, cookies, request }) => {
+export const load: PageServerLoad<OutputType> = async ({ locals, url, cookies }) => {
     const authToken = cookies.get('pb_auth');
     if (!authToken) {
         try {

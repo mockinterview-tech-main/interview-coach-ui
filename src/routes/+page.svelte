@@ -24,7 +24,9 @@
 				<a data-sveltekit-preload-data href="/interview"
 					><Button class="cta-button jumbo">New Interview</Button></a
 				>
-				<a href="/summary"><Button class="cta-button jumbo">Review Interviews</Button></a>
+				<a data-sveltekit-preload-data href="/summary"
+					><Button class="cta-button jumbo">Review Interviews</Button></a
+				>
 			{:else}
 				<a href="/login"><Button class="cta-button jumbo">Get Started!</Button></a>
 				<a href="/login"><Button class="cta-button jumbo">Log In</Button></a>
