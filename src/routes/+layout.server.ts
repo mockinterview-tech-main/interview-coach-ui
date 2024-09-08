@@ -8,10 +8,9 @@ const stripe = new Stripe(import.meta.env['VITE_STRIPE_SECRET_KEY'], {
 });
 
 export const load: LayoutServerLoad = async ({ locals, url }) => {
-    console.log("ASDF")
     const protectedRoutes = ['interview', 'summary', 'credits']
     if (!locals.pb?.authStore.isValid && protectedRoutes.includes(url.pathname.split("/").filter(Boolean)[0])) {
-        throw redirect(302, '/login')
+        // throw redirect(302, '/login')
     }
 
     const userAuthSession = decodeJwt(locals.pb?.authStore.token || '');
