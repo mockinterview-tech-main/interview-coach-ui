@@ -15,9 +15,9 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
         throw redirect(302, '/login')
     }
 
-    const currentUserToken = decodeJwt(locals.pb?.authStore.token || '');
-    if (currentUserToken){
-        let currentUser = await locals.pb?.collection('users').getOne(currentUserToken.id);
+    const userAuthSession = decodeJwt(locals.pb?.authStore.token || '');
+    if (userAuthSession){
+        let currentUser = await locals.pb?.collection('users').getOne(userAuthSession.id);
         if (currentUser){
             let subscriptionStatus = null;
             let subscriptionID = null;
@@ -34,22 +34,24 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
                 if (subscriptionResult.data.length > 0){
                     subscriptionStatus = subscriptionResult.data[0].status;
                     subscriptionID = subscriptionResult.data[0].id;
-                    await locals.pb?.collection('users').update(currentUserToken.id, {
+                    await locals.pb?.collection('users').update(userAuthSession.id, {
                         subscriptionID: subscriptionStatus === "active" ? subscriptionID : null
                     })
                 } else {
-                    await locals.pb?.collection('users').update(currentUserToken.id, {
+                    await locals.pb?.collection('users').update(userAuthSession.id, {
                         subscriptionID: null
                     })
                 }
             }
-            if (currentUser.nonce) {
+            if (currentUser.purchaseIntent) {
                 const nonce = url.searchParams.get('nonce')
-                const userToken = decodeJwt(currentUser.nonce)
-                if (userToken.nonce === nonce) {
-                    await locals.pb?.collection('users').update(currentUserToken.id, {nonce: '', credits: (currentUser.credits + userToken.credits)});
-                    currentUser = await locals.pb?.collection('users').getOne(currentUserToken.id);
+                const purchaseIntent = decodeJwt(currentUser.purchaseIntent)
+                let newUserState = {purchaseIntent: '', credits: currentUser.credits}
+                if (purchaseIntent.nonce === nonce) {
+                    newUserState = {...newUserState, credits: (currentUser.credits + purchaseIntent.credits)}
                 }
+                await locals.pb?.collection('users').update(userAuthSession.id, newUserState);
+                currentUser = await locals.pb?.collection('users').getOne(userAuthSession.id);
             }
             return {
                 loggedIn: locals.pb?.authStore.isValid,

@@ -14,7 +14,7 @@ export const POST: RequestHandler = async ({ locals, request }) => {
             if (req.action == "add") {
                 currentUser.credits += 1;
             }
-            locals.pb?.collection('users').update(currentUserToken.id, { nonce: '', ...currentUser});
+            locals.pb?.collection('users').update(currentUserToken.id, { purchaseIntent: '', ...currentUser});
             return json({credits: currentUser.credits})
         }
     }

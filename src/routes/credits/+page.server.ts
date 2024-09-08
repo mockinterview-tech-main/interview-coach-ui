@@ -5,9 +5,6 @@ import { redirect } from "@sveltejs/kit";
 import type { PageServerLoad } from "./$types";
 
 import { 
-    VITE_STRIPE_ID_BEST_PRODUCT, 
-    VITE_STRIPE_ID_BETTER_PRODUCT, 
-    VITE_STRIPE_ID_GOOD_PRODUCT, 
     VITE_NONCE_SIGNING_SECRET, 
     VITE_STRIPE_ID_ALA_CARTE,
     VITE_STRIPE_ID_SUBSCRIPTION,
@@ -61,10 +58,10 @@ export const actions = {
         if (chosenOffering) {
             const chosen = JSON.parse(chosenOffering.toString()) as Choice
             const nonce = generateNonce();
-            const nonceToken = jwt.sign({...chosen, nonce}, VITE_NONCE_SIGNING_SECRET);
+            const purchaseIntent = jwt.sign({...chosen, nonce}, VITE_NONCE_SIGNING_SECRET);
 
             const currentUserToken = decodeJwt(locals.pb?.authStore.token || '');
-            locals.pb?.collection('users').update(currentUserToken.id, {nonce: nonceToken});
+            locals.pb?.collection('users').update(currentUserToken.id, {purchaseIntent});
 
             const isProd = process.env.NODE_ENV === 'production' ? true : false;
 

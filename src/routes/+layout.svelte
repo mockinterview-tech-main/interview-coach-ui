@@ -175,15 +175,6 @@
 			}
 
 			@media only screen and (max-width: 750px) {
-				.left-nav-links,
-				.right-nav-links {
-					flex-direction: column;
-				}
-				.right-nav-links {
-					align-items: flex-start;
-					margin-right: 0px;
-					margin-left: 20px;
-				}
 				display: none;
 				flex-direction: column;
 				position: absolute;
@@ -191,6 +182,13 @@
 				top: 50px;
 				left: 0;
 				width: 100%;
+				.left-nav-links,
+				.right-nav-links {
+					flex-direction: column;
+					align-items: flex-start;
+					margin-right: 0px;
+					margin-left: 20px;
+				}
 				&.open {
 					display: flex;
 					width: 50%;
