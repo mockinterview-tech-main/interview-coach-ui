@@ -11,6 +11,7 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
     const protectedRoutes = ['interview', 'summary', 'credits']
     if (!locals.pb?.authStore.isValid && protectedRoutes.includes(url.pathname.split("/").filter(Boolean)[0])) {
         // throw redirect(302, '/login')
+        console.log("should not be happening")
     }
 
     const userAuthSession = decodeJwt(locals.pb?.authStore.token || '');
@@ -51,8 +52,6 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
                 await locals.pb?.collection('users').update(userAuthSession.id, newUserState);
                 currentUser = await locals.pb?.collection('users').getOne(userAuthSession.id);
             }
-
-            console.log("should be true", locals.pb?.authStore.isValid)
             return {
                 loggedIn: locals.pb?.authStore.isValid,
                 username: currentUser?.name || "Current User",
@@ -60,6 +59,7 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
                 credits: currentUser?.credits
             }
         }
+        console.log("current user not matching one in pb")
     }
     return {
         loggedIn: false
