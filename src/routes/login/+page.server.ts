@@ -10,30 +10,31 @@ export type OutputType = { [key: string]: {
 
 export const load: PageServerLoad<OutputType> = async ({ locals, url, cookies }) => {
     const authToken = cookies.get('pb_auth');
-    if (!authToken) {
-        try {
-            const authMethods = await locals.pb?.collection('users').listAuthMethods();
-            if (!authMethods) {
-                return {};
-            }
-            const redirectURL = `${url.origin}/callback`;
-
-            let output: OutputType = {}
-            authMethods.authProviders.forEach(provider => {
-                output[provider.name] = {
-                    authProviderRedirect: `${provider.authUrl}${redirectURL}`,
-                    authProviderState: provider.state,
-                    authCodeVerifier: provider.codeVerifier,
-                };
-            });
-
-            return output
-        } catch (e) {
-            console.error("[ERROR] Unable to connect to authentication service")
-            return {}
-        }
+    if (authToken) {
+        throw redirect(302, '/')
     }
-    return {}
+    
+    try {
+        const authMethods = await locals.pb?.collection('users').listAuthMethods();
+        if (!authMethods) {
+            return {};
+        }
+        const redirectURL = `${url.origin}/callback`;
+
+        let output: OutputType = {}
+        authMethods.authProviders.forEach(provider => {
+            output[provider.name] = {
+                authProviderRedirect: `${provider.authUrl}${redirectURL}`,
+                authProviderState: provider.state,
+                authCodeVerifier: provider.codeVerifier,
+            };
+        });
+
+        return output
+    } catch (e) {
+        console.error("[ERROR] Unable to connect to authentication service")
+        return {}
+    }
 };
 
 export const actions = {
