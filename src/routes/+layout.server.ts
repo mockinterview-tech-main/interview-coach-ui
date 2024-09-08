@@ -51,6 +51,8 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
                 await locals.pb?.collection('users').update(userAuthSession.id, newUserState);
                 currentUser = await locals.pb?.collection('users').getOne(userAuthSession.id);
             }
+
+            console.log("should be true", locals.pb?.authStore.isValid)
             return {
                 loggedIn: locals.pb?.authStore.isValid,
                 username: currentUser?.name || "Current User",
