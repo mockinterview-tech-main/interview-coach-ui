@@ -11,6 +11,7 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
     const protectedRoutes = ['interview', 'summary', 'credits']
 
     if (!locals.pb?.authStore.isValid && protectedRoutes.includes(url.pathname.split("/").filter(Boolean)[0])) {
+        console.log("LOGIN LOOP", locals.pb?.authStore.isValid, url.pathname.split("/").filter(Boolean)[0])
         throw redirect(302, '/login')
     }
 
