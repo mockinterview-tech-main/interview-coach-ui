@@ -21,10 +21,10 @@
 			<p>Make your stories as exceptional as you</p>
 			<br /><br />
 			{#if loggedIn}
-				<a data-sveltekit-preload-data href="/interview"
+				<a data-sveltekit-preload-data="hover" href="/interview"
 					><Button class="cta-button jumbo">New Interview</Button></a
 				>
-				<a data-sveltekit-preload-data href="/summary"
+				<a data-sveltekit-preload-data="hover" href="/summary"
 					><Button class="cta-button jumbo">Review Interviews</Button></a
 				>
 			{:else}
@@ -298,10 +298,10 @@
 		}
 
 		@media only screen and (max-width: 500px) {
+			padding: 20px;
 			& :global(img) {
 				display: none;
 			}
-			padding: 20px;
 		}
 	}
 
