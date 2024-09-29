@@ -1,5 +1,6 @@
 <script lang="ts">
-	export const ssr = false;
+	export const prerenderer = true;
+	export const ssr = true;
 
 	import Accordion, { Panel, Header, Content } from '@smui-extra/accordion';
 	import { interviewSummaryStore } from '$lib/stores/summaryStore';
