@@ -34,7 +34,7 @@
 
 <div id="conversationSection" bind:this={conversationSection}>
 	{#each $conversationStore.parts as part}
-		{#if part.participant.split(' ')[1] == 'Interviewer'}
+		{#if part.participant == 'ai'}
 			<p class="ai-text">{@html part.text}</p>
 		{:else}
 			<p class="user-text">

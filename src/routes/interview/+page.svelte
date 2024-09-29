@@ -13,7 +13,7 @@
 	import Patrick from '$lib/assets/profile-pics/patrick.png';
 
 	import { outputText } from '$lib/stores/recordingState';
-	import { conversationStore } from '$lib/stores/conversationStore';
+	import { type ConversationPart, conversationStore } from '$lib/stores/conversationStore';
 
 	import RecordAnswerButton from '$lib/components/recordAnswerButton.svelte';
 	import TTSButton from '$lib/components/ttsButton.svelte';
@@ -66,13 +66,16 @@
 	onDestroy(reset);
 
 	const buyCredits = () => goto('/credits');
+
 	const toggleTTS = () => {
 		ttsEnabled = !ttsEnabled;
 		processTTS();
 	};
 
 	const processTTS = async () => {
-		const audioPlayer: HTMLAudioElement = document.getElementById('audioPlayer');
+		const audioPlayer: HTMLAudioElement | null = document.getElementById(
+			'audioPlayer'
+		) as HTMLAudioElement;
 		if (audioPlayer) {
 			if (ttsEnabled) {
 				let text = $conversationStore.parts[$conversationStore.parts.length - 1].text;
@@ -93,6 +96,7 @@
 
 	const confirmInterview = async () => {
 		reset();
+
 		interviewConfirmed = true;
 		let creditResponse = await fetch('/interview', {
 			method: 'POST',
@@ -100,6 +104,7 @@
 			body: JSON.stringify({ action: 'deduct' })
 		}); // deducts a token and starts the interview
 		let creditsBody = await creditResponse.json();
+		$userStore = { credits: creditsBody.credits, ...userStore };
 
 		let text = `Hi ${username} I'm ${interviewer.name.split(' ')[0]} and I'll be conducting your interview today! `;
 
@@ -111,8 +116,7 @@
 			text += `Also since you want to go over a specific question, please tell me the question you'd like to practice.`;
 		}
 
-		$userStore = { credits: creditsBody.credits, ...userStore };
-		$conversationStore.parts = [{ participant: interviewer.name, text }];
+		$conversationStore.parts = [{ participant: 'ai', text }];
 		if (ttsEnabled) {
 			processTTS();
 		}
@@ -122,8 +126,8 @@
 		try {
 			if ($outputText !== '') {
 				if ($outputText.toLocaleLowerCase() === 'long answer error') {
-					const newPart = {
-						participant: interviewer.name,
+					const newPart: ConversationPart = {
+						participant: 'ai',
 						text: 'Great answer, but a key component of interviewing well is telling impactful stories succinctly. Please try shortening your story.'
 					};
 					$conversationStore.parts = [...$conversationStore.parts, newPart];
@@ -131,8 +135,8 @@
 				}
 
 				if ($outputText.toLocaleLowerCase() === 'bad transcription error') {
-					const newPart = {
-						participant: interviewer.name,
+					const newPart: ConversationPart = {
+						participant: 'ai',
 						text: "I'm sorry I didn't quite get that. Could you please say again?"
 					};
 					$conversationStore.parts = [...$conversationStore.parts, newPart];
@@ -147,8 +151,8 @@
 					speakingTime = outputTextMetaJSON['time'];
 				}
 
-				const newPart = {
-					participant: username || 'Me',
+				const newPart: ConversationPart = {
+					participant: 'user',
 					text: outputTextMeta[0] ? $outputText.substring(outputTextMeta[0].length) : $outputText,
 					speakingTime
 				};
@@ -163,7 +167,7 @@
 							text: `${newPart.participant}: ${newPart.text}`
 						})
 					: await postConversation({
-							text: `${newPart.text} and I'd like to talk about ${selectedTopic}`
+							text: `${$conversationStore.parts.map((part) => part.text).join(' ')}`
 						});
 
 				if (conversationResponse) {
@@ -173,15 +177,14 @@
 						parts: [
 							...$conversationStore.parts,
 							{
-								participant: interviewer.name,
+								participant: 'ai',
 								text: conversationResponse.added_part
 							}
 						]
 					};
 
-					if (ttsEnabled) {
-						processTTS();
-					}
+					if (ttsEnabled) processTTS();
+
 					if (conversationResponse.finished) {
 						const summary = await postSummary({ conversation_id: $conversationStore.id || '' });
 						summaryId = summary?.id || '';
@@ -192,7 +195,7 @@
 								parts: [
 									...$conversationStore.parts,
 									{
-										participant: interviewer.name,
+										participant: 'ai',
 										text: 'Looks like this analysis is taking a while. Check back on your past interviews later. Thank you for your patience.'
 									}
 								]

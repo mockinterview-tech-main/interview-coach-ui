@@ -14,10 +14,10 @@ type SummaryizeRequest = {
 
 export const postConversation = async (conversation: ConversationRequest): Promise<{id: string, user_id: string, text: string, finished: boolean, added_part: string} | null> => {
     try {
-        const response = await fetch(`${resumeUrl}/conversation`, {
+        const response = await fetch(`${resumeUrl}/conversations`, {
             method: 'POST',
             credentials: 'include',
-            body: JSON.stringify({...conversation})
+            body: JSON.stringify(conversation)
         });
         if (response.ok) {
             const d = await response.json();
@@ -34,10 +34,10 @@ export const postConversation = async (conversation: ConversationRequest): Promi
 
 export const putConversation = async (conversation: ConversationRequest): Promise<{id: string, user_id: string, text: string, finished: boolean, added_part: string} | null> => {
     try {
-        const response = await fetch(`${resumeUrl}/conversation`, {
+        const response = await fetch(`${resumeUrl}/conversations/${conversation.id}`, {
             method: 'PUT',
             credentials: 'include',
-            body: JSON.stringify({...conversation})
+            body: JSON.stringify(conversation)
         });
         if (response.ok) {
             const d = await response.json();

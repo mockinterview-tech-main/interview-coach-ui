@@ -17,7 +17,13 @@ export type InterviewSummary = {
     focus: SectionGrade & SkillAreaGrade
 };
 
-type SectionGrade = {grade: string, summary: string}
-type SkillAreaGrade = {area: string}
+type SectionGrade = {
+    grade: string, 
+    summary: string
+};
+
+type SkillAreaGrade = {
+    area: string
+};
 
 export const interviewSummaryStore = writable<InterviewSummary>();
