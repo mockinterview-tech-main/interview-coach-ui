@@ -1,6 +1,4 @@
 <script lang="ts">
-	export const ssr = true;
-
 	import { page } from '$app/stores';
 	import LogoFilled from '$lib/assets/icons/logo-filled.svg';
 	// import { getSummaryStats } from '$lib/serviceApi.js';
