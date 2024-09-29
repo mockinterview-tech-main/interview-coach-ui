@@ -1,4 +1,7 @@
 <script lang="ts">
+	export const prerender = false;
+	export const ssr = true;
+
 	import interviewScreenshot from '$lib/assets/interview-screenshot.png';
 	import setupScreenshot from '$lib/assets/setup-screenshot.png';
 	import Card from '@smui/card';
