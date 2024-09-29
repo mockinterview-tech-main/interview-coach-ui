@@ -1,5 +1,5 @@
 <script lang="ts">
-	export const prerender = false;
+	export const prerender = true;
 	export const ssr = true;
 
 	import interviewScreenshot from '$lib/assets/interview-screenshot.png';
