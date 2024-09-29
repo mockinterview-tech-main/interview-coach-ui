@@ -1,5 +1,5 @@
 export const prerender = false;
-export const ssr = false;
+export const ssr = true;
 
 import { getConversation, getSummary } from '$lib/serviceApi';
 
