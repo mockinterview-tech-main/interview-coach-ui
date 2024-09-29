@@ -21,7 +21,6 @@
 			try {
 				let parts = JSON.parse(summary?.summary_text);
 				interviewSummaryStore.set({ ...summary, ...parts });
-				console.log($interviewSummaryStore);
 			} catch (e) {
 				console.log('model returned invalid json');
 			}
