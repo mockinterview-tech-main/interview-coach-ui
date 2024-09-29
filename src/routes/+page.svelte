@@ -1,7 +1,4 @@
 <script lang="ts">
-	export const prerender = true;
-	export const ssr = true;
-
 	import interviewScreenshot from '$lib/assets/interview-screenshot.png';
 	import setupScreenshot from '$lib/assets/setup-screenshot.png';
 	import Card from '@smui/card';
@@ -10,9 +7,7 @@
 	import personFilled from '$lib/assets/icons/person-filled.svg';
 	import Accordion, { Panel, Header, Content } from '@smui-extra/accordion';
 	import Button from '@smui/button';
-
-	export let data;
-	const { loggedIn } = data;
+	import { userStore } from '$lib/stores/userStore.js';
 
 	const CONTACT_EMAIL = import.meta.env.VITE_CONTACT_INFO;
 </script>
@@ -23,7 +18,7 @@
 			<h1>The Missing Interview Dress Rehearsal</h1>
 			<p>Make your stories as exceptional as you</p>
 			<br /><br />
-			{#if loggedIn}
+			{#if $userStore.loggedIn}
 				<a data-sveltekit-preload-data="hover" href="/interview"
 					><Button class="cta-button jumbo">New Interview</Button></a
 				>
@@ -37,7 +32,7 @@
 		</div>
 	</section>
 
-	{#if !loggedIn}
+	{#if !$userStore.loggedIn}
 		<div class="announcement-banner">
 			Want Free Interviews? Do one interview and tell us about your experience!
 		</div>
@@ -145,12 +140,16 @@
 				<div class="hz-section price">
 					<h3 style="text-wrap: nowrap;">Single Session - $2.00</h3>
 					<p>1 Deep Dive Interview Question</p>
-					<a href={loggedIn ? '/credits' : '/login'}><Button class="cta-button">Buy Now</Button></a>
+					<a href={$userStore.loggedIn ? '/credits' : '/login'}
+						><Button class="cta-button">Buy Now</Button></a
+					>
 				</div>
 				<div class="hz-section price">
 					<h3 style="text-wrap: nowrap;">Subscription Plan - $20.00</h3>
 					<p>Unlimited Questions</p>
-					<a href={loggedIn ? '/credits' : '/login'}><Button class="cta-button">Buy Now</Button></a>
+					<a href={$userStore.loggedIn ? '/credits' : '/login'}
+						><Button class="cta-button">Buy Now</Button></a
+					>
 				</div>
 				<div class="hz-section price">
 					<h3 style="text-wrap: nowrap;">Live Coaching - Call Us</h3>

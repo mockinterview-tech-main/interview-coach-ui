@@ -12,7 +12,6 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
     if (!locals.pb?.authStore.isValid && protectedRoutes.includes(url.pathname.split("/").filter(Boolean)[0])) {
         throw redirect(302, '/login')
     }
-
     const userAuthSession = decodeJwt(locals.pb?.authStore.token || '');
     if (userAuthSession){
         let currentUser = await locals.pb?.collection('users').getOne(userAuthSession.id);
@@ -59,8 +58,10 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
             }
         }
     }
-    console.log("OH NO")
     return {
-        loggedIn: false
+        loggedIn: false,
+        subscriptionID: "",
+        username: "",
+        credits: 0
     }
 };

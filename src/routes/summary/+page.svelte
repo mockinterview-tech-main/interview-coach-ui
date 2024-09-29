@@ -1,34 +1,42 @@
 <script lang="ts">
 	import HorizontalLoader from '$lib/components/horizontalLoader.svelte';
 	import ListItem from '$lib/components/listItem.svelte';
+	import { getSummaries } from '$lib/serviceApi.js';
 	import type { InterviewSummary } from '$lib/stores/summaryStore.js';
+	import { onMount } from 'svelte';
 
-	export let data;
+	let summariesResponse: InterviewSummary[] | null;
+	$: summariesResponse;
+
 	let summaries: InterviewSummary[];
 	let unfinishedSummaryIds: string[] = [];
 
-	if (data.summaries) {
-		summaries = data.summaries?.map((summary: InterviewSummary) => {
-			try {
-				if (summary.summary_text) {
-					let parts = JSON.parse(summary?.summary_text);
-					return { ...summary, ...parts } as InterviewSummary;
-				} else {
-					unfinishedSummaryIds = [...unfinishedSummaryIds, summary.id];
+	onMount(async () => {
+		summariesResponse = await getSummaries();
+		if (summariesResponse) {
+			summaries = summariesResponse?.map((summary: InterviewSummary) => {
+				try {
+					if (summary.summary_text) {
+						let parts = JSON.parse(summary?.summary_text);
+						return { ...summary, ...parts } as InterviewSummary;
+					} else {
+						unfinishedSummaryIds = [...unfinishedSummaryIds, summary.id];
+						return { ...summary } as InterviewSummary;
+					}
+				} catch (e) {
+					console.log('model returned invalid json');
 					return { ...summary } as InterviewSummary;
 				}
-			} catch (e) {
-				console.log('model returned invalid json');
-				return { ...summary } as InterviewSummary;
-			}
-		});
-	}
+			});
+		}
+	});
+
 	$: summaries;
 </script>
 
 <div>
 	<h1>Past Interviews</h1>
-	{#if data.summaries && summaries.length > 0}
+	{#if summaries && summaries.length > 0}
 		{#each summaries as summary}
 			{#if summary.title}
 				<a data-sveltekit-preload-data="hover" href={`/summary/${summary.id}`}>
@@ -47,14 +55,14 @@
 				</a>
 			{/if}
 		{/each}
-	{:else if data.summaries && summaries.length == 0}
+	{:else if summaries && summaries.length == 0}
 		<p class="no-sessions">
 			Past interview evaluations will show up here as you practice. <a href="/interview"
 				>Start a new practice session.</a
 			>
 		</p>
 	{:else}
-		<div>LOADING....</div>
+		<div>LOADING...</div>
 	{/if}
 </div>
 

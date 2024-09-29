@@ -4,6 +4,7 @@
 	// import { getSummaryStats } from '$lib/serviceApi.js';
 	// import { statsStore } from '$lib/stores/statsStore.js';
 	import { userStore } from '$lib/stores/userStore.js';
+	import { onMount } from 'svelte';
 	// import { onMount } from 'svelte';
 
 	export let data;
@@ -11,7 +12,7 @@
 
 	$: isInterviewPage = $page.url.pathname === '/interview';
 
-	$userStore = { credits, subscriptionID };
+	userStore.set({ credits, subscriptionID, loggedIn: loggedIn || false });
 
 	let navMenu: HTMLElement;
 	$: isNavOpen = false;
@@ -24,22 +25,22 @@
 		}
 	};
 
-	// const closeNav = (event: MouseEvent): void => {
-	// 	if (navMenu && !navMenu.contains(event.target as Node)) {
-	// 		isNavOpen = false;
-	// 	}
-	// };
+	const closeNav = (event: MouseEvent): void => {
+		if (navMenu && !navMenu.contains(event.target as Node)) {
+			isNavOpen = false;
+		}
+	};
 
 	// establish global state & event listeners
-	// onMount(async () => {
-	// 	if (loggedIn) {
-	// 		let stats = await getSummaryStats();
-	// 		if (stats) {
-	// 			statsStore.set(stats);
-	// 		}
-	// 	}
-	// 	document.addEventListener('click', closeNav);
-	// });
+	onMount(async () => {
+		// 	if (loggedIn) {
+		// 		let stats = await getSummaryStats();
+		// 		if (stats) {
+		// 			statsStore.set(stats);
+		// 		}
+		// 	}
+		document.addEventListener('click', closeNav);
+	});
 
 	const CONTACT_EMAIL = import.meta.env.VITE_CONTACT_INFO;
 </script>
@@ -62,7 +63,7 @@
 						><a href="/"><img alt="mockinterview.tech logo" src={LogoFilled} /></a></span
 					>
 				{/if}
-				{#if loggedIn}
+				{#if $userStore.loggedIn}
 					<span class="nav-link" on:click={toggleNav}><a href="/interview">New Interview</a></span>
 					<span class="nav-link" on:click={toggleNav}
 						><a data-sveltekit-preload-data="hover" href="/summary">Past Interviews</a></span
@@ -71,7 +72,7 @@
 					<span class="nav-link" on:click={toggleNav}><a href="/login">Get Started</a></span>
 				{/if}
 			</div>
-			{#if loggedIn}
+			{#if $userStore.loggedIn}
 				<!-- svelte-ignore a11y-click-events-have-key-events -->
 				<div class="right-nav-links">
 					<span class="nav-link">{username}</span>
@@ -80,7 +81,9 @@
 					{:else}
 						<span class="nav-link"><a href="/credits">{$userStore.credits} Interviews</a></span>
 					{/if}
-					<span class="nav-link" on:click={logout}><a href="/">logout</a></span>
+					<span class="nav-link" on:click={logout}
+						><a href="/logout" data-sveltekit-reload>logout</a></span
+					>
 				</div>
 			{/if}
 		</div>
