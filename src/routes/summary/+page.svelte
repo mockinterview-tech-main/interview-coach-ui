@@ -28,7 +28,7 @@
 
 <div>
 	<h1>Past Interviews</h1>
-	{#if summaries && summaries.length > 0}
+	{#if data.summaries && summaries.length > 0}
 		{#each summaries as summary}
 			{#if summary.title}
 				<a data-sveltekit-preload-data="hover" href={`/summary/${summary.id}`}>
@@ -47,12 +47,14 @@
 				</a>
 			{/if}
 		{/each}
-	{:else}
+	{:else if data.summaries && summaries.length == 0}
 		<p class="no-sessions">
 			Past interview evaluations will show up here as you practice. <a href="/interview"
 				>Start a new practice session.</a
 			>
 		</p>
+	{:else}
+		<div>LOADING....</div>
 	{/if}
 </div>
 

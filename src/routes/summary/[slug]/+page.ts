@@ -1,9 +1,9 @@
 export const prerender = false;
-export const ssr = true;
+export const ssr = false;
 
 import { getConversation, getSummary } from '$lib/serviceApi';
 
-export const load = async ({params}) => {
+export const load = async ({params, cookies}) => {
     let summary = await getSummary(params.slug);
     let conversation = "";
 
