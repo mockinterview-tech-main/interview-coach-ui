@@ -1,10 +1,13 @@
 <script lang="ts">
+	export const ssr = true;
+
 	import { page } from '$app/stores';
 	import LogoFilled from '$lib/assets/icons/logo-filled.svg';
 	// import { getSummaryStats } from '$lib/serviceApi.js';
 	// import { statsStore } from '$lib/stores/statsStore.js';
 	import { userStore } from '$lib/stores/userStore.js';
-	import { onMount } from 'svelte';
+	// import { onMount } from 'svelte';
+
 	export let data;
 	const { loggedIn, credits, username, subscriptionID } = data;
 
@@ -23,11 +26,11 @@
 		}
 	};
 
-	const closeNav = (event: MouseEvent): void => {
-		if (navMenu && !navMenu.contains(event.target as Node)) {
-			isNavOpen = false;
-		}
-	};
+	// const closeNav = (event: MouseEvent): void => {
+	// 	if (navMenu && !navMenu.contains(event.target as Node)) {
+	// 		isNavOpen = false;
+	// 	}
+	// };
 
 	// establish global state & event listeners
 	// onMount(async () => {
