@@ -1,5 +1,5 @@
-export const prerender = false;
-export const ssr = false;
+export const prerender = true;
+export const ssr = true;
 
 import { getSummaries } from "$lib/serviceApi";
 
