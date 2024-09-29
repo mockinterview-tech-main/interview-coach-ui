@@ -23,7 +23,8 @@ export const postConversation = async (conversation: ConversationRequest): Promi
             const d = await response.json();
             return {...d.conversation, added_part: d.added_part}
         } else {
-            console.error('API returned an error: ', response);
+            const d = await response.json();
+            console.error('API returned an error: ', d);
             return null;
         }
     } catch (error) {
@@ -43,7 +44,8 @@ export const putConversation = async (conversation: ConversationRequest): Promis
             const d = await response.json();
             return {...d.conversation, added_part: d.added_part}
         } else {
-            console.error('API returned an error: ', response);
+            const d = await response.json();
+            console.error('API returned an error: ', d);
             return null;
         }
     } catch (error) {
@@ -62,7 +64,8 @@ export const getConversation = async (conversationId: string): Promise<{id: stri
             const d = await response.json();
             return { ...d.conversation}
         } else {
-            console.error('API returned an error: ', response);
+            const d = await response.json();
+            console.error('API returned an error: ', d);
             return null;
         }
     } catch (error) {
@@ -81,7 +84,8 @@ export const getSummary = async (summaryId: string): Promise<InterviewSummary | 
             const d = await response.json();
             return d.summary as InterviewSummary
         } else {
-            console.error('API returned an error: ', response);
+            const d = await response.json();
+            console.error('API returned an error: ', d);
             return null;
         }
     } catch (error) {
@@ -100,7 +104,8 @@ export const getSummaries = async (): Promise<Array<InterviewSummary> | null> =>
             const d = await response.json();
             return d.summaries as Array<InterviewSummary>
         } else {
-            console.error('API returned an error: ', response);
+            const d = await response.json();
+            console.error('API returned an error: ', d);
             return null;
         }
     } catch (error) {
@@ -119,7 +124,8 @@ export const getSummaryStats = async (): Promise<Stats | null> => {
             const d = await response.json();
             return d.summaries as Stats
         } else {
-            console.error('API returned an error: ', response);
+            const d = await response.json();
+            console.error('API returned an error: ', d);
             return null;
         }
     } catch (error) {
@@ -139,7 +145,8 @@ export const postSummary = async (summarize_request: SummaryizeRequest): Promise
             const d = await response.json();
             return d.summary as InterviewSummary;
         } else {
-            console.error('API returned an error: ', response);
+            const d = await response.json();
+            console.error('API returned an error: ', d);
             return null;
         }
     } catch (error) {
@@ -163,7 +170,8 @@ export const postTranscription = async (audioBlob: Blob): Promise<string | null>
             const d = await response.json();
             return d.text;
         } else {
-            console.error('API returned an error: ', response);
+            const d = await response.json();
+            console.error('API returned an error: ', d);
             return null;
         }
     } catch (error) {
