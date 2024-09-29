@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 	import LogoFilled from '$lib/assets/icons/logo-filled.svg';
-	import { getSummaryStats } from '$lib/serviceApi.js';
-	import { statsStore } from '$lib/stores/statsStore.js';
+	// import { getSummaryStats } from '$lib/serviceApi.js';
+	// import { statsStore } from '$lib/stores/statsStore.js';
 	import { userStore } from '$lib/stores/userStore.js';
 	import { onMount } from 'svelte';
 	export let data;
@@ -30,15 +30,15 @@
 	};
 
 	// establish global state & event listeners
-	onMount(async () => {
-		if (loggedIn) {
-			let stats = await getSummaryStats();
-			if (stats) {
-				statsStore.set(stats);
-			}
-		}
-		document.addEventListener('click', closeNav);
-	});
+	// onMount(async () => {
+	// 	if (loggedIn) {
+	// 		let stats = await getSummaryStats();
+	// 		if (stats) {
+	// 			statsStore.set(stats);
+	// 		}
+	// 	}
+	// 	document.addEventListener('click', closeNav);
+	// });
 
 	const CONTACT_EMAIL = import.meta.env.VITE_CONTACT_INFO;
 </script>
