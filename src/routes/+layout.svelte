@@ -59,15 +59,15 @@
 				{#if isNavOpen}
 					<span class="nav-link" on:click={toggleNav}><a href="/">Home</a></span>
 				{:else}
-					<span class="nav-link" on:click={toggleNav}
-						><a href="/"><img alt="mockinterview.tech logo" src={LogoFilled} /></a></span
-					>
+					<span class="nav-link" on:click={toggleNav}>
+						<a href="/"><img alt="mockinterview.tech logo" src={LogoFilled} /></a>
+					</span>
 				{/if}
 				{#if $userStore.loggedIn}
 					<span class="nav-link" on:click={toggleNav}><a href="/interview">New Interview</a></span>
-					<span class="nav-link" on:click={toggleNav}
-						><a data-sveltekit-preload-data="hover" href="/summary">Past Interviews</a></span
-					>
+					<span class="nav-link" on:click={toggleNav}>
+						<a data-sveltekit-preload-data="hover" href="/summary">Past Interviews</a>
+					</span>
 				{:else}
 					<span class="nav-link" on:click={toggleNav}><a href="/login">Get Started</a></span>
 				{/if}
@@ -81,9 +81,9 @@
 					{:else}
 						<span class="nav-link"><a href="/credits">{$userStore.credits} Interviews</a></span>
 					{/if}
-					<span class="nav-link" on:click={logout}
-						><a href="/logout" data-sveltekit-reload>logout</a></span
-					>
+					<span class="nav-link" on:click={logout}>
+						<a href="/logout" data-sveltekit-reload>logout</a>
+					</span>
 				</div>
 			{/if}
 		</div>
