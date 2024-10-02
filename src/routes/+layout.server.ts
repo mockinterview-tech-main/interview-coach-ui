@@ -17,6 +17,7 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
         let currentUser = await locals.pb?.collection('users').getOne(userAuthSession.id);
         if (currentUser){
             let subscriptionStatus = null;
+            let subscriptionCancelAt = null;
             let subscriptionID = null;
 
             const stripeCustomerResult = await stripe.customers.list({
@@ -24,12 +25,15 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
                 email: currentUser.email
             });
             if (stripeCustomerResult.data.length > 0){
-                const stripeCustomerID = stripeCustomerResult.data[0].id;
+                const stripeCustomerID: string = stripeCustomerResult.data[0].id;
                 const subscriptionResult = await stripe.subscriptions.list({
                     customer: stripeCustomerID
                 });
                 if (subscriptionResult.data.length > 0){
                     subscriptionStatus = subscriptionResult.data[0].status;
+                    if (subscriptionResult.data[0].cancel_at) {
+                        subscriptionCancelAt = new Date(subscriptionResult.data[0].cancel_at * 1000)
+                    }
                     subscriptionID = subscriptionResult.data[0].id;
                     await locals.pb?.collection('users').update(userAuthSession.id, {
                         subscriptionID: subscriptionStatus === "active" ? subscriptionID : null
@@ -53,8 +57,9 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
             return {
                 loggedIn: locals.pb?.authStore.isValid,
                 username: currentUser?.name || "Current User",
+                credits: currentUser?.credits,
                 subscriptionID: currentUser?.subscriptionID,
-                credits: currentUser?.credits
+                subscriptionCancelAt
             }
         }
     }
