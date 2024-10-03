@@ -181,7 +181,8 @@
 					<Content
 						><p>
 							Right now we don't have a self serve way to do that but if you <a
-								href="mailto:{CONTACT_EMAIL}">drop us a line</a
+								class="contact-link"
+								href="mailto:{CONTACT_EMAIL}">get in touch (click here)</a
 							> we can get you squared away.
 						</p></Content
 					>
@@ -190,8 +191,9 @@
 					<Header>How do I shut down my account?</Header>
 					<Content
 						><p>
-							We'd be sorry to see you go, however, just <a href="mailto:{CONTACT_EMAIL}"
-								>drop us a line</a
+							We'd be sorry to see you go, however, just <a
+								class="contact-link"
+								href="mailto:{CONTACT_EMAIL}">get in touch (click here)</a
 							> we can close out your account including erasure of your data.
 						</p></Content
 					>
@@ -280,6 +282,11 @@
 		width: 100%;
 		background-color: $dark-purple;
 		color: $white;
+	}
+
+	.contact-link {
+		color: $yellow;
+		font-weight: bold;
 	}
 
 	* :global(.features-card) {
