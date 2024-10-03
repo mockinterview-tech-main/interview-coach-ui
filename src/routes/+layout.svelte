@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 	import LogoFilled from '$lib/assets/icons/logo-filled.svg';
+	import SubscriptionStatus from '$lib/components/subscriptionStatus.svelte';
 	// import { getSummaryStats } from '$lib/serviceApi.js';
 	// import { statsStore } from '$lib/stores/statsStore.js';
 	import { userStore } from '$lib/stores/userStore.js';
@@ -20,37 +21,6 @@
 	$: isNavOpen = false;
 
 	const logout = () => fetch('/logout');
-
-	const cancelSubscription = async () => {
-		if (confirm(`Are you sure? You'll still have access until the end of your billing cycle.`)) {
-			const response = await fetch('/subscription/cancel', {
-				method: 'PUT',
-				body: JSON.stringify({ subscriptionID: $userStore.subscriptionID, action: 'cancel' }),
-				headers: { 'content-type': 'application/json' }
-			});
-			({ subscriptionCancelAt } = await response.json());
-			if (subscriptionCancelAt) {
-				alert("We're sorry to see you go, your subscription will cancel at the end of the month.");
-				userStore.set({ ...$userStore, subscriptionCancelAt });
-			}
-		}
-	};
-
-	const restoreSubscription = async () => {
-		if (confirm(`Are you sure? If so, we'll continue billing you monthly.`)) {
-			const response = await fetch('/subscription/restore', {
-				method: 'PUT',
-				body: JSON.stringify({ subscriptionID: $userStore.subscriptionID, action: 'restore' }),
-				headers: { 'content-type': 'application/json' }
-			});
-			const { restored } = await response.json();
-			if (restored) {
-				alert('Thank you for reinstating your subscription!');
-				userStore.set({ ...$userStore, subscriptionCancelAt: null });
-				subscriptionCancelAt = null;
-			}
-		}
-	};
 
 	const toggleNav = () => {
 		if (window.matchMedia('(max-width: 750px)').matches) {
@@ -109,31 +79,11 @@
 				<!-- svelte-ignore a11y-click-events-have-key-events -->
 				<div class="right-nav-links">
 					<span class="nav-link">{username}</span>
-					{#if $userStore.subscriptionID}
-						{#if $userStore.subscriptionCancelAt}
-							<span
-								class="nav-link"
-								on:click={() => {
-									restoreSubscription();
-								}}
-							>
-								<a href="/">Restore Subscription</a>
-							</span>
-						{:else}
-							<span
-								class="nav-link"
-								on:click={() => {
-									cancelSubscription();
-								}}
-							>
-								<a href="/">Cancel Subscription</a>
-							</span>
-						{/if}
-					{:else if $userStore.credits === 0}
-						<span class="nav-link"><a href="/credits">{$userStore.credits} Buy Credits</a></span>
-					{:else}
-						<span class="nav-link"><a href="/credits">{$userStore.credits} Interviews</a></span>
-					{/if}
+					<SubscriptionStatus
+						credits={$userStore.credits}
+						subscriptionCancelAt={$userStore.subscriptionCancelAt}
+						subscriptionID={$userStore.subscriptionID}
+					/>
 					<span class="nav-link" on:click={logout}>
 						<a href="/logout" data-sveltekit-reload>logout</a>
 					</span>
