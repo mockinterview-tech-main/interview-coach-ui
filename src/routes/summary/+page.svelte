@@ -1,6 +1,5 @@
 <script lang="ts">
 	export const prerenderer = true;
-	export const ssr = true;
 
 	import HorizontalLoader from '$lib/components/horizontalLoader.svelte';
 	import ListItem from '$lib/components/listItem.svelte';
