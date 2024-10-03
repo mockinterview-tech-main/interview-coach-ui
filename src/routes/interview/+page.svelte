@@ -104,7 +104,7 @@
 			body: JSON.stringify({ action: 'deduct' })
 		}); // deducts a token and starts the interview
 		let creditsBody = await creditResponse.json();
-		$userStore = { credits: creditsBody.credits, ...userStore };
+		$userStore = { ...$userStore, credits: creditsBody.credits };
 
 		let text = `Hi ${username} I'm ${interviewer.name.split(' ')[0]} and I'll be conducting your interview today! `;
 
