@@ -51,8 +51,8 @@ export const actions = {
             await locals.pb?.collection('users').create({email, password, passwordConfirm})
             locals.pb?.collection('users').requestVerification(email)
         } catch (e) {
-            console.error("[Signup Error]: ", e.response.data);
-            return fail(422, {error: true, message: e.response.data})
+            console.error("[Signup Error]: ", e);
+            return fail(422, {error: true, message: e})
         }
 
         return loginWithEmailPassword(locals, cookies, email, password)
