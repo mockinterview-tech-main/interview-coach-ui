@@ -85,7 +85,7 @@
 						subscriptionID={$userStore.subscriptionID}
 					/>
 					<span class="nav-link" on:click={logout}>
-						<a href="/logout" data-sveltekit-reload>logout</a>
+						<a href="/logout" data-sveltekit-reload>Logout</a>
 					</span>
 				</div>
 			{/if}
