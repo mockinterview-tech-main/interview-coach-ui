@@ -3,29 +3,9 @@
 
 	import Accordion, { Panel, Header, Content } from '@smui-extra/accordion';
 	import { interviewSummaryStore } from '$lib/stores/summaryStore';
-	import { onMount } from 'svelte';
-	import { page } from '$app/stores';
-	import { getConversation, getSummary } from '$lib/serviceApi';
 
-	// export let data;
-	let conversationText = '';
-
-	onMount(async () => {
-		let summary = await getSummary($page.params.slug);
-		let conversation = '';
-
-		if (summary?.summary_text) {
-			let conversationData = await getConversation(summary?.conversation_id);
-			conversation = conversationData?.text || 'Converation not found';
-			conversationText = conversation;
-			try {
-				let parts = JSON.parse(summary?.summary_text);
-				interviewSummaryStore.set({ ...summary, ...parts });
-			} catch (e) {
-				console.log('model returned invalid json');
-			}
-		}
-	});
+	export let data;
+	const conversationText = data.conversationText;
 
 	const capitalize = (s: string) => s && s[0].toUpperCase() + s.slice(1);
 </script>

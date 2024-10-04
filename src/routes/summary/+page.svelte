@@ -3,37 +3,10 @@
 
 	import HorizontalLoader from '$lib/components/horizontalLoader.svelte';
 	import ListItem from '$lib/components/listItem.svelte';
-	import { getSummaries } from '$lib/serviceApi.js';
-	import type { InterviewSummary } from '$lib/stores/summaryStore.js';
-	import { onMount } from 'svelte';
 
-	let summariesResponse: InterviewSummary[] | null;
-	$: summariesResponse;
+	export let data;
 
-	let summaries: InterviewSummary[];
-	let unfinishedSummaryIds: string[] = [];
-
-	onMount(async () => {
-		summariesResponse = await getSummaries();
-		if (summariesResponse) {
-			summaries = summariesResponse?.map((summary: InterviewSummary) => {
-				try {
-					if (summary.summary_text) {
-						let parts = JSON.parse(summary?.summary_text);
-						return { ...summary, ...parts } as InterviewSummary;
-					} else {
-						unfinishedSummaryIds = [...unfinishedSummaryIds, summary.id];
-						return { ...summary } as InterviewSummary;
-					}
-				} catch (e) {
-					console.log('model returned invalid json');
-					return { ...summary } as InterviewSummary;
-				}
-			});
-		}
-	});
-
-	$: summaries;
+	const summaries = data.summaries;
 </script>
 
 <div>
@@ -45,7 +18,10 @@
 					<ListItem
 						title={summary.title}
 						subtitle={`${new Date(summary.created_at).toLocaleDateString()} ${new Date(summary.created_at).toLocaleTimeString()}`}
-					/>
+					>
+						<!-- <p>Overall: {summary.overall.grade}</p>
+						<p>Focus on {summary.focus.area}: {summary.focus.grade}</p> -->
+					</ListItem>
 				</a>
 			{:else}
 				<a data-sveltekit-preload-data="hover" href={`/summary/${summary.id}`}>
