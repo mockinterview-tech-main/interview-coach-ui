@@ -2,7 +2,9 @@
 	import Button from '@smui/button';
 
 	import { onDestroy } from 'svelte';
-	import { goto } from '$app/navigation';
+	import { writable } from 'svelte/store';
+
+	import { beforeNavigate, goto } from '$app/navigation';
 
 	import UserHeadsetDuo from '$lib/assets/icons/user-headset-duo.svg';
 
@@ -12,17 +14,24 @@
 	import Judy from '$lib/assets/profile-pics/judy.png';
 	import Patrick from '$lib/assets/profile-pics/patrick.png';
 
-	import { outputText } from '$lib/stores/recordingState';
 	import { type ConversationPart, conversationStore } from '$lib/stores/conversationStore';
 
 	import RecordAnswerButton from '$lib/components/recordAnswerButton.svelte';
 	import TTSButton from '$lib/components/ttsButton.svelte';
 	import Transcript from '$lib/components/transcript.svelte';
-	import { postConversation, postSummary, putConversation } from '$lib/serviceApi.js';
+	import {
+		postConversation,
+		postSummary,
+		postTranscription,
+		putConversation
+	} from '$lib/serviceApi.js';
 	import { userStore } from '$lib/stores/userStore.js';
+	import { millisecondsToMinuteSecondString } from '$lib/utils/time';
 
 	export let data;
 	let { username } = data;
+
+	const outputText = writable<string>('');
 
 	const interviewers = [
 		{ name: 'Lucy Interviewer', pfp: Lucy },
@@ -51,6 +60,7 @@
 	let ttsEnabled = false;
 	let selectedTopic = '';
 	let summaryId = '';
+	let finished = false;
 
 	$: loading;
 	$: interviewConfirmed;
@@ -64,6 +74,14 @@
 	};
 
 	onDestroy(reset);
+
+	beforeNavigate(({ cancel }) => {
+		if (interviewConfirmed && !finished) {
+			if (!confirm('Are you sure you want to leave? Your conversation and token will be lost.')) {
+				cancel();
+			}
+		}
+	});
 
 	const buyCredits = () => goto('/credits');
 
@@ -94,6 +112,39 @@
 		}
 	};
 
+	const processAudio = async (audio: Blob, speakingTime: number) => {
+		const text = await postTranscription(audio);
+		if (text) {
+			const newPart: ConversationPart = {
+				participant: 'user',
+				text,
+				speakingTime: millisecondsToMinuteSecondString(speakingTime)
+			};
+			$conversationStore.parts = [...$conversationStore.parts, newPart];
+			getLLMReply(newPart);
+		} else {
+			$conversationStore.parts = [
+				...$conversationStore.parts,
+				{
+					participant: 'ai',
+					text: "I'm sorry I didn't quite get that. Could you please say again?"
+				}
+			];
+		}
+	};
+
+	const processAudioError = async (e: string) => {
+		if (e === 'long answer error') {
+			$conversationStore.parts = [
+				...$conversationStore.parts,
+				{
+					participant: 'ai',
+					text: 'Great answer, but a key component of interviewing well is telling impactful stories succinctly. Please try shortening your story.'
+				}
+			];
+		}
+	};
+
 	const confirmInterview = async () => {
 		reset();
 
@@ -103,6 +154,7 @@
 			credentials: 'include',
 			body: JSON.stringify({ action: 'deduct' })
 		}); // deducts a token and starts the interview
+
 		let creditsBody = await creditResponse.json();
 		$userStore = { ...$userStore, credits: creditsBody.credits };
 
@@ -117,60 +169,42 @@
 		}
 
 		$conversationStore.parts = [{ participant: 'ai', text }];
-		if (ttsEnabled) {
-			processTTS();
-		}
+
+		if (ttsEnabled) processTTS();
 	};
 
-	outputText.subscribe(async () => {
-		try {
-			if ($outputText !== '') {
-				if ($outputText.toLocaleLowerCase() === 'long answer error') {
-					const newPart: ConversationPart = {
+	const getLLMReply = async (newPart: ConversationPart) => {
+		loading = true;
+
+		const conversationResponse = $conversationStore.id
+			? await putConversation({
+					id: $conversationStore.id,
+					text: `${newPart.participant}: ${newPart.text}`
+				})
+			: await postConversation({
+					text: `${$conversationStore.parts.map((part) => part.text).join(' ')}`
+				});
+
+		if (conversationResponse) {
+			$conversationStore = {
+				id: conversationResponse.id,
+				finished: conversationResponse.finished,
+				parts: [
+					...$conversationStore.parts,
+					{
 						participant: 'ai',
-						text: 'Great answer, but a key component of interviewing well is telling impactful stories succinctly. Please try shortening your story.'
-					};
-					$conversationStore.parts = [...$conversationStore.parts, newPart];
-					return;
-				}
+						text: conversationResponse.added_part
+					}
+				]
+			};
 
-				if ($outputText.toLocaleLowerCase() === 'bad transcription error') {
-					const newPart: ConversationPart = {
-						participant: 'ai',
-						text: "I'm sorry I didn't quite get that. Could you please say again?"
-					};
-					$conversationStore.parts = [...$conversationStore.parts, newPart];
-					return;
-				}
+			if (ttsEnabled) processTTS();
 
-				let speakingTime = null;
-
-				const outputTextMeta = $outputText.match(/\{.*\}/) ?? [];
-				if (outputTextMeta.length > 0) {
-					let outputTextMetaJSON = JSON.parse(outputTextMeta[0] ?? '{}');
-					speakingTime = outputTextMetaJSON['time'];
-				}
-
-				const newPart: ConversationPart = {
-					participant: 'user',
-					text: outputTextMeta[0] ? $outputText.substring(outputTextMeta[0].length) : $outputText,
-					speakingTime
-				};
-
-				$conversationStore.parts = [...$conversationStore.parts, newPart];
-
-				loading = true;
-
-				const conversationResponse = $conversationStore.id
-					? await putConversation({
-							id: $conversationStore.id,
-							text: `${newPart.participant}: ${newPart.text}`
-						})
-					: await postConversation({
-							text: `${$conversationStore.parts.map((part) => part.text).join(' ')}`
-						});
-
-				if (conversationResponse) {
+			if (conversationResponse.finished) {
+				const summary = await postSummary({ conversation_id: $conversationStore.id || '' });
+				finished = true;
+				summaryId = summary?.id || '';
+				if (summaryId === '') {
 					$conversationStore = {
 						id: conversationResponse.id,
 						finished: conversationResponse.finished,
@@ -178,38 +212,15 @@
 							...$conversationStore.parts,
 							{
 								participant: 'ai',
-								text: conversationResponse.added_part
+								text: 'Looks like this analysis is taking a while. Check back on your past interviews later. Thank you for your patience.'
 							}
 						]
 					};
-
-					if (ttsEnabled) processTTS();
-
-					if (conversationResponse.finished) {
-						const summary = await postSummary({ conversation_id: $conversationStore.id || '' });
-						summaryId = summary?.id || '';
-						if (summaryId === '') {
-							$conversationStore = {
-								id: conversationResponse.id,
-								finished: conversationResponse.finished,
-								parts: [
-									...$conversationStore.parts,
-									{
-										participant: 'ai',
-										text: 'Looks like this analysis is taking a while. Check back on your past interviews later. Thank you for your patience.'
-									}
-								]
-							};
-						}
-					}
 				}
-
-				loading = false;
 			}
-		} catch (error) {
-			console.error('An error occurred:', error);
 		}
-	});
+		loading = false;
+	};
 </script>
 
 <div>
@@ -228,7 +239,10 @@
 		<div class="control-panel">
 			{#if interviewConfirmed && summaryId == ''}
 				<TTSButton on:click={toggleTTS} {ttsEnabled} />
-				<RecordAnswerButton {loading} />
+				<RecordAnswerButton
+					on:error={(e) => processAudioError(e.detail)}
+					on:audio={(e) => processAudio(e.detail.audioBlob, e.detail.elapsedTime)}
+				/>
 			{/if}
 		</div>
 	</div>
@@ -251,9 +265,9 @@
 					{#if topic !== 'Specific Question'}
 						<Button class="cta-button" on:click={() => (selectedTopic = topic)}>{topic}</Button>
 					{:else}
-						<Button class="cta-button specific-topic" on:click={() => (selectedTopic = topic)}
-							>{topic}</Button
-						>
+						<Button class="cta-button specific-topic" on:click={() => (selectedTopic = topic)}>
+							{topic}
+						</Button>
 					{/if}
 				{/each}
 			</div>
@@ -266,15 +280,15 @@
 			{/if}
 			<p style="text-align: center;">Leaving the page or refreshing will lose the session</p>
 			<div class="options-container" style="flex-direction: column; align-items: center;">
-				<Button class="cta-button" style="max-width: 135px;" on:click={confirmInterview}
-					>Continue</Button
-				><br />
-				<Button class="cta-button" style="max-width: 135px;" on:click={() => (selectedTopic = '')}
-					>Go Back</Button
-				>
+				<Button class="cta-button" style="max-width: 135px;" on:click={confirmInterview}>
+					Continue
+				</Button><br />
+				<Button class="cta-button" style="max-width: 135px;" on:click={() => (selectedTopic = '')}>
+					Go Back
+				</Button>
 			</div>
 		{:else}
-			<Transcript {loading} />
+			<Transcript {conversationStore} {loading} />
 			<div style="flex-direction: column; align-items: center;">
 				{#if $conversationStore.finished && summaryId != '' && !loading}
 					<Button class="cta-button" on:click={() => goto(`/summary/${summaryId}`)}

@@ -1,11 +1,11 @@
 <script lang="ts">
-	import { conversationStore } from '$lib/stores/conversationStore';
-	import { recordingState } from '$lib/stores/recordingState';
-
+	import { type Writable } from 'svelte/store';
 	import { afterUpdate, beforeUpdate } from 'svelte';
 	import HorizontalLoader from './horizontalLoader.svelte';
+	import { type Conversation } from '$lib/stores/conversationStore';
 
 	export let loading: boolean;
+	export let conversationStore: Writable<Conversation>;
 
 	const conversationSectionElement = document.querySelector('#conversationSection');
 	if (conversationSectionElement) {
@@ -46,9 +46,9 @@
 			</p>
 		{/if}
 	{/each}
-	{#if loading || $recordingState === 'transcribing'}
+	{#if loading}
 		<HorizontalLoader size="s" position="c">
-			{$recordingState === 'transcribing' ? 'transcribing speech...' : 'taking some notes...'}
+			{'taking some notes...'}
 		</HorizontalLoader>
 	{/if}
 </div>

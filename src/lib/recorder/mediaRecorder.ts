@@ -1,4 +1,5 @@
 import AudioRecorder from 'audio-recorder-polyfill';
+import * as lamejs from '@breezystack/lamejs';
 
 let mediaRecorder: MediaRecorder | null = null;
 let recordedChunks: Blob[] = [];
@@ -30,3 +31,22 @@ export const stopRecording = async (): Promise<[Blob, number]> => {
 		mediaRecorder.stop();
 	});
 }
+export const compressAudioBlob = async (audioBlob: Blob): Promise<Blob> => {
+	return new Promise((resolve, reject) => {
+		const r = new FileReader();
+		r.onload = () => {
+			let data = r.result as ArrayBuffer;
+			if (data.byteLength % 2 !== 0) {
+				// If not, create a new ArrayBuffer with the correct length
+				data = data.slice(0, data.byteLength - 1);
+			}
+			const mp3Encoder = new lamejs.Mp3Encoder(1, 44100, 128); // Mono channel, 44100 Hz, 128 kbps
+
+			const mp3Data = mp3Encoder.encodeBuffer(new Int16Array(data));
+			mp3Encoder.flush();
+			resolve(new Blob([mp3Data], { type: 'audio/mp3' }));
+		};
+		r.onerror = (error) => reject(error);
+		r.readAsArrayBuffer(audioBlob);
+	});
+};
