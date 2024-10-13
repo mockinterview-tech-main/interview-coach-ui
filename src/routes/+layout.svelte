@@ -12,7 +12,7 @@
 	const { loggedIn, credits, username, subscriptionID } = data;
 	let { subscriptionCancelAt } = data;
 
-	$: isInterviewPage = $page.url.pathname === '/interview';
+	$: isSummaryPage = $page.url.pathname === '/summary';
 	$: subscriptionCancelAt;
 
 	userStore.set({ credits, subscriptionID, subscriptionCancelAt, loggedIn: loggedIn || false });
@@ -94,7 +94,7 @@
 	<main>
 		<slot />
 	</main>
-	{#if !isInterviewPage}
+	{#if !isSummaryPage}
 		<footer>
 			<span>&copy; 2024 EmpowerPro Labs</span>
 			<span><a href="https://medium.com/@mockinterview-tech">Blog</a></span>
@@ -134,7 +134,7 @@
 	.container {
 		font-family: 'inter', Arial, Helvetica, sans-serif;
 		font-size: medium;
-		min-height: 110vh;
+		min-height: 100vh;
 		display: flex;
 		flex-direction: column;
 		width: 100%;

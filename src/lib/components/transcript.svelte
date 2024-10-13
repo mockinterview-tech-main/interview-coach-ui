@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { type Writable } from 'svelte/store';
-	import { afterUpdate, beforeUpdate } from 'svelte';
+	import { afterUpdate, tick } from 'svelte';
 	import HorizontalLoader from './horizontalLoader.svelte';
 	import { type Conversation } from '$lib/stores/conversationStore';
 
@@ -15,20 +15,11 @@
 		conversationSectionElementObserver.observe(conversationSectionElement, { childList: true });
 	}
 
-	let autoscroll = true;
 	let conversationSection: HTMLDivElement;
-	beforeUpdate(() => {
-		if (conversationSection) {
-			const scrollableDistance =
-				conversationSection.scrollHeight - conversationSection.offsetHeight;
-			autoscroll = conversationSection.scrollTop > scrollableDistance - 20;
-		}
-	});
 
-	afterUpdate(() => {
-		if (autoscroll) {
-			conversationSection.scrollTo(0, conversationSection.scrollHeight);
-		}
+	afterUpdate(async () => {
+		await tick();
+		conversationSection.scroll({ top: conversationSection.scrollHeight, behavior: 'smooth' });
 	});
 </script>
 
@@ -57,9 +48,11 @@
 	@import '../styles/colors.scss';
 
 	#conversationSection {
-		padding: 0 25%;
+		padding: 0 15%;
 		display: flex;
+		height: 500px;
 		margin-top: 1em;
+		overflow-y: auto;
 		flex-direction: column;
 		scroll-behavior: smooth;
 		p {

@@ -3,7 +3,7 @@ const openaiKey = import.meta.env["VITE_OPENAI_API_KEY"];
 
 export const POST: RequestHandler = async ({ request }) => {
     const {text, interviewer} = await request.json();
-    let voice = "onyx"
+    let voice = "echo"
     if (interviewer === "Lucy" || interviewer === "Kelly" || interviewer === "Judy") {
         voice = "nova"
     }

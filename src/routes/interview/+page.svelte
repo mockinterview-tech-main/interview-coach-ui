@@ -27,6 +27,7 @@
 	} from '$lib/serviceApi.js';
 	import { userStore } from '$lib/stores/userStore.js';
 	import { millisecondsToMinuteSecondString } from '$lib/utils/time';
+	import { sleep } from 'openai/core.js';
 
 	export let data;
 	let { username } = data;
@@ -75,6 +76,8 @@
 
 	onDestroy(reset);
 
+	const pause = (ms: number) => new Promise((fulfill) => setTimeout(fulfill, ms));
+
 	beforeNavigate(({ cancel }) => {
 		if (interviewConfirmed && !finished) {
 			if (!confirm('Are you sure you want to leave? Your conversation and token will be lost.')) {
@@ -82,8 +85,6 @@
 			}
 		}
 	});
-
-	const buyCredits = () => goto('/credits');
 
 	const toggleTTS = () => {
 		ttsEnabled = !ttsEnabled;
@@ -158,17 +159,31 @@
 		let creditsBody = await creditResponse.json();
 		$userStore = { ...$userStore, credits: creditsBody.credits };
 
-		let text = `Hi ${username} I'm ${interviewer.name.split(' ')[0]} and I'll be conducting your interview today! `;
-
 		if (selectedTopic !== 'Specific Question') {
-			text += `I see you chose ${selectedTopic} as your focus area. `;
+			$conversationStore.parts = [
+				...$conversationStore.parts,
+				{
+					participant: 'ai',
+					text: `Hi ${username} I'm ${interviewer.name.split(' ')[0]} and I'll be conducting your interview today! I see you chose ${selectedTopic} as your focus area.`
+				}
+			];
+		} else {
+			$conversationStore.parts = [
+				...$conversationStore.parts,
+				{
+					participant: 'ai',
+					text: `Hi ${username} I'm ${interviewer.name.split(' ')[0]} and I'll be conducting your interview today!`
+				}
+			];
 		}
-		text += `Please tell me what role and company you'd like to practice for. `;
-		if (selectedTopic === 'Specific Question') {
-			text += `Also since you want to go over a specific question, please tell me the question you'd like to practice.`;
-		}
-
-		$conversationStore.parts = [{ participant: 'ai', text }];
+		await pause(500);
+		$conversationStore.parts = [
+			...$conversationStore.parts,
+			{
+				participant: 'ai',
+				text: `Please unmute and tell me what role and company you'd like to practice for. When you are done answering, please go on mute so I know you're done speaking.`
+			}
+		];
 
 		if (ttsEnabled) processTTS();
 	};
@@ -252,7 +267,7 @@
 				Uh oh, looks like you're out of credits. Please buy more before continuing.
 			</p>
 			<div class="options-container" style="flex-direction: column; align-items: center;">
-				<Button class="cta-button" on:click={buyCredits}>Buy Credits</Button>
+				<Button class="cta-button" on:click={() => goto('/credits')}>Buy Credits</Button>
 			</div>
 		{:else if !interviewConfirmed && !selectedTopic}
 			<h2>Select a Focus Area</h2>

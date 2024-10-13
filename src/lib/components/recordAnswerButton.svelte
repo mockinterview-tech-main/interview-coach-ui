@@ -61,7 +61,7 @@
 	<img
 		width="30px"
 		height="30px"
-		src={recordingState === 'idle' || isDisabled ? MicFilled : MuteFilled}
+		src={recordingState === 'idle' || isDisabled ? MuteFilled : MicFilled}
 	/>
 </button>
 
