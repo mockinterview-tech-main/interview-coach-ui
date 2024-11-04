@@ -9,15 +9,13 @@
 
 	type RecordingState = 'idle' | 'recording' | 'transcribing';
 	let recordingState: RecordingState = 'idle';
+	let isDisabled = false;
 
 	const dispatch = createEventDispatcher();
 
-	let isDisabled = false;
 	$: {
 		isDisabled = loading || recordingState === 'transcribing';
 	}
-	$: isDisabled;
-	$: recordingState;
 
 	const toggleRecording = async () => {
 		if (recordingState === 'idle') {

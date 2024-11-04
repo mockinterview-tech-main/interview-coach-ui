@@ -2,8 +2,6 @@
 	export let title: string;
 	export let subtitle: string;
 	export let selected = false;
-
-	$: selected;
 </script>
 
 <!-- svelte-ignore a11y-click-events-have-key-events -->

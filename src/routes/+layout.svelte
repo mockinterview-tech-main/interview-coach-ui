@@ -10,15 +10,14 @@
 
 	export let data;
 	const { loggedIn, credits, username, subscriptionID } = data;
-	let { subscriptionCancelAt } = data;
+	let subscriptionCancelAt = data.subscriptionCancelAt;
+	let isNavOpen = false;
 
-	$: isSummaryPage = $page.url.pathname === '/summary';
-	$: subscriptionCancelAt;
+	let isSummaryPage = $page.url.pathname === '/summary';
 
 	userStore.set({ credits, subscriptionID, subscriptionCancelAt, loggedIn: loggedIn || false });
 
 	let navMenu: HTMLElement;
-	$: isNavOpen = false;
 
 	const logout = () => fetch('/logout');
 

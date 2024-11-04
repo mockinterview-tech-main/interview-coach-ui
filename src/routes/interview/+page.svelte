@@ -27,10 +27,16 @@
 	} from '$lib/serviceApi.js';
 	import { userStore } from '$lib/stores/userStore.js';
 	import { millisecondsToMinuteSecondString } from '$lib/utils/time';
-	import { sleep } from 'openai/core.js';
 
 	export let data;
 	let { username } = data;
+
+	let loading = false;
+	let interviewConfirmed = false;
+	let ttsEnabled = false;
+	let selectedTopic = '';
+	let summaryId = '';
+	let finished = false;
 
 	const outputText = writable<string>('');
 
@@ -54,20 +60,6 @@
 	];
 
 	const interviewer = interviewers[Math.floor(Math.random() * interviewers.length)];
-
-	// Initial Values
-	let loading = false;
-	let interviewConfirmed = false;
-	let ttsEnabled = false;
-	let selectedTopic = '';
-	let summaryId = '';
-	let finished = false;
-
-	$: loading;
-	$: interviewConfirmed;
-	$: ttsEnabled;
-	$: summaryId;
-	$: selectedTopic;
 
 	const reset = () => {
 		$outputText = '';
