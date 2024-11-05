@@ -14,10 +14,10 @@ export const GET: RequestHandler = async ({ locals, url }: RequestEvent) => {
                 let currentUser = await locals.pb?.collection('users').getOne(currentUserToken.id);
                 if (currentUser){
                     await locals.pb?.collection('users').update(currentUserToken.id);
-                    throw redirect(303, '/')
+                    redirect(303, '/');
                 }
             }
         }
     }
-    throw redirect(303, '/login')
+    redirect(303, '/login');
 }

@@ -51,7 +51,7 @@ const generateNonce = (length = 24) => {
 export const actions = {
     purchase: async ({request, locals}) => {
         if (!locals.pb?.authStore.isValid){
-            throw redirect(301, '/');
+            redirect(301, '/');
         }
         const rawData = await request.formData();
         const chosenOffering = rawData.get('chosenOffering');
@@ -77,7 +77,7 @@ export const actions = {
                 cancel_url: isProd ? `https://mockinterview.tech/interview` : `http://localhost:5173/interview`,
                 automatic_tax: {enabled: true},
             });
-            throw redirect(303, session.url || 'http://localhost:5173/interview');
+            redirect(303, session.url || 'http://localhost:5173/interview');
         }
     },
 }

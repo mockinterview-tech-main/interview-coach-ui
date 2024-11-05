@@ -15,18 +15,18 @@ export const GET: RequestHandler = async ({ locals, url, cookies }: RequestEvent
     const authMethods = await locals.pb?.collection('users').listAuthMethods();
     if (!authMethods?.authProviders) {
         console.log('authy providers');
-        throw redirect(303, '/login');
+        redirect(303, '/login');
     }
     const provider = authMethods.authProviders.find(p => p.name == providerName);
 
     if (!provider) {
         console.log('Provider not found');
-        throw redirect(303, '/login');
+        redirect(303, '/login');
     }
 
     if (expectedState !== state) {
         console.log('state does not match expected', expectedState, state);
-        throw redirect(303, '/login');
+        redirect(303, '/login');
     }
 
     try {
@@ -43,6 +43,6 @@ export const GET: RequestHandler = async ({ locals, url, cookies }: RequestEvent
     } catch (err) {
         console.log('Error logging in with OAuth user', err);
     } finally {
-        throw redirect(303, '/interview');
+        redirect(303, '/interview');
     }
 };
