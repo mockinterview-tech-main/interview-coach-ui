@@ -8,16 +8,7 @@ export const GET: RequestHandler = async ({ locals, url }: RequestEvent) => {
 
     const verified = await locals.pb?.collection('users').confirmVerification(token);
     if (verified) {
-        if (locals.pb?.authStore.isValid){
-            const currentUserToken = decodeJwt(locals.pb?.authStore.token || '');
-            if (currentUserToken){
-                let currentUser = await locals.pb?.collection('users').getOne(currentUserToken.id);
-                if (currentUser){
-                    await locals.pb?.collection('users').update(currentUserToken.id);
-                    redirect(303, '/');
-                }
-            }
-        }
+        throw redirect(303, '/interview');
     }
-    redirect(303, '/login');
+    throw redirect(303, '/login');
 }
