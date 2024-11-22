@@ -11,7 +11,7 @@ export type OutputType = { [key: string]: {
 export const load: PageServerLoad<OutputType> = async ({ locals, url, cookies }) => {
     const authToken = cookies.get('pb_auth');
     if (authToken) {
-        redirect(302, '/');
+        throw redirect(302, '/');
     }
     
     try {
