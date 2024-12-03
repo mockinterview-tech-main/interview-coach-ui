@@ -5,9 +5,9 @@ let mediaRecorder: MediaRecorder | null = null;
 let recordedChunks: Blob[] = [];
 
 let startTime: number;
-let stopTime: number
+let stopTime: number;
 
-export const startRecording = async (): Promise<void> => {
+export const startRecording = async (): Promise<MediaStream> => {
 	const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 	mediaRecorder = new AudioRecorder(stream);
 	if (!mediaRecorder) throw new Error('MediaRecorder is not initialized.');
@@ -16,6 +16,7 @@ export const startRecording = async (): Promise<void> => {
 	});
 	startTime = Date.now();
 	mediaRecorder.start();
+	return stream
 }
 
 export const stopRecording = async (): Promise<[Blob, number]> => {
@@ -25,7 +26,7 @@ export const stopRecording = async (): Promise<[Blob, number]> => {
 			mediaRecorder?.stream.getTracks().forEach((track) => track.stop());
 			const audioBlob = new Blob(recordedChunks, { type: 'audio/mp3' });
 			recordedChunks = [];
-			stopTime = Date.now()
+			stopTime = Date.now();
 			resolve([audioBlob, stopTime - startTime]);
 		});
 		mediaRecorder.stop();

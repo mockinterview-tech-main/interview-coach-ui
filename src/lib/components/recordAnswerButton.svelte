@@ -10,23 +10,46 @@
 	type RecordingState = 'idle' | 'recording' | 'transcribing';
 	let recordingState: RecordingState = 'idle';
 	let isDisabled = false;
+	let volume = 0;
 
 	const dispatch = createEventDispatcher();
 
-	$: {
-		isDisabled = loading || recordingState === 'transcribing';
-	}
+	$: isDisabled = loading || recordingState === 'transcribing';
+
+	const updateVolume = (analyser: AnalyserNode): void => {
+		const dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+		const update = () => {
+			analyser.getByteFrequencyData(dataArray);
+			volume = dataArray.reduce((acc, curr) => acc + curr, 0) / dataArray.length;
+			requestAnimationFrame(update);
+		};
+
+		update();
+	};
 
 	const toggleRecording = async () => {
 		if (recordingState === 'idle') {
-			await startRecording();
+			const stream = await startRecording();
+
+			const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+			const analyser = audioContext.createAnalyser();
+
+			analyser.fftSize = 256;
+
+			const source = audioContext.createMediaStreamSource(stream);
+			source.connect(analyser);
+
+			updateVolume(analyser);
 			recordingState = 'recording';
+			dispatch('recording', true);
 			return;
 		}
 		if (recordingState === 'recording') {
 			try {
 				let [audioBlob, elapsedTime] = await stopRecording();
 				recordingState = 'transcribing';
+				dispatch('recording', false);
 				// Check if the size is less than 25MB
 				if (audioBlob.size > 25 * 1024 * 1024) {
 					audioBlob = await compressAudioBlob(audioBlob);
@@ -53,7 +76,7 @@
 			? 'please wait'
 			: 'turn on microphone'
 		: 'mute microphone'}
-	class={`record-button ${recordingState === 'recording' ? 'flash' : ''}`}
+	class={`record-button ${volume > 10 && recordingState === 'recording' ? 'flash' : ''}`}
 >
 	<!-- svelte-ignore a11y-missing-attribute -->
 	<img
@@ -98,6 +121,7 @@
 	.record-button:hover {
 		background-color: $light-purple;
 	}
+
 	.flash {
 		animation: flash 1s infinite;
 	}
@@ -107,7 +131,7 @@
 			background-color: $dark-purple;
 		}
 		50% {
-			background-color: $light-purple;
+			background-color: red;
 		}
 		100% {
 			background-color: $dark-purple;

@@ -17,7 +17,6 @@
 	import { type ConversationPart, conversationStore } from '$lib/stores/conversationStore';
 
 	import RecordAnswerButton from '$lib/components/recordAnswerButton.svelte';
-	import TTSButton from '$lib/components/ttsButton.svelte';
 	import Transcript from '$lib/components/transcript.svelte';
 	import {
 		postConversation,
@@ -33,10 +32,10 @@
 
 	let loading = false;
 	let interviewConfirmed = false;
-	let ttsEnabled = false;
 	let selectedTopic = '';
 	let summaryId = '';
 	let finished = false;
+	let timeRemaining = '5:00';
 
 	const outputText = writable<string>('');
 
@@ -78,30 +77,35 @@
 		}
 	});
 
-	const toggleTTS = () => {
-		ttsEnabled = !ttsEnabled;
-		processTTS();
+	let interval: ReturnType<typeof setInterval> | null = null;
+	const startTimer = (duration: number, x: boolean) => {
+		console.log(x);
+		if (interval !== null) {
+			clearInterval(interval);
+		}
+
+		let timer = duration;
+
+		interval = setInterval(() => {
+			const minutes = Math.floor(timer / 60);
+			let seconds: string | number = timer % 60;
+			seconds = seconds < 10 ? '0' + seconds : seconds;
+			timeRemaining = `${minutes}:${seconds}`;
+			console.log(`Time Remaining: ${timeRemaining}`);
+
+			if (--timer < 0) {
+				clearInterval(interval as ReturnType<typeof setInterval>);
+				interval = null;
+				timeRemaining = '0:00';
+			}
+		}, 1000);
 	};
 
-	const processTTS = async () => {
-		const audioPlayer: HTMLAudioElement | null = document.getElementById(
-			'audioPlayer'
-		) as HTMLAudioElement;
-		if (audioPlayer) {
-			if (ttsEnabled) {
-				let text = $conversationStore.parts[$conversationStore.parts.length - 1].text;
-				const response = await fetch('/tts', {
-					method: 'POST',
-					credentials: 'include',
-					body: JSON.stringify({ text, interviewer: interviewer.name.split(' ')[0] })
-				});
-				const r = await response.blob();
-				const audioUrl = URL.createObjectURL(r);
-				audioPlayer.src = audioUrl;
-				await audioPlayer.play();
-			} else {
-				audioPlayer.pause();
-			}
+	const stopTimer = () => {
+		if (interval !== null) {
+			clearInterval(interval);
+			interval = null;
+			timeRemaining = '5:00';
 		}
 	};
 
@@ -173,11 +177,9 @@
 			...$conversationStore.parts,
 			{
 				participant: 'ai',
-				text: `Please unmute and tell me what role and company you'd like to practice for. When you are done answering, please go on mute so I know you're done speaking.`
+				text: `Please unmute and tell me what role and company you'd like to practice for. When you are done answering, please go on mute so I know you're done speaking. Please limit your responses to 5 minutes or less as a best practice and so we can properly analyze your answer.`
 			}
 		];
-
-		if (ttsEnabled) processTTS();
 	};
 
 	const getLLMReply = async (newPart: ConversationPart) => {
@@ -204,8 +206,6 @@
 					}
 				]
 			};
-
-			if (ttsEnabled) processTTS();
 
 			if (conversationResponse.finished) {
 				const summary = await postSummary({ conversation_id: $conversationStore.id || '' });
@@ -245,11 +245,12 @@
 		<br />
 		<div class="control-panel">
 			{#if interviewConfirmed && summaryId == ''}
-				<TTSButton on:click={toggleTTS} {ttsEnabled} />
 				<RecordAnswerButton
 					on:error={(e) => processAudioError(e.detail)}
 					on:audio={(e) => processAudio(e.detail.audioBlob, e.detail.elapsedTime)}
+					on:recording={(e) => (e.detail ? startTimer(300, e.detail) : stopTimer())}
 				/>
+				<h2 class="time-remaining">Time {timeRemaining}</h2>
 			{/if}
 		</div>
 	</div>
@@ -340,8 +341,13 @@
 			.control-panel {
 				display: flex;
 				flex-direction: row;
-				margin: 0px 30vw;
-				justify-content: space-around;
+				margin: 0px 35vw;
+				justify-content: space-between;
+				.time-remaining {
+					margin: auto;
+					font-weight: bolder;
+					font-size: 1.5em;
+				}
 			}
 			h3 {
 				margin: auto;
@@ -371,6 +377,9 @@
 				h3 {
 					font-size: 14px;
 					width: 300px;
+				}
+				h2 {
+					font-size: 14px;
 				}
 				.pfp-container {
 					width: 300px;

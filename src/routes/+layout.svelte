@@ -14,6 +14,7 @@
 	let isNavOpen = false;
 
 	let isSummaryPage = $page.url.pathname === '/summary';
+	let isInterviewPage = $page.url.pathname === '/interview';
 
 	userStore.set({ credits, subscriptionID, subscriptionCancelAt, loggedIn: loggedIn || false });
 
@@ -93,7 +94,7 @@
 	<main>
 		<slot />
 	</main>
-	{#if !isSummaryPage}
+	{#if !isSummaryPage && !isInterviewPage}
 		<footer>
 			<span>&copy; 2024 EmpowerPro Labs</span>
 			<span><a href="https://medium.com/@mockinterview-tech">Blog</a></span>
