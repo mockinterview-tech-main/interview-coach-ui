@@ -15,7 +15,7 @@
 <div class="frontpage-container">
 	<section class="jumbotron">
 		<div>
-			<h1>The Missing Interview Dress Rehearsal</h1>
+			<h1>Your Anytime Anywhere Interview Coach</h1>
 			<p>Make your stories as exceptional as you</p>
 			<br /><br />
 			{#if $userStore.loggedIn}
@@ -44,11 +44,9 @@
 			<div class="vertical-sections">
 				<div class="vl-section">
 					<p>
-						Craft and curate stories that get to the heart of what interviewers actually care about.
-					</p>
-					<p>
-						Efficiently hone your practice telling stories about select soft-skill traits rather
-						than answering random questions.
+						We enhance A.I. with the secrets of hiring managers and decision makers at MAANG,
+						Fortune 500 companies, and other top teams to bring you an interview coach that will
+						push you to bring out the best in your experience and help you land that dream job!
 					</p>
 				</div>
 			</div>
@@ -239,7 +237,9 @@
 
 	.jumbotron {
 		position: relative;
-		color: $white;
+		color: $yellow;
+		font-size: 1em;
+		font-weight: bolder;
 		z-index: 100;
 		padding: 200px 0px;
 		width: 100vw;
@@ -254,23 +254,31 @@
 			right: 0;
 			bottom: 0;
 			z-index: -2; /* Ensure it's below the content */
-			background-image: url('$lib/assets/jumbotron.jpg');
-			background-size: cover;
+			background-color: $dark-purple;
 		}
 
 		div {
 			padding: 0 40px;
 		}
 		h1 {
-			font-size: 42px;
+			font-size: 5em;
 		}
 		p {
-			font-size: 24px;
+			font-size: 3em;
 		}
 		* :global(.jumbo) {
 			padding: 20px;
 			margin-right: 20px;
 			margin-top: 20px;
+			background-color: $white;
+			color: $dark-purple;
+		}
+		* :global(.jumbo:hover) {
+			padding: 20px;
+			margin-right: 20px;
+			margin-top: 20px;
+			background-color: $light-purple;
+			color: black;
 		}
 	}
 
