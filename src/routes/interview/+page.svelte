@@ -91,6 +91,7 @@
 			let seconds: string | number = timer % 60;
 			seconds = seconds < 10 ? '0' + seconds : seconds;
 			timeRemaining = `${minutes}:${seconds}`;
+			console.log(`Time Remaining: ${timeRemaining}`);
 
 			if (--timer < 0) {
 				clearInterval(interval as ReturnType<typeof setInterval>);
