@@ -36,6 +36,7 @@
   <hr/>
   <h1>The Fine Print</h1>
   <p>Motiv8 uses sms based messaging to reach out to you about your plans and goals.</p>
+  <p>By signing up for this service, you agree to be contacted via SMS as part of our service offering.</p>
   <p>Standard messaging rates apply.</p>
   <p>We will not spam, sell your phone number, or use your phone number for marketing.</p>
   <p>You may opt out any time by texting STOP.</p>
