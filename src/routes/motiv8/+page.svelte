@@ -24,14 +24,11 @@
   <p>You're also welcome to converse with the app via sms if you need help identifying some key activities or plan changes that day</p>
   <hr/>
   <form>
-    
-      <label for="phone">phone number</label><br/><br/>
-      <input disabled={!$userStore.loggedIn} type="tel"/>
-      <button disabled={!$userStore.loggedIn} class="cta-button interest" type="submit" on:click={registerUser}>I'm Interested!</button>
-      <br/>
-      <input type="checkbox" name="sms_consent" required/>
-      <label for="sms_consent">I agree to receive SMS messages from Motiv8 as part of this service.</label>
-      
+    <label for="phone">phone number</label><br/><br/>
+    <input disabled={!$userStore.loggedIn} type="tel"/><br/><br/>
+    <input type="checkbox" name="sms_consent" required/>
+    <label for="sms_consent">I agree to receive SMS messages from Motiv8 as part of this service.</label><br/><br/>
+    <button disabled={!$userStore.loggedIn} class="cta-button interest" type="submit" on:click={registerUser}>I'm Interested!</button>
     {#if !$userStore.loggedIn}
       <p>This service is only available to registerd users of mockinterview.tech with a paid subscription right now. Please consider <a href="/login">signing up!</a></p>
       <a href="/login"><Button class="cta-button jumbo">Get Started!</Button></a>
