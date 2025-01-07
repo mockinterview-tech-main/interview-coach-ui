@@ -24,12 +24,16 @@
   <p>You're also welcome to converse with the app via sms if you need help identifying some key activities or plan changes that day</p>
   <hr/>
   <form>
-    {#if $userStore.loggedIn}
+    
       <label for="phone">phone number</label><br/><br/>
-      <input type="tel"/>
-      <button class="cta-button interest" type="submit" on:click={registerUser}>I'm Interested!</button>
-    {:else}
-      <p>This service is only available to registerd users of mockinterview.tech with a paid subscription right now. Please consider signing up!</p>
+      <input disabled={!$userStore.loggedIn} type="tel"/>
+      <button disabled={!$userStore.loggedIn} class="cta-button interest" type="submit" on:click={registerUser}>I'm Interested!</button>
+      <br/>
+      <input type="checkbox" name="sms_consent" required/>
+      <label for="sms_consent">I agree to receive SMS messages from Motiv8 as part of this service.</label>
+      
+    {#if !$userStore.loggedIn}
+      <p>This service is only available to registerd users of mockinterview.tech with a paid subscription right now. Please consider <a href="/login">signing up!</a></p>
       <a href="/login"><Button class="cta-button jumbo">Get Started!</Button></a>
     {/if}
   </form>
@@ -51,6 +55,10 @@
     margin-top: 70px;
     margin-left: 20px;
     margin-right: 20px;
+  }
+  input[type='checkbox'] {
+    width: 1em;
+    margin: 0;
   }
   hr {
     margin: 20px 0px;
