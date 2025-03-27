@@ -77,7 +77,6 @@ export const actions = {
                 cancel_url: isProd ? `https://mockinterview.tech/interview` : `http://localhost:5173/interview`,
                 automatic_tax: {enabled: true},
             });
-            console.warn("stripe url", session.url)
             throw redirect(303, session.url || 'http://localhost:5173/interview');
         }
     },
