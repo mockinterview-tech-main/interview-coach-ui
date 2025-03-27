@@ -78,7 +78,7 @@ export const actions = {
                 automatic_tax: {enabled: true},
             });
             console.warn("stripe url", session.url)
-            redirect(303, session.url || 'http://localhost:5173/interview');
+            throw redirect(303, session.url || 'http://localhost:5173/interview');
         }
     },
 }
