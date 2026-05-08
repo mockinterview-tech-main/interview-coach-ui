@@ -125,6 +125,7 @@
 	.main {
 		max-width: 600px;
 		margin: 0 auto;
+		margin-top: 100px;
 		padding: 3.5rem 2rem;
 		text-align: center;
 	}
@@ -270,6 +271,7 @@
 
 	@media (max-width: 500px) {
 		.main {
+			margin-top: 100px;
 			padding: 2.5rem 1.25rem;
 		}
 
