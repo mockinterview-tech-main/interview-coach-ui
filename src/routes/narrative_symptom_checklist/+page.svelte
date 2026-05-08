@@ -1,37 +1,16 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-
-	let emailInput: HTMLInputElement;
-	let submitBtn: HTMLButtonElement;
-	let form: HTMLFormElement;
-	let successMsg: HTMLDivElement;
-	let scheduleBtn: HTMLButtonElement;
+	let email = '';
+	let showSuccess = false;
 
 	const PDF_DOWNLOAD_URL =
 		'https://drive.google.com/uc?export=download&id=1x5bQIZWlqtOF5zhxAZgOvnD2CLYHkrYF';
 	const FORMSPREE_ENDPOINT = 'https://formspree.io/f/xgodnyla';
 	const CAL_LINK = 'yijun-interview-therapist/30min-free-narrative-audit';
 
-	onMount(() => {
-		form?.addEventListener('submit', handleSubmit);
-		scheduleBtn?.addEventListener('click', handleSchedule);
-
-		return () => {
-			form?.removeEventListener('submit', handleSubmit);
-			scheduleBtn?.removeEventListener('click', handleSchedule);
-		};
-	});
-
-	function handleSubmit(e: Event) {
-		e.preventDefault();
-		const email = emailInput?.value?.trim();
+	function handleSubmit() {
 		if (!email) return;
 
-		// Show success and trigger download immediately — no waiting on network
-		form.style.display = 'none';
-		const hint = document.querySelector('.hint');
-		if (hint) hint.style.display = 'none';
-		successMsg?.classList.add('visible');
+		showSuccess = true;
 
 		// Trigger PDF download
 		const link = document.createElement('a');
@@ -43,13 +22,10 @@
 		link.click();
 		document.body.removeChild(link);
 
-		// Fire-and-forget email capture to Formspree
+		// Fire-and-forget email capture
 		fetch(FORMSPREE_ENDPOINT, {
 			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json',
-				Accept: 'application/json'
-			},
+			headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
 			body: JSON.stringify({ email, _subject: 'New lead: ' + email })
 		}).catch((err) => console.error('Formspree error:', err));
 	}
@@ -80,22 +56,19 @@
 	<h2>Your narratives can be more impactful!</h2>
 	<p class="lead">Enter your email to receive the 1-page Narrative Symptom Checklist.</p>
 
-	<form class="email-form" bind:this={form}>
-		<input
-			type="email"
-			bind:this={emailInput}
-			placeholder="you@example.com"
-			required
-		/>
-		<button type="submit" bind:this={submitBtn}>Download</button>
-	</form>
-	<p class="hint">Next, unlock a complimentary 30-minute session with me</p>
-
-	<div class="success-msg" bind:this={successMsg}>
-		<h3>Your download is starting!</h3>
-		<p>Now book your free 30-minute <b>Narrative Audit</b>.</p>
-		<button class="btn-schedule" bind:this={scheduleBtn}>Book Your Free Session</button>
-	</div>
+	{#if !showSuccess}
+		<form class="email-form" on:submit|preventDefault={handleSubmit}>
+			<input type="email" bind:value={email} placeholder="you@example.com" required />
+			<button type="submit">Download</button>
+		</form>
+		<p class="hint">Next, unlock a complimentary 30-minute session with me</p>
+	{:else}
+		<div class="success-msg">
+			<h3>Your download is starting!</h3>
+			<p>Now book your free 30-minute <b>Narrative Audit</b>.</p>
+			<button class="btn-schedule" on:click={handleSchedule}>Book Your Free Session</button>
+		</div>
+	{/if}
 </main>
 
 <hr class="divider" />
@@ -190,11 +163,6 @@
 		&:hover {
 			background: #c0009a;
 		}
-
-		&:disabled {
-			color: rgba(0, 0, 0, 0.38);
-			cursor: default;
-		}
 	}
 
 	.hint {
@@ -204,7 +172,6 @@
 
 	/* ── SUCCESS ── */
 	.success-msg {
-		display: none;
 		background: #fff;
 		border: 1px solid rgba(0, 0, 0, 0.12);
 		border-top: 3px solid #a40080;
@@ -212,10 +179,6 @@
 		padding: 2rem;
 		margin-top: 1rem;
 		text-align: center;
-
-		&.visible {
-			display: block;
-		}
 
 		h3 {
 			font-size: 1.25rem;
