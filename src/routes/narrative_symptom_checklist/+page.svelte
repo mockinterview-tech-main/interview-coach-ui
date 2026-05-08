@@ -22,26 +22,16 @@
 		};
 	});
 
-	async function handleSubmit(e: Event) {
+	function handleSubmit(e: Event) {
 		e.preventDefault();
 		const email = emailInput?.value?.trim();
 		if (!email) return;
 
-		submitBtn.disabled = true;
-		submitBtn.textContent = 'Sending…';
-
-		try {
-			await fetch(FORMSPREE_ENDPOINT, {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-					Accept: 'application/json'
-				},
-				body: JSON.stringify({ email, _subject: 'New lead: ' + email })
-			});
-		} catch (err) {
-			console.error('Form submission error:', err);
-		}
+		// Show success and trigger download immediately — no waiting on network
+		form.style.display = 'none';
+		const hint = document.querySelector('.hint');
+		if (hint) hint.style.display = 'none';
+		successMsg?.classList.add('visible');
 
 		// Trigger PDF download
 		const link = document.createElement('a');
@@ -53,11 +43,15 @@
 		link.click();
 		document.body.removeChild(link);
 
-		// Show success message and hide form
-		form.style.display = 'none';
-		const hint = document.querySelector('.hint');
-		if (hint) hint.style.display = 'none';
-		successMsg?.classList.add('visible');
+		// Fire-and-forget email capture to Formspree
+		fetch(FORMSPREE_ENDPOINT, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				Accept: 'application/json'
+			},
+			body: JSON.stringify({ email, _subject: 'New lead: ' + email })
+		}).catch((err) => console.error('Formspree error:', err));
 	}
 
 	function handleSchedule() {
@@ -271,7 +265,6 @@
 
 	@media (max-width: 500px) {
 		.main {
-			margin-top: 100px;
 			padding: 2.5rem 1.25rem;
 		}
 
