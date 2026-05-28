@@ -68,6 +68,7 @@
 				{/if}
 				{#if $userStore.loggedIn}
 					<span class="nav-link" on:click={toggleNav}><a href="/interview">New Interview</a></span>
+					<span class="nav-link" on:click={toggleNav}><a href="/storybuilder">Story Builder</a></span>
 					<span class="nav-link" on:click={toggleNav}>
 						<a data-sveltekit-preload-data="hover" href="/summary">Past Interviews</a>
 					</span>
