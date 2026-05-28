@@ -8,7 +8,7 @@ const stripe = new Stripe(import.meta.env['VITE_STRIPE_SECRET_KEY'], {
 });
 
 export const load: LayoutServerLoad = async ({ locals, url }) => {
-    const protectedRoutes = ['interview', 'summary', 'credits']
+    const protectedRoutes = ['interview', 'summary', 'credits', 'storybuilder']
     if (!locals.pb?.authStore.isValid && protectedRoutes.includes(url.pathname.split("/").filter(Boolean)[0])) {
         redirect(302, '/login');
     }
