@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
+	import { browser } from '$app/environment';
 	import { goto } from '$app/navigation';
 	import { userStore } from '$lib/stores/userStore';
 
@@ -298,7 +299,7 @@
 			if (err.name === 'AbortError') return;
 			console.warn('TTS failed, falling back to browser:', err.message);
 			// Browser fallback
-			if (window.speechSynthesis) {
+			if (browser && window.speechSynthesis) {
 				const u = new SpeechSynthesisUtterance(text);
 				u.onend = () => { isSpeaking = false; ttsStarted = false; if (voiceMode && phase === 'coaching') startListening(); };
 				u.onerror = () => { isSpeaking = false; ttsStarted = false; if (voiceMode && phase === 'coaching') startListening(); };
@@ -315,7 +316,7 @@
 		isPlaying = false;
 		ttsFetchCount = 0;
 		ttsFlush = false;
-		if (window.speechSynthesis) window.speechSynthesis.cancel();
+		if (browser && window.speechSynthesis) window.speechSynthesis.cancel();
 		isSpeaking = false;
 		ttsStarted = false;
 	}
@@ -587,7 +588,7 @@
 	}
 
 	function handleMouseMove(e: MouseEvent) {
-		if (!isDragging) return;
+		if (!isDragging || !browser) return;
 		e.preventDefault();
 		const vw = window.innerWidth;
 		const minW = vw * 0.2;
@@ -635,13 +636,12 @@
 	});
 
 	onDestroy(() => {
+		if (!browser) return;
 		stopListening();
 		ttsStop();
 		if (timerInterval) clearInterval(timerInterval);
-		if (typeof window !== 'undefined') {
-			window.removeEventListener('mousemove', handleMouseMove);
-			window.removeEventListener('mouseup', handleMouseUp);
-		}
+		window.removeEventListener('mousemove', handleMouseMove);
+		window.removeEventListener('mouseup', handleMouseUp);
 	});
 </script>
 
