@@ -33,7 +33,7 @@ export const POST: RequestHandler = async ({ locals, request }) => {
         };
 
         try {
-          await handleUserMessageStream(sessionId, message, writer);
+          await handleUserMessageStream(sessionId, message, writer, locals.supabase);
         } catch (err: any) {
           console.error('Error streaming message:', err);
           controller.enqueue(

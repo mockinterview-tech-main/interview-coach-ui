@@ -13,7 +13,7 @@ export const POST: RequestHandler = async ({ locals, request }) => {
     if (!conversationHistory || !fullStory) {
       return json({ error: 'conversationHistory and fullStory are required' }, { status: 400 });
     }
-    const signals = await evaluateStrengthSignals(conversationHistory, question, fullStory, sessionId);
+    const signals = await evaluateStrengthSignals(conversationHistory, question, fullStory, sessionId, locals.supabase);
     return json({ signals });
   } catch (err: any) {
     console.error('Strength signals error:', err);

@@ -10,16 +10,16 @@ export const POST: RequestHandler = async ({ locals }) => {
 
   try {
     const coachSession = createSession();
-    const firstMessage = await startSession(coachSession.id);
 
-    // Log session start (fire and forget)
-    locals.supabase.from('session_logs').insert({
+    // Log session start BEFORE startSession so loadSession can find it on cold start
+    const { error: insertError } = await locals.supabase.from('session_logs').insert({
       user_id: authSession.user.id,
       session_id: coachSession.id,
       status: 'started',
-    }).then(({ error }) => {
-      if (error) console.error('Failed to log session start:', error.message);
     });
+    if (insertError) console.error('Failed to log session start:', insertError.message);
+
+    const firstMessage = await startSession(coachSession.id, locals.supabase);
 
     return json({
       sessionId: coachSession.id,

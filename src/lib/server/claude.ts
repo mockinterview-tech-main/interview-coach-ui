@@ -8,12 +8,9 @@ const anthropic = new Anthropic({
 // ── Model config ──
 const MODEL = 'claude-sonnet-4-20250514';
 
-// ── Token usage tracking ──
+// ── Token usage tracking (per-call to Supabase) ──
 const SONNET_INPUT_PRICE = 3.0;   // $ per 1M input tokens
 const SONNET_OUTPUT_PRICE = 15.0; // $ per 1M output tokens
-
-type TokenAccumulator = { input: number; output: number; calls: number };
-const sessionTokens = new Map<string, TokenAccumulator>();
 
 interface MessageUsage {
   input_tokens: number;
@@ -22,31 +19,20 @@ interface MessageUsage {
   cache_creation_input_tokens?: number;
 }
 
-function trackUsage(sessionId: string, usage: MessageUsage) {
-  if (!sessionTokens.has(sessionId)) {
-    sessionTokens.set(sessionId, { input: 0, output: 0, calls: 0 });
-  }
-  const t = sessionTokens.get(sessionId)!;
-  t.input += usage.input_tokens;
-  t.output += usage.output_tokens;
-  t.calls += 1;
-}
+// Fire-and-forget: increment token counts directly in Supabase per API call
+export function trackUsageToDb(sessionId: string, usage: MessageUsage, supabase: any) {
+  const inputCost = (usage.input_tokens / 1_000_000) * SONNET_INPUT_PRICE;
+  const outputCost = (usage.output_tokens / 1_000_000) * SONNET_OUTPUT_PRICE;
+  const callCost = parseFloat((inputCost + outputCost).toFixed(6));
 
-export function getSessionCost(sessionId: string) {
-  const t = sessionTokens.get(sessionId);
-  if (!t) return null;
-  const inputCost = (t.input / 1_000_000) * SONNET_INPUT_PRICE;
-  const outputCost = (t.output / 1_000_000) * SONNET_OUTPUT_PRICE;
-  return {
-    input_tokens: t.input,
-    output_tokens: t.output,
-    total_tokens: t.input + t.output,
-    api_calls: t.calls,
-    input_cost: `$${inputCost.toFixed(4)}`,
-    output_cost: `$${outputCost.toFixed(4)}`,
-    total_cost: `$${(inputCost + outputCost).toFixed(4)}`,
-    total_cost_numeric: parseFloat((inputCost + outputCost).toFixed(6)),
-  };
+  supabase.rpc('increment_session_usage', {
+    p_session_id: sessionId,
+    p_input_tokens: usage.input_tokens,
+    p_output_tokens: usage.output_tokens,
+    p_cost: callCost,
+  }).then(({ error }: any) => {
+    if (error) console.error('Failed to track usage:', error.message);
+  });
 }
 
 // ── Conversation summarization ──
@@ -289,7 +275,8 @@ export async function streamCoachResponse(
   elapsedMinutes: number | undefined,
   sessionId: string,
   onChunk: (chunk: string) => void,
-  starSections?: { situation: string | null; task: string | null; action: string | null; result: string | null }
+  starSections?: { situation: string | null; task: string | null; action: string | null; result: string | null },
+  supabase?: any
 ): Promise<string> {
   const starProgress = {
     situation: !!starSections?.situation,
@@ -332,7 +319,7 @@ export async function streamCoachResponse(
   const finalMessage = await stream.finalMessage();
 
   if (sessionId && finalMessage.usage) {
-    trackUsage(sessionId, finalMessage.usage as MessageUsage);
+    if (supabase) trackUsageToDb(sessionId, finalMessage.usage as MessageUsage, supabase);
   }
 
   return fullText;
@@ -343,7 +330,8 @@ export async function getCoachResponse(
   conversationHistory: ConversationMessage[],
   elapsedMinutes: number | undefined,
   sessionId: string,
-  starSections?: { situation: string | null; task: string | null; action: string | null; result: string | null }
+  starSections?: { situation: string | null; task: string | null; action: string | null; result: string | null },
+  supabase?: any
 ): Promise<string> {
   const starProgress = {
     situation: !!starSections?.situation,
@@ -376,14 +364,14 @@ export async function getCoachResponse(
   });
 
   if (sessionId && response.usage) {
-    trackUsage(sessionId, response.usage as MessageUsage);
+    if (supabase) trackUsageToDb(sessionId, response.usage as MessageUsage, supabase);
   }
 
   return (response.content[0] as { type: 'text'; text: string }).text;
 }
 
 // ── Story report generation ──
-export async function generateStoryReport(conversationHistory: ConversationMessage[], sessionId: string) {
+export async function generateStoryReport(conversationHistory: ConversationMessage[], sessionId: string, supabase?: any) {
   const reportPrompt = `You are reviewing a coaching session where you helped someone build a STAR story for behavioral interviews. Based on the full conversation, generate a session report.
 
 Even if the coaching session ended early or didn't cover all STAR sections explicitly, do your best to reconstruct the complete story from everything the user shared. Extract and organize the user's real experiences — do NOT invent details they didn't mention, but do infer which parts map to Situation, Task, Action, and Result based on what they said.
@@ -413,7 +401,7 @@ Write in a natural speaking voice — this will be read aloud in an interview. U
   });
 
   if (sessionId && response.usage) {
-    trackUsage(sessionId, response.usage as MessageUsage);
+    if (supabase) trackUsageToDb(sessionId, response.usage as MessageUsage, supabase);
   }
 
   try {
@@ -430,7 +418,8 @@ export async function evaluateStrengthSignals(
   conversationHistory: ConversationMessage[],
   question: string | null,
   fullStory: string | null,
-  sessionId: string
+  sessionId: string,
+  supabase?: any
 ): Promise<{ strong: Array<{ signal: string; explanation: string }>; improve: Array<{ signal: string; explanation: string }> } | null> {
   const prompt = `You are evaluating a STAR interview story against behavioral interview rubrics. Your job is to identify which strength signals the story demonstrates well, and which relevant ones are weak or missing.
 
@@ -477,7 +466,7 @@ Respond with ONLY a JSON object:
     });
 
     if (sessionId && response.usage) {
-      trackUsage(sessionId, response.usage as MessageUsage);
+      if (supabase) trackUsageToDb(sessionId, response.usage as MessageUsage, supabase);
     }
 
     const text = (response.content[0] as { type: 'text'; text: string }).text;
@@ -499,7 +488,8 @@ Respond with ONLY a JSON object:
 export async function generateTalkingPoints(
   starSections: { situation?: string | null; task?: string | null; action?: string | null; result?: string | null } | null,
   sessionId: string,
-  fullStory?: string | null
+  fullStory?: string | null,
+  supabase?: any
 ) {
   let prompt: string;
 
@@ -536,7 +526,7 @@ Respond with ONLY a JSON object:
     });
 
     if (sessionId && response.usage) {
-      trackUsage(sessionId, response.usage as MessageUsage);
+      if (supabase) trackUsageToDb(sessionId, response.usage as MessageUsage, supabase);
     }
 
     const text = (response.content[0] as { type: 'text'; text: string }).text;
@@ -551,7 +541,8 @@ Respond with ONLY a JSON object:
 // ── Real-time STAR section extractor (runs in parallel with coach) ──
 export async function extractStarSections(
   conversationHistory: ConversationMessage[],
-  sessionId: string
+  sessionId: string,
+  supabase?: any
 ): Promise<{ question: string | null; situation: string | null; task: string | null; action: string | null; result: string | null; flags: Array<{ flag: string; suggestion: string }> | null } | null> {
   const extractPrompt = `You are analyzing a coaching conversation to extract STAR interview story sections. Read the conversation and extract whatever Situation, Task, Action, and Result content the user has shared so far.
 
@@ -591,7 +582,7 @@ Respond with ONLY a JSON object:
     });
 
     if (sessionId && response.usage) {
-      trackUsage(sessionId, response.usage as MessageUsage);
+      if (supabase) trackUsageToDb(sessionId, response.usage as MessageUsage, supabase);
     }
 
     const text = (response.content[0] as { type: 'text'; text: string }).text;

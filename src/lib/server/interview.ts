@@ -3,7 +3,7 @@ import {
   streamCoachResponse,
   extractStarSections,
   generateStoryReport,
-  getSessionCost,
+  trackUsageToDb,
   type ConversationMessage
 } from './claude';
 
@@ -41,8 +41,56 @@ export interface Session {
   report: any;
 }
 
-// In-memory session store (per server process)
+// In-memory cache (fast path — may be empty on serverless cold start)
 const sessions = new Map<string, Session>();
+
+// ── Load session: memory first, then Supabase ──
+async function loadSession(sessionId: string, supabase: any): Promise<Session | null> {
+  // Fast path: in-memory
+  const cached = sessions.get(sessionId);
+  if (cached) return cached;
+
+  // Slow path: load from Supabase
+  const { data, error } = await supabase
+    .from('session_logs')
+    .select('session_id, created_at, status, conversation_history, star_sections, extracted_question, extracted_flags')
+    .eq('session_id', sessionId)
+    .single();
+
+  if (error || !data) return null;
+
+  const session: Session = {
+    id: data.session_id,
+    status: data.status === 'started' ? 'active' : data.status,
+    conversationHistory: data.conversation_history || [],
+    starSections: data.star_sections || { situation: null, task: null, action: null, result: null },
+    extractedQuestion: data.extracted_question || null,
+    extractedFlags: data.extracted_flags || null,
+    startedAt: data.created_at,
+    completedAt: null,
+    report: null,
+  };
+
+  // Cache it for this instance
+  sessions.set(sessionId, session);
+  return session;
+}
+
+// ── Persist session state to Supabase (fire-and-forget) ──
+function persistSession(sessionId: string, session: Session, supabase: any) {
+  supabase
+    .from('session_logs')
+    .update({
+      conversation_history: session.conversationHistory,
+      star_sections: session.starSections,
+      extracted_question: session.extractedQuestion,
+      extracted_flags: session.extractedFlags,
+    })
+    .eq('session_id', sessionId)
+    .then(({ error }: any) => {
+      if (error) console.error('Failed to persist session state:', error.message);
+    });
+}
 
 export function createSession(): Session {
   const id = `session_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -67,8 +115,8 @@ export function getSession(id: string): Session | undefined {
   return sessions.get(id);
 }
 
-export async function startSession(sessionId: string): Promise<string> {
-  const session = sessions.get(sessionId);
+export async function startSession(sessionId: string, supabase: any): Promise<string> {
+  const session = await loadSession(sessionId, supabase);
   if (!session) throw new Error('Session not found');
 
   const shuffled = [...STARTER_PROMPTS].sort(() => Math.random() - 0.5);
@@ -85,6 +133,9 @@ What would you like to work on?`;
     content: openingMessage,
   });
 
+  // Persist opening message to Supabase
+  persistSession(sessionId, session, supabase);
+
   return openingMessage;
 }
 
@@ -92,9 +143,10 @@ What would you like to work on?`;
 export async function handleUserMessageStream(
   sessionId: string,
   userMessage: string,
-  writer: { write: (data: string) => void; end: () => void }
+  writer: { write: (data: string) => void; end: () => void },
+  supabase: any
 ) {
-  const session = sessions.get(sessionId);
+  const session = await loadSession(sessionId, supabase);
   if (!session) throw new Error('Session not found');
   if (session.status === 'completed') throw new Error('Session already completed');
 
@@ -109,6 +161,7 @@ export async function handleUserMessageStream(
     session.conversationHistory.push({ role: 'assistant', content: closingMessage });
     session.status = 'completed';
     session.completedAt = new Date().toISOString();
+    persistSession(sessionId, session, supabase);
     writer.write(`data: ${JSON.stringify({ type: 'chunk', text: closingMessage })}\n\n`);
     writer.write(`data: ${JSON.stringify({ type: 'done', message: closingMessage, done: true, remainingMs: 0 })}\n\n`);
     writer.end();
@@ -124,7 +177,8 @@ export async function handleUserMessageStream(
     (chunk) => {
       writer.write(`data: ${JSON.stringify({ type: 'chunk', text: chunk })}\n\n`);
     },
-    session.starSections
+    session.starSections,
+    supabase
   );
 
   session.conversationHistory.push({
@@ -142,10 +196,13 @@ export async function handleUserMessageStream(
     remainingMs,
   })}\n\n`);
 
+  // Persist after coach reply (fire-and-forget)
+  persistSession(sessionId, session, supabase);
+
   // Fire STAR extraction in parallel — don't block the conversation
   const userMsgCount = session.conversationHistory.filter(m => m.role === 'user').length;
   if (userMsgCount >= 2) {
-    extractStarSections(session.conversationHistory, sessionId)
+    extractStarSections(session.conversationHistory, sessionId, supabase)
       .then((sections) => {
         if (!sections) return;
         // Update server-side session with extracted sections
@@ -164,6 +221,8 @@ export async function handleUserMessageStream(
         }
         if (updates.length > 0 || sections.question || sections.flags) {
           writer.write(`data: ${JSON.stringify({ type: 'star_update', updates, question: sections.question || null, flags: sections.flags || null })}\n\n`);
+          // Persist updated STAR sections
+          persistSession(sessionId, session, supabase);
         }
         writer.end();
       })
@@ -177,8 +236,8 @@ export async function handleUserMessageStream(
 }
 
 // ── Non-streaming fallback ──
-export async function handleUserMessage(sessionId: string, userMessage: string) {
-  const session = sessions.get(sessionId);
+export async function handleUserMessage(sessionId: string, userMessage: string, supabase: any) {
+  const session = await loadSession(sessionId, supabase);
   if (!session) throw new Error('Session not found');
   if (session.status === 'completed') throw new Error('Session already completed');
 
@@ -193,11 +252,12 @@ export async function handleUserMessage(sessionId: string, userMessage: string) 
     session.conversationHistory.push({ role: 'assistant', content: closingMessage });
     session.status = 'completed';
     session.completedAt = new Date().toISOString();
+    persistSession(sessionId, session, supabase);
     return { message: closingMessage, done: true, remainingMs: 0 };
   }
 
   const elapsedMinutes = elapsed / 60000;
-  const coachResponse = await getCoachResponse(session.conversationHistory, elapsedMinutes, sessionId, session.starSections);
+  const coachResponse = await getCoachResponse(session.conversationHistory, elapsedMinutes, sessionId, session.starSections, supabase);
 
   session.conversationHistory.push({
     role: 'assistant',
@@ -206,11 +266,14 @@ export async function handleUserMessage(sessionId: string, userMessage: string) 
 
   const remainingMs = Math.max(0, SESSION_LIMIT_MS - (Date.now() - new Date(session.startedAt).getTime()));
 
+  // Persist after coach reply
+  persistSession(sessionId, session, supabase);
+
   // Extract STAR sections in parallel
   const userMsgCount = session.conversationHistory.filter(m => m.role === 'user').length;
   let starUpdates: { section: string; content: string }[] | undefined;
   if (userMsgCount >= 2) {
-    const sections = await extractStarSections(session.conversationHistory, sessionId);
+    const sections = await extractStarSections(session.conversationHistory, sessionId, supabase);
     if (sections) {
       starUpdates = [];
       if (sections.question) {
@@ -225,6 +288,8 @@ export async function handleUserMessage(sessionId: string, userMessage: string) 
           starUpdates.push({ section: key, content: sections[key]! });
         }
       }
+      // Persist updated STAR sections
+      persistSession(sessionId, session, supabase);
     }
   }
 
@@ -237,27 +302,16 @@ export async function handleUserMessage(sessionId: string, userMessage: string) 
   };
 }
 
-export async function endSession(sessionId: string, { generateReport = false } = {}) {
-  const session = sessions.get(sessionId);
+export async function endSession(sessionId: string, supabase: any, { generateReport = false } = {}) {
+  const session = await loadSession(sessionId, supabase);
   if (!session) throw new Error('Session not found');
 
   session.status = 'completed';
   session.completedAt = new Date().toISOString();
 
-  const cost = getSessionCost(sessionId);
-
   const durationMs = session.completedAt && session.startedAt
     ? new Date(session.completedAt).getTime() - new Date(session.startedAt).getTime()
     : null;
-
-  const costData = cost ? {
-    api_calls: cost.api_calls,
-    input_tokens: cost.input_tokens,
-    output_tokens: cost.output_tokens,
-    total_tokens: cost.total_tokens,
-    total_cost: cost.total_cost,
-    total_cost_numeric: cost.total_cost_numeric,
-  } : null;
 
   // Fallback: generate report from full transcript when STAR extractor didn't capture sections
   if (generateReport) {
@@ -265,13 +319,9 @@ export async function endSession(sessionId: string, { generateReport = false } =
     if (userMessages.length < 2) {
       return { error: 'too_short', message: 'Not enough conversation to build a story.' };
     }
-    const report = await generateStoryReport(session.conversationHistory, sessionId);
-    return { completed: true, report, cost: costData, durationMs };
+    const report = await generateStoryReport(session.conversationHistory, sessionId, supabase);
+    return { completed: true, report, durationMs };
   }
 
-  return { completed: true, cost: costData, durationMs };
-}
-
-export function getSessionUsage(sessionId: string) {
-  return getSessionCost(sessionId);
+  return { completed: true, durationMs };
 }

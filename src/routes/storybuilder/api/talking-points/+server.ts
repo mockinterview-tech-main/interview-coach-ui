@@ -13,7 +13,7 @@ export const POST: RequestHandler = async ({ locals, request }) => {
     if (!starSections && !fullStory) {
       return json({ error: 'starSections or fullStory is required' }, { status: 400 });
     }
-    const points = await generateTalkingPoints(starSections || null, sessionId, fullStory);
+    const points = await generateTalkingPoints(starSections || null, sessionId, fullStory, locals.supabase);
     return json({ talkingPoints: points });
   } catch (err: any) {
     console.error('Talking points error:', err);
