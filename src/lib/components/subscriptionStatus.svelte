@@ -77,7 +77,18 @@
 {/if}
 
 <style lang="scss">
+	@import '$lib/styles/colors.scss';
 	.nav-link {
 		margin-right: 20px;
+		a {
+			color: $text-dark;
+			text-decoration: none;
+			font-weight: 600;
+			font-size: 15px;
+			transition: color 0.2s;
+			&:hover {
+				color: $primary;
+			}
+		}
 	}
 </style>

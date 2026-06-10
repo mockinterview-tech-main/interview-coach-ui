@@ -2,7 +2,8 @@ import type { RequestHandler } from './$types';
 import { handleUserMessageStream } from '$lib/server/interview';
 
 export const POST: RequestHandler = async ({ locals, request }) => {
-  if (!locals.pb?.authStore.isValid) {
+  const session = await locals.getSession();
+  if (!session) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
       status: 401,
       headers: { 'Content-Type': 'application/json' }

@@ -1,155 +1,99 @@
 <script lang="ts">
-	import Button from '@smui/button';
-	import Card from '@smui/card';
-
-	import { browser } from '$app/environment';
-	import type { PageData } from './$types';
 	import googleGLogo from '$lib/assets/logos/googleLogo.svg';
-	import githubLogo from '$lib/assets/logos/githubLogo.svg';
-	export let data: PageData;
+
 	export let form;
-
-	let providers = data;
-
-	let isSignup = true;
-
-	const toggleIsSignup = () => (isSignup = !isSignup);
-
-	const logos: { [key: string]: string } = {
-		google: googleGLogo,
-		github: githubLogo
-	};
-
-	const gotoAuthProvider = (name: string) => {
-		if (browser) {
-			if (providers[name]) {
-				document.cookie = `state=${providers[name].authProviderState}`;
-				document.cookie = `cv=${providers[name].authCodeVerifier}`;
-				document.cookie = `prov=${name}`;
-			}
-		}
-		window.location.href = providers[name].authProviderRedirect || '';
-	};
 </script>
 
 <p class="error">
-	{#if form?.error}{form.message}{/if}
+	{#if form?.error}<span class="error-text">{form.message}</span>{/if}
 </p>
 
-<div class="form-container">
-	<Card padded>
-		<div class="action-selector">
-			<!-- svelte-ignore a11y-click-events-have-key-events -->
-			<!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
-			<p class={isSignup ? 'active-action-tab' : ''} on:click={toggleIsSignup}>Sign Up</p>
-			<!-- svelte-ignore a11y-click-events-have-key-events -->
-			<!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
-			<p class={isSignup ? '' : 'active-action-tab'} on:click={toggleIsSignup}>Log In</p>
+<div class="login-container">
+	<div class="login-card">
+		<div class="login-header">
+			<h2>Welcome</h2>
+			<p>Sign in to start building better interview stories</p>
 		</div>
-		<div class="action-form">
-			{#if isSignup}
-				<form method="POST" action="?/signup">
-					<label for="email">email</label><br />
-					<input name="email" type="email" placeholder="email" required /><br />
-					<label for="password">password</label><br />
-					<input name="password" type="password" placeholder="password" minlength="8" required /><br
-					/>
-					<label for="passwordConfirm">confirm</label><br />
-					<input
-						name="passwordConfirm"
-						type="password"
-						placeholder="password"
-						minlength="8"
-						required
-					/><br />
-					<Button class="cta-button" type="submit">Sign Up</Button>
-				</form>
-			{:else}
-				<form method="POST" action="?/login">
-					<label for="email">email</label><br />
-					<input name="email" type="email" placeholder="email" required /><br />
-					<label for="password">password</label><br />
-					<input name="password" type="password" placeholder="password" required /><br />
-					<Button class="cta-button" type="submit">Login</Button>
-				</form>
-			{/if}
-		</div>
-		<div class="social-container">
-			{#each Object.keys(providers) as provider}
-				{#if providers[provider].authProviderState}
-					<!-- svelte-ignore a11y-click-events-have-key-events -->
-					<!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
-					<div>
-						<img
-							src={logos[provider]}
-							alt="{provider} logo"
-							on:click={() => gotoAuthProvider(provider)}
-						/>
-						<p>{provider}</p>
-					</div>
-				{/if}
-			{/each}
-		</div>
-	</Card>
+
+		<form method="POST" action="?/google">
+			<button type="submit" class="google-btn">
+				<img src={googleGLogo} alt="Google logo" />
+				<span>Continue with Google</span>
+			</button>
+		</form>
+	</div>
 </div>
 
 <style lang="scss">
 	@import '$lib/styles/colors.scss';
-	.error {
-		padding: 40px;
-		position: absolute;
-		top: 40px;
-		color: red;
-	}
-	.form-container {
-		width: 50%;
-		margin: auto;
-		position: relative;
-		top: 100px;
-		text-align: center;
 
-		.action-selector {
-			display: flex;
-			flex-flow: row nowrap;
-			margin: none;
-			text-wrap: nowrap;
-			cursor: pointer;
-			border-bottom: 1px solid $dark-purple;
-			p {
-				margin: 0;
-				flex: 1;
-				text-align: center;
-				line-height: 50px;
-				color: $light-purple;
-			}
-			p:hover {
-				background-color: $dark-purple;
-				color: white;
-				transition: background-color 0.2s ease-in-out;
-				transition: color 0.2s ease-in-out;
-			}
-			.active-action-tab {
-				background-color: $dark-purple;
-				color: white;
-			}
+	.error {
+		position: fixed;
+		top: 70px;
+		left: 50%;
+		transform: translateX(-50%);
+		z-index: 100;
+	}
+	.error-text { color: #e53e3e; font-weight: 500; }
+
+	.login-container {
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		min-height: calc(100vh - 120px);
+		padding: 0px;
+		background: $bg-warm;
+	}
+
+	.login-card {
+		width: 100%;
+		max-width: 420px;
+		background: white;
+		border-radius: $card-radius;
+		box-shadow: $card-shadow;
+		padding: 40px 36px;
+	}
+
+	.login-header {
+		text-align: center;
+		margin-bottom: 28px;
+		h2 {
+			font-size: 26px;
+			font-weight: 700;
+			color: $text-dark;
+			margin: 0 0 6px;
 		}
-		.action-form {
-			padding: 20px 0px;
-			text-align: center;
-			& :global(.cta-button) {
-				margin: auto;
-			}
+		p {
+			color: $text-light;
+			font-size: 14px;
+			margin: 0;
 		}
-		.social-container {
-			display: flex;
-			flex-flow: row wrap;
-			align-items: center;
-			justify-content: space-evenly;
-			img {
-				cursor: pointer;
-				width: 50px;
-				height: 50px;
-			}
+	}
+
+	.google-btn {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 12px;
+		width: 100%;
+		padding: 14px 24px;
+		border: 2px solid rgba(45, 43, 61, 0.1);
+		border-radius: 50px;
+		background: white;
+		cursor: pointer;
+		font-size: 15px;
+		font-weight: 600;
+		font-family: inherit;
+		color: $text-dark;
+		transition: border-color 0.2s, transform 0.2s;
+
+		&:hover {
+			border-color: $primary;
+			transform: translateY(-1px);
+		}
+		img {
+			width: 20px;
+			height: 20px;
 		}
 	}
 </style>

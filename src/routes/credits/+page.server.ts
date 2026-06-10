@@ -1,71 +1,77 @@
-import jwt from 'jsonwebtoken';
 import Stripe from 'stripe';
-import { redirect } from "@sveltejs/kit";
+import { redirect } from '@sveltejs/kit';
+import type { PageServerLoad, Actions } from './$types';
 
-import type { PageServerLoad } from "./$types";
-
-import { 
-    VITE_NONCE_SIGNING_SECRET, 
+import {
     VITE_STRIPE_ID_ALA_CARTE,
     VITE_STRIPE_ID_SUBSCRIPTION,
-    VITE_STRIPE_MANAGE_LINK
-} from "$env/static/private";
-
-import { decodeJwt } from '$lib/jwt';
+} from '$env/static/private';
 
 export type Choice = {
-    type: "subscription" | "payment";
+    type: 'subscription' | 'payment';
     sku: string;
     price: number;
     label: string;
     description: string;
+    features: string[];
     stripeID: string;
     credits: number;
-}
+};
 
 const stripe = new Stripe(import.meta.env['VITE_STRIPE_SECRET_KEY'], {
-  apiVersion: '2023-08-16',
+    apiVersion: '2023-08-16',
 });
 
 const offerings: Array<Choice> = [
-    {type: "payment", sku: "alacarte", price: 2, label: "Single Interview", description: "Just trying out the product", credits: 1, stripeID: VITE_STRIPE_ID_ALA_CARTE},
-    {type: "subscription", sku: "subscription", price: 20, label: "Monthly Subscription", description: "As many interviews as you like. Billed monthly. Cancel anytime.", credits: 0, stripeID: VITE_STRIPE_ID_SUBSCRIPTION},
-]
+    {
+        type: 'payment',
+        sku: 'alacarte',
+        price: 3,
+        label: 'Single Session',
+        description: '20-min STAR story construction with the AI coach',
+        features: [
+            'Relaxing conversations for rambling out project details.',
+            'Ending wth an interview-competitive narrative',
+            'Polished details saved to your Story Bank, forever accessible',
+        ],
+        credits: 1,
+        stripeID: VITE_STRIPE_ID_ALA_CARTE,
+    },
+    {
+        type: 'subscription',
+        sku: 'subscription',
+        price: 30,
+        label: 'Monthly Unlimited',
+        description: 'Unlimited story building sessions. Billed monthly.',
+        features: [
+            'Same single-session benefits',
+            'Unlimited sessions per month',
+            'Cancel anytime',
+        ],
+        credits: 0,
+        stripeID: VITE_STRIPE_ID_SUBSCRIPTION,
+    },
+];
 
-export const load: PageServerLoad = async () =>  {
-    return { offerings, manageLink: VITE_STRIPE_MANAGE_LINK } 
-}
+export const load: PageServerLoad = async () => {
+    return { offerings };
+};
 
-const generateNonce = (length = 24) => {
-    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    let result = '';
-
-    for (let i = 0; i < length; i++) {
-        const randomIndex = Math.floor(Math.random() * characters.length);
-        result += characters.charAt(randomIndex);
-    }
-
-    return result;
-}
-
-export const actions = {
-    purchase: async ({request, locals}) => {
-        if (!locals.pb?.authStore.isValid){
-            redirect(301, '/');
+export const actions: Actions = {
+    purchase: async ({ request, locals, url }) => {
+        const session = await locals.getSession();
+        if (!session) {
+            throw redirect(301, '/login');
         }
+
         const rawData = await request.formData();
         const chosenOffering = rawData.get('chosenOffering');
+
         if (chosenOffering) {
-            const chosen = JSON.parse(chosenOffering.toString()) as Choice
-            const nonce = generateNonce();
-            const purchaseIntent = jwt.sign({...chosen, nonce}, VITE_NONCE_SIGNING_SECRET);
+            const chosen = JSON.parse(chosenOffering.toString()) as Choice;
+            const baseUrl = url.origin;
 
-            const currentUserToken = decodeJwt(locals.pb?.authStore.token || '');
-            locals.pb?.collection('users').update(currentUserToken.id, {purchaseIntent});
-
-            const isProd = process.env.NODE_ENV === 'production' ? true : false;
-
-            const session = await stripe.checkout.sessions.create({
+            const checkoutSession = await stripe.checkout.sessions.create({
                 line_items: [
                     {
                         price: chosen.stripeID,
@@ -73,11 +79,16 @@ export const actions = {
                     },
                 ],
                 mode: chosen.type,
-                success_url: isProd ? `https://mockinterview.tech/interview?nonce=${nonce}` : `http://localhost:5173/interview?nonce=${nonce}`,
-                cancel_url: isProd ? `https://mockinterview.tech/interview` : `http://localhost:5173/interview`,
-                automatic_tax: {enabled: true},
+                success_url: `${baseUrl}/credits/success?session_id={CHECKOUT_SESSION_ID}`,
+                cancel_url: `${baseUrl}/credits`,
+                customer_email: session.user.email,
+                metadata: {
+                    credits: chosen.credits.toString(),
+                    user_id: session.user.id,
+                },
             });
-            throw redirect(303, session.url || 'http://localhost:5173/interview');
+
+            throw redirect(303, checkoutSession.url || '/credits');
         }
     },
-}
+};

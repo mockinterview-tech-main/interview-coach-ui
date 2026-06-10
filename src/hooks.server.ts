@@ -1,30 +1,20 @@
 import type { Handle } from '@sveltejs/kit';
-import PocketBase from 'pocketbase';
-import { VITE_POCKETBASE_URL } from '$env/static/private';
+import { createSupabaseServerClient } from '$lib/server/supabase';
 
 export const handle: Handle = async ({ event, resolve }) => {
-    event.locals.pb = new PocketBase(VITE_POCKETBASE_URL);
-    event.locals.pb.authStore.loadFromCookie(event.request.headers.get('cookie') || '');
+    event.locals.supabase = createSupabaseServerClient(event.cookies);
 
-    try {
-        if (event.locals.pb.authStore.isValid) {
-            await event.locals.pb.collection('users').authRefresh();
-        }
-    } catch (err) {
-        event.locals.pb.authStore.clear();
-        // throw redirect(302, '/') // use if all the things need login to work
-    }
+    // Convenience helper — gets session without re-fetching if already cached
+    event.locals.getSession = async () => {
+        const { data: { session } } = await event.locals.supabase.auth.getSession();
+        return session;
+    };
 
-    const response = await resolve(event);
-    const isProd = process.env.NODE_ENV === 'production' ? true : false;
-    response.headers.set(
-        'set-cookie',
-        event.locals.pb.authStore.exportToCookie({ 
-            httpOnly: true,
-            secure: isProd, 
-            sameSite: isProd ? 'none' : 'lax',  
-            domain: isProd ? ".mockinterview.tech" : "localhost" 
-        })
-    );
+    const response = await resolve(event, {
+        filterSerializedResponseHeaders(name) {
+            return name === 'content-range';
+        },
+    });
+
     return response;
 };

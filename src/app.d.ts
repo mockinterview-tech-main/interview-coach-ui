@@ -2,9 +2,11 @@
 // for information about these interfaces
 declare global {
 	namespace App {
-		type PocketBase = import('pocketbase').default;
+		type SupabaseClient = import('@supabase/supabase-js').SupabaseClient;
+		type Session = import('@supabase/supabase-js').Session;
 		interface Locals {
-			pb?: PocketBase;
+			supabase: SupabaseClient;
+			getSession: () => Promise<Session | null>;
 		}
 		interface Window {
 			SpeechRecognition: any;
@@ -12,7 +14,6 @@ declare global {
 			SpeechRecognitionEvent: any;
 		}
 		// interface Error {}
-		// interface Locals {}
 		// interface PageData {}
 		// interface Platform {}
 	}

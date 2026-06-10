@@ -1,6 +1,7 @@
 import {
   getCoachResponse,
   streamCoachResponse,
+  extractStarSections,
   generateStoryReport,
   getSessionCost,
   type ConversationMessage
@@ -33,6 +34,8 @@ export interface Session {
   status: 'active' | 'completed' | 'story_ready';
   conversationHistory: ConversationMessage[];
   starSections: StarSections;
+  extractedQuestion: string | null;
+  extractedFlags: Array<{ flag: string; suggestion: string }> | null;
   startedAt: string;
   completedAt: string | null;
   report: any;
@@ -49,6 +52,8 @@ export function createSession(): Session {
     status: 'active',
     conversationHistory: [],
     starSections: { situation: null, task: null, action: null, result: null },
+    extractedQuestion: null,
+    extractedFlags: null,
     startedAt: new Date().toISOString(),
     completedAt: null,
     report: null,
@@ -81,40 +86,6 @@ What would you like to work on?`;
   });
 
   return openingMessage;
-}
-
-export interface StarUpdate {
-  section: string;
-  content: string;
-}
-
-export interface ParsedResponse {
-  chatMessage: string;
-  starUpdate: StarUpdate | null;
-  storyReady: boolean;
-}
-
-function parseCoachResponse(coachResponse: string): ParsedResponse {
-  let starUpdate: StarUpdate | null = null;
-  let chatMessage = coachResponse;
-
-  const sectionMatch = coachResponse.match(
-    /---UPDATE_STAR---\s*\n?section:\s*(situation|task|action|result)\s*\n?content:\s*([\s\S]*?)\s*---END_UPDATE---/i
-  );
-  if (sectionMatch) {
-    starUpdate = {
-      section: sectionMatch[1].toLowerCase(),
-      content: sectionMatch[2].trim(),
-    };
-    chatMessage = coachResponse.replace(/---UPDATE_STAR---[\s\S]*?---END_UPDATE---/, '').trim();
-  }
-
-  const storyReady = coachResponse.includes('---STORY_READY---');
-  if (storyReady) {
-    chatMessage = chatMessage.replace(/---STORY_READY---/, '').trim();
-  }
-
-  return { chatMessage, starUpdate, storyReady };
 }
 
 // ── Streaming handler (writes SSE to a writable controller) ──
@@ -152,7 +123,8 @@ export async function handleUserMessageStream(
     sessionId,
     (chunk) => {
       writer.write(`data: ${JSON.stringify({ type: 'chunk', text: chunk })}\n\n`);
-    }
+    },
+    session.starSections
   );
 
   session.conversationHistory.push({
@@ -160,26 +132,48 @@ export async function handleUserMessageStream(
     content: coachResponse,
   });
 
-  const { chatMessage, starUpdate, storyReady } = parseCoachResponse(coachResponse);
-
-  if (starUpdate) {
-    session.starSections[starUpdate.section as keyof StarSections] = starUpdate.content;
-  }
-  if (storyReady) {
-    session.status = 'story_ready';
-  }
-
   const remainingMs = Math.max(0, SESSION_LIMIT_MS - (Date.now() - new Date(session.startedAt).getTime()));
 
+  // Send the coach's conversational reply immediately
   writer.write(`data: ${JSON.stringify({
     type: 'done',
-    message: chatMessage,
-    done: storyReady,
-    storyReady,
-    starUpdate,
+    message: coachResponse,
+    done: false,
     remainingMs,
   })}\n\n`);
-  writer.end();
+
+  // Fire STAR extraction in parallel — don't block the conversation
+  const userMsgCount = session.conversationHistory.filter(m => m.role === 'user').length;
+  if (userMsgCount >= 2) {
+    extractStarSections(session.conversationHistory, sessionId)
+      .then((sections) => {
+        if (!sections) return;
+        // Update server-side session with extracted sections
+        const updates: { section: string; content: string }[] = [];
+        if (sections.question) {
+          session.extractedQuestion = sections.question;
+        }
+        if (sections.flags) {
+          session.extractedFlags = sections.flags;
+        }
+        for (const key of ['situation', 'task', 'action', 'result'] as const) {
+          if (sections[key] && sections[key] !== session.starSections[key]) {
+            session.starSections[key] = sections[key];
+            updates.push({ section: key, content: sections[key]! });
+          }
+        }
+        if (updates.length > 0 || sections.question || sections.flags) {
+          writer.write(`data: ${JSON.stringify({ type: 'star_update', updates, question: sections.question || null, flags: sections.flags || null })}\n\n`);
+        }
+        writer.end();
+      })
+      .catch((err) => {
+        console.warn('STAR extraction failed:', err.message);
+        writer.end();
+      });
+  } else {
+    writer.end();
+  }
 }
 
 // ── Non-streaming fallback ──
@@ -203,57 +197,52 @@ export async function handleUserMessage(sessionId: string, userMessage: string) 
   }
 
   const elapsedMinutes = elapsed / 60000;
-  const coachResponse = await getCoachResponse(session.conversationHistory, elapsedMinutes, sessionId);
+  const coachResponse = await getCoachResponse(session.conversationHistory, elapsedMinutes, sessionId, session.starSections);
 
   session.conversationHistory.push({
     role: 'assistant',
     content: coachResponse,
   });
 
-  const { chatMessage, starUpdate, storyReady } = parseCoachResponse(coachResponse);
-
-  if (starUpdate) {
-    session.starSections[starUpdate.section as keyof StarSections] = starUpdate.content;
-  }
-  if (storyReady) {
-    session.status = 'story_ready';
-  }
-
   const remainingMs = Math.max(0, SESSION_LIMIT_MS - (Date.now() - new Date(session.startedAt).getTime()));
 
+  // Extract STAR sections in parallel
+  const userMsgCount = session.conversationHistory.filter(m => m.role === 'user').length;
+  let starUpdates: { section: string; content: string }[] | undefined;
+  if (userMsgCount >= 2) {
+    const sections = await extractStarSections(session.conversationHistory, sessionId);
+    if (sections) {
+      starUpdates = [];
+      if (sections.question) {
+        session.extractedQuestion = sections.question;
+      }
+      if (sections.flags) {
+        session.extractedFlags = sections.flags;
+      }
+      for (const key of ['situation', 'task', 'action', 'result'] as const) {
+        if (sections[key] && sections[key] !== session.starSections[key]) {
+          session.starSections[key] = sections[key];
+          starUpdates.push({ section: key, content: sections[key]! });
+        }
+      }
+    }
+  }
+
   return {
-    message: chatMessage,
-    done: storyReady,
-    storyReady,
-    starUpdate,
+    message: coachResponse,
+    done: false,
+    starUpdates,
+    flags: session.extractedFlags,
     remainingMs,
   };
 }
 
-export async function endSession(sessionId: string, { skipReport = false } = {}) {
+export async function endSession(sessionId: string, { generateReport = false } = {}) {
   const session = sessions.get(sessionId);
   if (!session) throw new Error('Session not found');
 
   session.status = 'completed';
   session.completedAt = new Date().toISOString();
-
-  if (skipReport) {
-    const cost = getSessionCost(sessionId);
-    if (cost) {
-      console.log(`\n══ SESSION COMPLETE: ${sessionId} (report skipped) ══`);
-      console.log(`  API calls: ${cost.api_calls} | TOTAL: ${cost.total_tokens.toLocaleString()} tokens → ${cost.total_cost}`);
-    }
-    return { skipped: true };
-  }
-
-  const userMessages = session.conversationHistory.filter(m => m.role === 'user');
-  if (userMessages.length < 2) {
-    session.status = 'active';
-    return { error: 'too_short', message: 'Not enough conversation to build a story.' };
-  }
-
-  const report = await generateStoryReport(session.conversationHistory, sessionId);
-  session.report = report;
 
   const cost = getSessionCost(sessionId);
   if (cost) {
@@ -261,7 +250,30 @@ export async function endSession(sessionId: string, { skipReport = false } = {})
     console.log(`  API calls: ${cost.api_calls} | TOTAL: ${cost.total_tokens.toLocaleString()} tokens → ${cost.total_cost}`);
   }
 
-  return report;
+  const durationMs = session.completedAt && session.startedAt
+    ? new Date(session.completedAt).getTime() - new Date(session.startedAt).getTime()
+    : null;
+
+  const costData = cost ? {
+    api_calls: cost.api_calls,
+    input_tokens: cost.input_tokens,
+    output_tokens: cost.output_tokens,
+    total_tokens: cost.total_tokens,
+    total_cost: cost.total_cost,
+    total_cost_numeric: cost.total_cost_numeric,
+  } : null;
+
+  // Fallback: generate report from full transcript when STAR extractor didn't capture sections
+  if (generateReport) {
+    const userMessages = session.conversationHistory.filter(m => m.role === 'user');
+    if (userMessages.length < 2) {
+      return { error: 'too_short', message: 'Not enough conversation to build a story.' };
+    }
+    const report = await generateStoryReport(session.conversationHistory, sessionId);
+    return { completed: true, report, cost: costData, durationMs };
+  }
+
+  return { completed: true, cost: costData, durationMs };
 }
 
 export function getSessionUsage(sessionId: string) {

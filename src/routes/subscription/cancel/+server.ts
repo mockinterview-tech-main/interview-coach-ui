@@ -1,5 +1,5 @@
 import { json } from '@sveltejs/kit';
-import type { RequestHandler } from '../$types';
+import type { RequestHandler } from './$types';
 import Stripe from 'stripe';
 
 const stripe = new Stripe(import.meta.env['VITE_STRIPE_SECRET_KEY'], {

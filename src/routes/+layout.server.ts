@@ -1,6 +1,5 @@
 import { redirect } from '@sveltejs/kit';
 import type { LayoutServerLoad } from './$types';
-import { decodeJwt } from '$lib/jwt';
 import Stripe from 'stripe';
 
 const stripe = new Stripe(import.meta.env['VITE_STRIPE_SECRET_KEY'], {
@@ -8,65 +7,78 @@ const stripe = new Stripe(import.meta.env['VITE_STRIPE_SECRET_KEY'], {
 });
 
 export const load: LayoutServerLoad = async ({ locals, url }) => {
-    const protectedRoutes = ['interview', 'summary', 'credits', 'storybuilder']
-    if (!locals.pb?.authStore.isValid && protectedRoutes.includes(url.pathname.split("/").filter(Boolean)[0])) {
+    const protectedRoutes = ['storybuilder', 'credits', 'stories', 'dashboard'];
+    const firstSegment = url.pathname.split('/').filter(Boolean)[0];
+
+    const session = await locals.getSession();
+
+    if (!session && protectedRoutes.includes(firstSegment)) {
         redirect(302, '/login');
     }
-    const userAuthSession = decodeJwt(locals.pb?.authStore.token || '');
-    if (userAuthSession){
-        let currentUser = await locals.pb?.collection('users').getOne(userAuthSession.id);
-        if (currentUser){
-            let subscriptionStatus = null;
-            let subscriptionCancelAt = null;
-            let subscriptionID = null;
 
+    if (session) {
+        const user = session.user;
+        const email = user.email || '';
+        const name = user.user_metadata?.full_name || user.user_metadata?.name || email.split('@')[0];
+
+        // Check Stripe subscription status
+        let subscriptionID: string | null = null;
+        let subscriptionCancelAt: Date | null = null;
+        let subscriptionRenewAt: string | null = null;
+        let credits = 0;
+
+        try {
+            // Look up user profile in Supabase for credits
+            const { data: profile } = await locals.supabase
+                .from('profiles')
+                .select('credits')
+                .eq('id', user.id)
+                .single();
+
+            if (profile) {
+                credits = profile.credits || 0;
+            }
+
+            // Check Stripe for subscription
             const stripeCustomerResult = await stripe.customers.list({
                 limit: 1,
-                email: currentUser.email
+                email: email,
             });
-            if (stripeCustomerResult.data.length > 0){
-                const stripeCustomerID: string = stripeCustomerResult.data[0].id;
+
+            if (stripeCustomerResult.data.length > 0) {
+                const stripeCustomerID = stripeCustomerResult.data[0].id;
                 const subscriptionResult = await stripe.subscriptions.list({
-                    customer: stripeCustomerID
+                    customer: stripeCustomerID,
                 });
-                if (subscriptionResult.data.length > 0){
-                    subscriptionStatus = subscriptionResult.data[0].status;
-                    if (subscriptionResult.data[0].cancel_at) {
-                        subscriptionCancelAt = new Date(subscriptionResult.data[0].cancel_at * 1000)
+                if (subscriptionResult.data.length > 0) {
+                    const sub = subscriptionResult.data[0];
+                    if (sub.status === 'active') {
+                        subscriptionID = sub.id;
+                        subscriptionRenewAt = new Date(sub.current_period_end * 1000).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
                     }
-                    subscriptionID = subscriptionResult.data[0].id;
-                    await locals.pb?.collection('users').update(userAuthSession.id, {
-                        subscriptionID: subscriptionStatus === "active" ? subscriptionID : null
-                    })
-                } else {
-                    await locals.pb?.collection('users').update(userAuthSession.id, {
-                        subscriptionID: null
-                    })
+                    if (sub.cancel_at) {
+                        subscriptionCancelAt = new Date(sub.cancel_at * 1000);
+                    }
                 }
             }
-            if (currentUser.purchaseIntent) {
-                const nonce = url.searchParams.get('nonce')
-                const purchaseIntent = decodeJwt(currentUser.purchaseIntent)
-                let newUserState = {purchaseIntent: '', credits: currentUser.credits}
-                if (purchaseIntent.nonce === nonce) {
-                    newUserState = {...newUserState, credits: (currentUser.credits + purchaseIntent.credits)}
-                }
-                await locals.pb?.collection('users').update(userAuthSession.id, newUserState);
-                currentUser = await locals.pb?.collection('users').getOne(userAuthSession.id);
-            }
-            return {
-                loggedIn: locals.pb?.authStore.isValid,
-                username: currentUser?.name || "Current User",
-                credits: currentUser?.credits,
-                subscriptionID: currentUser?.subscriptionID,
-                subscriptionCancelAt
-            }
+        } catch (err) {
+            console.error('Error loading user data:', err);
         }
+
+        return {
+            loggedIn: true,
+            username: name,
+            credits,
+            subscriptionID,
+            subscriptionCancelAt,
+            subscriptionRenewAt,
+        };
     }
+
     return {
         loggedIn: false,
-        subscriptionID: "",
-        username: "",
-        credits: 0
-    }
+        subscriptionID: null,
+        username: '',
+        credits: 0,
+    };
 };

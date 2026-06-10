@@ -1,6 +1,41 @@
-$dark-purple: #A40080;
-$light-purple: #FE4BDD;
-$yellow: #FDF56C;
+// ── Joyful Design System ──
+
+// Primary — warm coral/salmon (energy, confidence)
+$primary: #E8735A;
+$primary-light: #FF9A85;
+$primary-dark: #D4563E;
+
+// Secondary — soft violet (creativity, warmth)
+$secondary: #8B5CF6;
+$secondary-light: #A78BFA;
+
+// Accent — sunshine yellow (happiness, optimism)
+$accent: #FFD93D;
+$accent-soft: #FFF0B3;
+
+// Warm neutrals
+$text-dark: #2D2B3D;
+$text-medium: #5C5A6F;
+$text-light: #8E8CA0;
+$bg-warm: #FFF8F0;
+$bg-cream: #FFFCF7;
+$bg-peach: #FFF2EB;
 $white: #ffffff;
-$dark-gray: #333;
-$light-gray: #f5f5f5f5;
+
+// Surfaces
+$card-shadow: 0 4px 20px rgba(45, 43, 61, 0.08);
+$card-shadow-hover: 0 8px 30px rgba(45, 43, 61, 0.14);
+$card-radius: 16px;
+
+// Gradients
+$gradient-hero: linear-gradient(135deg, #FFF2EB 0%, #F0E6FF 50%, #FFF8F0 100%);
+$gradient-warm: linear-gradient(135deg, #E8735A 0%, #8B5CF6 100%);
+$gradient-sunset: linear-gradient(135deg, #FFD93D 0%, #E8735A 50%, #8B5CF6 100%);
+$gradient-soft: linear-gradient(135deg, #FFF0B3 0%, #FF9A85 50%, #A78BFA 100%);
+
+// Legacy aliases (so existing SMUI refs don't break)
+$dark-purple: $primary;
+$light-purple: $primary-light;
+$yellow: $accent;
+$dark-gray: $text-dark;
+$light-gray: $bg-warm;

@@ -3,16 +3,26 @@ import type { RequestHandler } from './$types';
 import { createSession, startSession } from '$lib/server/interview';
 
 export const POST: RequestHandler = async ({ locals }) => {
-  // Auth check — require logged-in user
-  if (!locals.pb?.authStore.isValid) {
+  const authSession = await locals.getSession();
+  if (!authSession) {
     return json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   try {
-    const session = createSession();
-    const firstMessage = await startSession(session.id);
+    const coachSession = createSession();
+    const firstMessage = await startSession(coachSession.id);
+
+    // Log session start (fire and forget)
+    locals.supabase.from('session_logs').insert({
+      user_id: authSession.user.id,
+      session_id: coachSession.id,
+      status: 'started',
+    }).then(({ error }) => {
+      if (error) console.error('Failed to log session start:', error.message);
+    });
+
     return json({
-      sessionId: session.id,
+      sessionId: coachSession.id,
       message: firstMessage,
     });
   } catch (err: any) {

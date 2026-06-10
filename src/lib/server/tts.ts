@@ -1,89 +1,95 @@
-import { ELEVENLABS_API_KEY, ELEVENLABS_VOICE_ID } from '$env/static/private';
+import { GOOGLE_TTS_API_KEY } from '$env/static/private';
 
-const DEFAULT_VOICE_ID = 'EXAVITQu4vr4xnSDxMaL'; // "Sarah"
+// Chirp 3: HD voice — en-US female, natural conversational tone
+const DEFAULT_VOICE = 'en-US-Chirp3-HD-Leda';
 
 interface TTSOptions {
-  voiceId?: string;
-  stability?: number;
-  similarityBoost?: number;
-  style?: number;
+  voice?: string;
+  speakingRate?: number;
+  pitch?: number;
 }
 
 /**
- * Stream TTS audio from ElevenLabs.
+ * Convert text to speech using Google Cloud Chirp 3: HD.
  * Returns a ReadableStream of MP3 audio bytes.
  */
 export async function textToSpeechStream(text: string, options: TTSOptions = {}): Promise<ReadableStream<Uint8Array>> {
-  if (!ELEVENLABS_API_KEY) {
-    throw new Error('ELEVENLABS_API_KEY not set');
+  if (!GOOGLE_TTS_API_KEY) {
+    throw new Error('GOOGLE_TTS_API_KEY not set');
   }
 
-  const vid = options.voiceId || ELEVENLABS_VOICE_ID || DEFAULT_VOICE_ID;
-  const url = `https://api.elevenlabs.io/v1/text-to-speech/${vid}/stream`;
+  const voice = options.voice || DEFAULT_VOICE;
+  const url = `https://texttospeech.googleapis.com/v1/text:synthesize?key=${GOOGLE_TTS_API_KEY}`;
 
   const response = await fetch(url, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'xi-api-key': ELEVENLABS_API_KEY,
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      text,
-      model_id: 'eleven_turbo_v2_5',
-      voice_settings: {
-        stability: options.stability ?? 0.5,
-        similarity_boost: options.similarityBoost ?? 0.75,
-        style: options.style ?? 0.0,
-        use_speaker_boost: true,
+      input: { text },
+      voice: {
+        languageCode: 'en-US',
+        name: voice,
+      },
+      audioConfig: {
+        audioEncoding: 'MP3',
+        speakingRate: options.speakingRate ?? 1.0,
+        pitch: options.pitch ?? 0.0,
       },
     }),
   });
 
   if (!response.ok) {
     const errBody = await response.text();
-    throw new Error(`ElevenLabs stream error ${response.status}: ${errBody}`);
+    throw new Error(`Google TTS error ${response.status}: ${errBody}`);
   }
 
-  if (!response.body) {
-    throw new Error('ElevenLabs returned no body');
-  }
+  const data = await response.json();
+  // Google returns base64-encoded audio in audioContent
+  const audioBytes = Uint8Array.from(atob(data.audioContent), c => c.charCodeAt(0));
 
-  return response.body;
+  // Wrap in a ReadableStream to match existing interface
+  return new ReadableStream({
+    start(controller) {
+      controller.enqueue(audioBytes);
+      controller.close();
+    }
+  });
 }
 
 /**
  * Convert text to speech, returns full audio as ArrayBuffer.
  */
 export async function textToSpeech(text: string, options: TTSOptions = {}): Promise<ArrayBuffer> {
-  if (!ELEVENLABS_API_KEY) {
-    throw new Error('ELEVENLABS_API_KEY not set');
+  if (!GOOGLE_TTS_API_KEY) {
+    throw new Error('GOOGLE_TTS_API_KEY not set');
   }
 
-  const vid = options.voiceId || ELEVENLABS_VOICE_ID || DEFAULT_VOICE_ID;
-  const url = `https://api.elevenlabs.io/v1/text-to-speech/${vid}`;
+  const voice = options.voice || DEFAULT_VOICE;
+  const url = `https://texttospeech.googleapis.com/v1/text:synthesize?key=${GOOGLE_TTS_API_KEY}`;
 
   const response = await fetch(url, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'xi-api-key': ELEVENLABS_API_KEY,
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      text,
-      model_id: 'eleven_turbo_v2_5',
-      voice_settings: {
-        stability: options.stability ?? 0.5,
-        similarity_boost: options.similarityBoost ?? 0.75,
-        style: options.style ?? 0.0,
-        use_speaker_boost: true,
+      input: { text },
+      voice: {
+        languageCode: 'en-US',
+        name: voice,
+      },
+      audioConfig: {
+        audioEncoding: 'MP3',
+        speakingRate: options.speakingRate ?? 1.0,
+        pitch: options.pitch ?? 0.0,
       },
     }),
   });
 
   if (!response.ok) {
     const errBody = await response.text();
-    throw new Error(`ElevenLabs API error ${response.status}: ${errBody}`);
+    throw new Error(`Google TTS error ${response.status}: ${errBody}`);
   }
 
-  return response.arrayBuffer();
+  const data = await response.json();
+  const audioBytes = Uint8Array.from(atob(data.audioContent), c => c.charCodeAt(0));
+  return audioBytes.buffer;
 }

@@ -2,7 +2,8 @@ import type { RequestHandler } from './$types';
 import { textToSpeechStream } from '$lib/server/tts';
 
 export const POST: RequestHandler = async ({ locals, request }) => {
-  if (!locals.pb?.authStore.isValid) {
+  const session = await locals.getSession();
+  if (!session) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
       status: 401,
       headers: { 'Content-Type': 'application/json' }

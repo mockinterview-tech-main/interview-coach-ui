@@ -12,3 +12,4 @@ pocketbase/build
 pocketbase/pb_data
 pocketbase/pocketbase-volume
 .vercel
+.claude

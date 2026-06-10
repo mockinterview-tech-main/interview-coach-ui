@@ -15,13 +15,25 @@
 	let remainingTime = 20 * 60 * 1000;
 	let userConfirmedEnd = false;
 	let starSections: Record<string, string | null> = { situation: null, task: null, action: null, result: null };
+	let extractedQuestion: string | null = null;
+	let extractedFlags: Array<{ flag: string; suggestion: string }> | null = null;
 	let talkingPoints: any = null;
 	let talkingPointsLoading = false;
+	let strengthSignals: { strong: Array<{ signal: string; explanation: string }>; improve: Array<{ signal: string; explanation: string }> } | null = null;
+	let strengthSignalsLoading = false;
 	let sidebarWidth = 380;
 	let isListening = false;
 	let isSpeaking = false;
 	let interimTranscript = '';
 	let browserSupported = true;
+	let toast: { message: string; type: 'error' | 'success' | 'info' } | null = null;
+	let toastTimeout: ReturnType<typeof setTimeout> | null = null;
+
+	function showToast(message: string, type: 'error' | 'success' | 'info' = 'info', durationMs = 5000) {
+		if (toastTimeout) clearTimeout(toastTimeout);
+		toast = { message, type };
+		toastTimeout = setTimeout(() => { toast = null; }, durationMs);
+	}
 
 	// ── Refs (using variables) ──
 	let messagesEndEl: HTMLElement;
@@ -29,6 +41,10 @@
 	let isDragging = false;
 	let startTimeMs: number | null = null;
 	let timerInterval: ReturnType<typeof setInterval> | null = null;
+	let warningSent = false;
+	let sessionExpired = false;
+	let pendingTtsWarning: string | null = null;
+	let pendingAutoEnd = false;
 
 	// ── Speech Recognition state ──
 	let recognition: any = null;
@@ -40,13 +56,11 @@
 	const MIN_WORD_COUNT = 3;
 
 	// ── TTS state ──
-	let audioQueue: Blob[] = [];
-	let isPlaying = false;
-	let currentAudio: HTMLAudioElement | null = null;
-	let abortController: AbortController | null = null;
+	let ttsAudio: HTMLAudioElement | null = null;
+	let sentenceQueue: string[] = [];
+	let isProcessingQueue = false;
 	let ttsFlush = false;
 	let ttsStarted = false;
-	let ttsFetchCount = 0;
 	let ttsStopped = false;
 
 	// ── Helpers ──
@@ -171,73 +185,97 @@
 		if (finalTranscriptBuf.trim()) { finalizeTurn(); }
 	}
 
-	// ── TTS (ElevenLabs) ──
-	function ttsPlayNext() {
-		if (ttsStopped) return;
-		if (audioQueue.length === 0) {
-			if (ttsFlush && ttsFetchCount === 0) {
-				isPlaying = false;
-				isSpeaking = false;
-				ttsStarted = false;
-				setTimeout(() => {
-					if (voiceMode && phase === 'coaching') startListening();
-				}, 300);
-			}
-			return;
-		}
-		isPlaying = true;
-		const blob = audioQueue.shift()!;
-		const audioUrl = URL.createObjectURL(blob);
-		const audio = new Audio(audioUrl);
-		currentAudio = audio;
-		audio.onended = () => { URL.revokeObjectURL(audioUrl); currentAudio = null; ttsPlayNext(); };
-		audio.onerror = () => { URL.revokeObjectURL(audioUrl); currentAudio = null; ttsPlayNext(); };
-		audio.play().catch(() => { URL.revokeObjectURL(audioUrl); currentAudio = null; ttsPlayNext(); });
+	// ── TTS (via /storybuilder/api/tts) ──
+	let prefetchCache = new Map<string, Promise<Blob | null>>();
+
+	function ttsFetchAudio(text: string): Promise<Blob | null> {
+		if (prefetchCache.has(text)) return prefetchCache.get(text)!;
+		const promise = fetch('/storybuilder/api/tts', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ text }),
+		}).then(res => res.ok ? res.blob() : null).catch(() => null);
+		prefetchCache.set(text, promise);
+		return promise;
 	}
 
-	async function ttsQueueSentence(sentence: string) {
+	async function ttsPlaySentence(text: string): Promise<void> {
+		if (ttsStopped || !text.trim()) return;
+		try {
+			const blob = await ttsFetchAudio(text);
+			prefetchCache.delete(text);
+			if (!blob || ttsStopped) return;
+			const url = URL.createObjectURL(blob);
+			return new Promise<void>((resolve) => {
+				const audio = new Audio(url);
+				ttsAudio = audio;
+				audio.onended = () => {
+					URL.revokeObjectURL(url);
+					ttsAudio = null;
+					resolve();
+				};
+				audio.onerror = () => {
+					URL.revokeObjectURL(url);
+					ttsAudio = null;
+					resolve();
+				};
+				audio.play().catch(() => resolve());
+			});
+		} catch (err) {
+			console.warn('[TTS] fetch failed:', err);
+		}
+	}
+
+	async function ttsProcessQueue() {
+		if (isProcessingQueue) return;
+		isProcessingQueue = true;
+		while (sentenceQueue.length > 0 && !ttsStopped) {
+			// Prefetch next sentence while current one plays
+			if (sentenceQueue.length > 1) {
+				ttsFetchAudio(sentenceQueue[1]);
+			}
+			const next = sentenceQueue.shift()!;
+			await ttsPlaySentence(next);
+		}
+		isProcessingQueue = false;
+		if (ttsFlush && !ttsStopped) {
+			isSpeaking = false;
+			ttsStarted = false;
+			if (pendingAutoEnd) {
+				pendingAutoEnd = false;
+				handleEnd(true);
+				return;
+			}
+			setTimeout(() => {
+				if (voiceMode && phase === 'coaching') startListening();
+			}, 300);
+		}
+	}
+
+	function ttsQueueSentence(sentence: string) {
 		if (!sentence.trim() || ttsStopped) return;
 		if (!ttsStarted) {
 			ttsStarted = true;
 			isSpeaking = true;
 			stopListening();
 		}
-		ttsFetchCount++;
-		try {
-			const controller = new AbortController();
-			abortController = controller;
-			const res = await fetch('/storybuilder/api/tts', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ text: sentence }),
-				signal: controller.signal,
-			});
-			if (!res.ok) throw new Error(`TTS ${res.status}`);
-			const blob = await res.blob();
-			if (ttsStopped) return;
-			audioQueue.push(blob);
-			if (!isPlaying) ttsPlayNext();
-		} catch (err: any) {
-			if (err.name === 'AbortError') return;
-			console.warn('TTS sentence failed:', err.message);
-		} finally {
-			ttsFetchCount--;
-			if (ttsFlush && ttsFetchCount === 0 && audioQueue.length === 0 && !isPlaying) {
-				isSpeaking = false;
-				ttsStarted = false;
-				setTimeout(() => {
-					if (voiceMode && phase === 'coaching') startListening();
-				}, 300);
-			}
-		}
+		sentenceQueue.push(sentence);
+		// Start prefetching immediately so audio is ready when it's time to play
+		ttsFetchAudio(sentence);
+		ttsProcessQueue();
 	}
 
 	function ttsFlushQueue() {
 		ttsFlush = true;
-		if (ttsFetchCount === 0 && audioQueue.length === 0 && !isPlaying) {
+		if (sentenceQueue.length === 0 && !isProcessingQueue) {
 			if (ttsStarted) {
 				isSpeaking = false;
 				ttsStarted = false;
+				if (pendingAutoEnd) {
+					pendingAutoEnd = false;
+					handleEnd(true);
+					return;
+				}
 				setTimeout(() => {
 					if (voiceMode && phase === 'coaching') startListening();
 				}, 300);
@@ -249,81 +287,45 @@
 		ttsStopped = false;
 		ttsFlush = false;
 		ttsStarted = false;
-		audioQueue = [];
-		ttsFetchCount = 0;
-		isPlaying = false;
+		sentenceQueue = [];
+		isProcessingQueue = false;
 	}
 
-	async function ttsSpeak(text: string) {
+	function ttsSpeak(text: string) {
+		if (!text) return;
 		ttsStop();
 		ttsStopped = false;
-		ttsFlush = false;
-		ttsStarted = false;
-		audioQueue = [];
-		ttsFetchCount = 0;
+		ttsFlush = true;
+		ttsStarted = true;
 		isSpeaking = true;
 		stopListening();
-		ttsStarted = true;
-		try {
-			const controller = new AbortController();
-			abortController = controller;
-			const res = await fetch('/storybuilder/api/tts', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ text }),
-				signal: controller.signal,
-			});
-			if (!res.ok) throw new Error(`TTS ${res.status}`);
-			const blob = await res.blob();
-			const audioUrl = URL.createObjectURL(blob);
-			const audio = new Audio(audioUrl);
-			currentAudio = audio;
-			audio.onended = () => {
-				isSpeaking = false;
-				URL.revokeObjectURL(audioUrl);
-				currentAudio = null;
-				ttsStarted = false;
-				setTimeout(() => {
-					if (voiceMode && phase === 'coaching') startListening();
-				}, 300);
-			};
-			audio.onerror = () => {
-				isSpeaking = false;
-				URL.revokeObjectURL(audioUrl);
-				currentAudio = null;
-				ttsStarted = false;
-				if (voiceMode && phase === 'coaching') startListening();
-			};
-			await audio.play();
-		} catch (err: any) {
-			if (err.name === 'AbortError') return;
-			console.warn('TTS failed, falling back to browser:', err.message);
-			// Browser fallback
-			if (browser && window.speechSynthesis) {
-				const u = new SpeechSynthesisUtterance(text);
-				u.onend = () => { isSpeaking = false; ttsStarted = false; if (voiceMode && phase === 'coaching') startListening(); };
-				u.onerror = () => { isSpeaking = false; ttsStarted = false; if (voiceMode && phase === 'coaching') startListening(); };
-				window.speechSynthesis.speak(u);
-			}
+		// Split into sentences so first sentence plays fast
+		const sentences = text.match(/[^.!?\n]+[.!?]+(?:\s|$)/g) || [text];
+		const remaining = text.slice(sentences.join('').length).trim();
+		for (const s of sentences) {
+			if (s.trim().length > 3) sentenceQueue.push(s.trim());
 		}
+		if (remaining.length > 3) sentenceQueue.push(remaining);
+		ttsProcessQueue();
 	}
 
 	function ttsStop() {
 		ttsStopped = true;
-		if (abortController) { abortController.abort(); abortController = null; }
-		if (currentAudio) { currentAudio.pause(); currentAudio = null; }
-		audioQueue = [];
-		isPlaying = false;
-		ttsFetchCount = 0;
+		sentenceQueue = [];
+		isProcessingQueue = false;
 		ttsFlush = false;
-		if (browser && window.speechSynthesis) window.speechSynthesis.cancel();
+		if (ttsAudio) {
+			ttsAudio.pause();
+			ttsAudio = null;
+		}
+		prefetchCache.clear();
 		isSpeaking = false;
 		ttsStarted = false;
 	}
 
 	// ── Send message (streaming SSE) ──
 	async function sendMessage(userMessage: string) {
-		if (!userMessage.trim() || loading) return;
+		if (!userMessage.trim() || loading || sessionExpired) return;
 
 		messages = [...messages, { role: 'candidate', content: userMessage }];
 		loading = true;
@@ -375,10 +377,11 @@
 							if (voiceMode) {
 								const cleanSoFar = stripMarkdown(streamedText);
 								const unspoken = cleanSoFar.slice(spokenText.length);
-								const sentenceRegex = /[^.!?\n]+[.!?]+(?:\s|$)/g;
+								// Split on sentences OR long clauses (commas/semicolons/colons) for faster TTS
+								const chunkRegex = /[^.!?;:\n]+[.!?]+(?:\s|$)|[^.!?;:\n]{30,}[;:,](?:\s|$)/g;
 								let match;
 								let lastEnd = 0;
-								while ((match = sentenceRegex.exec(unspoken)) !== null) {
+								while ((match = chunkRegex.exec(unspoken)) !== null) {
 									const sentence = match[0].trim();
 									if (sentence.length > 5) ttsQueueSentence(sentence);
 									lastEnd = match.index + match[0].length;
@@ -387,6 +390,13 @@
 							}
 						} else if (event.type === 'done') {
 							finalData = event;
+						} else if (event.type === 'star_update') {
+							// Real-time STAR section updates from parallel extractor
+							if (event.question) extractedQuestion = event.question;
+							if (event.flags) extractedFlags = event.flags;
+							for (const update of event.updates) {
+								starSections = { ...starSections, [update.section]: update.content };
+							}
 						} else if (event.type === 'error') {
 							messages = messages.filter(m => !m.streaming).concat([
 								{ role: 'system', content: `Error: ${event.error}` }
@@ -403,17 +413,18 @@
 				if (voiceMode) {
 					const remaining = cleanMessage.slice(spokenText.length).trim();
 					if (remaining.length > 5) ttsQueueSentence(remaining);
+					// Append time warning to the end of this response's TTS stream
+					if (pendingTtsWarning) {
+						ttsQueueSentence(pendingTtsWarning);
+						pendingTtsWarning = null;
+					}
 					ttsFlushQueue();
-				}
-
-				if (finalData.starUpdate) {
-					starSections = { ...starSections, [finalData.starUpdate.section]: finalData.starUpdate.content };
 				}
 
 				if (finalData.done) {
 					stopListening();
 					ttsStop();
-					await handleEnd();
+					await handleEnd(true);
 				}
 			}
 		} catch {
@@ -422,27 +433,44 @@
 			]);
 		}
 		loading = false;
+
+		// If session expired while this exchange was in progress, end after TTS finishes
+		if (sessionExpired && !loading) {
+			if (isSpeaking) {
+				// TTS still playing (includes the time-up message) — let it finish
+				pendingAutoEnd = true;
+			} else {
+				await handleEnd(true);
+			}
+		}
 	}
 
 	// ── Start session ──
 	async function handleStart() {
 		loading = true;
 		try {
-			// Deduct credit
-			const creditRes = await fetch('/interview', {
-				method: 'POST',
-				credentials: 'include',
-				body: JSON.stringify({ action: 'deduct' })
-			});
-			if (creditRes.ok) {
-				const creditsBody = await creditRes.json();
-				if (creditsBody.credits !== undefined) {
-					$userStore = { ...$userStore, credits: creditsBody.credits };
+			// Deduct credit (skip for subscribers)
+			if (!$userStore.subscriptionID) {
+				const creditRes = await fetch('/storybuilder/api/credits', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ action: 'deduct' })
+				});
+				if (creditRes.ok) {
+					const creditsBody = await creditRes.json();
+					if (creditsBody.credits !== undefined) {
+						$userStore = { ...$userStore, credits: creditsBody.credits };
+					}
 				}
 			}
 
-			const res = await fetch('/storybuilder/api/start', { method: 'POST' });
-			const data = await res.json();
+			const interviewRes = await fetch('/storybuilder/api/start', { method: 'POST' });
+
+			if (!interviewRes.ok) {
+				throw new Error('Session start failed');
+			}
+
+			const data = await interviewRes.json();
 			sessionId = data.sessionId;
 			startTimeMs = Date.now();
 			remainingTime = 20 * 60 * 1000;
@@ -453,20 +481,65 @@
 			phase = 'coaching';
 
 			// Start timer
+			warningSent = false;
 			timerInterval = setInterval(() => {
 				if (!startTimeMs) return;
 				const elapsed = Date.now() - startTimeMs;
 				remainingTime = Math.max(0, 20 * 60 * 1000 - elapsed);
+				// 2-minute warning — shown as Coach message
+				if (remainingTime <= 2 * 60 * 1000 && remainingTime > 0 && !warningSent) {
+					warningSent = true;
+					messages = [...messages, { role: 'interviewer', content: '⏰ 2 minutes remaining — wrapping up soon.' }];
+					if (voiceMode) pendingTtsWarning = "By the way, we have about 2 minutes left, so let's start wrapping up.";
+				}
+				// 20-minute mark — gracefully end after TTS completes
 				if (remainingTime === 0 && timerInterval) {
 					clearInterval(timerInterval);
+					sessionExpired = true;
+					stopListening();
+
+					const timeUpMsg = "Alright, that's our 20 minutes! Let me save everything we worked on.";
+					messages = [...messages, { role: 'interviewer', content: timeUpMsg }];
+
+					if (loading) {
+						// Coach is mid-stream — append time-up to TTS after response finishes
+						pendingTtsWarning = timeUpMsg;
+						// sendMessage's sessionExpired check will set pendingAutoEnd
+					} else if (isSpeaking) {
+						// Coach TTS is still playing — queue time-up at the end
+						ttsQueueSentence(timeUpMsg);
+						pendingAutoEnd = true;
+					} else {
+						// Idle — speak time-up then end
+						if (voiceMode) {
+							ttsSpeak(timeUpMsg);
+							pendingAutoEnd = true;
+						} else {
+							handleEnd(true);
+						}
+					}
 				}
 			}, 1000);
 
 			if (voiceMode) {
-				setTimeout(() => ttsSpeak(cleanOpening), 500);
+				ttsSpeak(cleanOpening);
 			}
 		} catch {
-			alert('Failed to start session. Is the server running?');
+			// Refund the credit if session failed to start
+			try {
+				const refundRes = await fetch('/storybuilder/api/credits', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ action: 'refund' })
+				});
+				if (refundRes.ok) {
+					const refundBody = await refundRes.json();
+					if (refundBody.credits !== undefined) {
+						$userStore = { ...$userStore, credits: refundBody.credits };
+					}
+				}
+			} catch { /* best effort */ }
+			showToast('Failed to start session. Your credit is not impacted.', 'error', 8000);
 		}
 		loading = false;
 	}
@@ -480,78 +553,240 @@
 		sendMessage(msg);
 	}
 
+	// ── Auto-save story to Supabase ──
+	let savedStoryId: string | null = null;
+	let sessionEnded = false;
+	let retryCount = 0;
+
+	// Inline support form (for too_short cases)
+	let showSupportForm = false;
+	let supportDescription = '';
+	let supportSubmitting = false;
+	let supportSubmitted = false;
+
+	async function submitSupportRequest() {
+		if (!supportDescription.trim()) return;
+		supportSubmitting = true;
+		try {
+			const res = await fetch('/dashboard/api/support', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					topic: 'credit_refund',
+					sessionId: sessionId || null,
+					description: supportDescription.trim(),
+				}),
+			});
+			const result = await res.json();
+			if (result.success) supportSubmitted = true;
+		} catch (err) {
+			console.error('Support request failed:', err);
+		} finally {
+			supportSubmitting = false;
+		}
+	}
+
+	function trySaveStory() {
+		// Only save once both talking points and strength signals are done loading
+		if (talkingPointsLoading || strengthSignalsLoading) return;
+		if (savedStoryId) return; // Already saved
+
+		fetch('/storybuilder/api/save', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+				session_id: sessionId || null,
+				question: report?.question || null,
+				full_story: report?.full_story || null,
+				talking_points: talkingPoints || null,
+				strength_signals: strengthSignals || null,
+				flags: extractedFlags || null,
+			}),
+		}).then(res => res.json()).then(data => {
+			if (data.saved) {
+				savedStoryId = data.id;
+				console.log('Story saved:', data.id);
+			}
+		}).catch(err => console.warn('Failed to save story:', err));
+	}
+
 	// ── End session ──
-	async function handleEnd() {
-		const confirmed = confirm("Are you sure you want to finish? You won't be able to return to this session and the session credit will be used.");
-		if (!confirmed) return;
+	async function handleEnd(auto = false) {
+		if (!auto) {
+			const confirmed = confirm("Are you sure you want to finish? You won't be able to return to this session and the session credit will be used.");
+			if (!confirmed) return;
+		}
 
 		userConfirmedEnd = true;
+		sessionEnded = true;
 		stopListening();
 		ttsStop();
 		if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
 
-		const allSectionsFilled = starSections.situation && starSections.task && starSections.action && starSections.result;
+		const anySectionFilled = starSections.situation || starSections.task || starSections.action || starSections.result;
 
-		const fetchTP = async (sections: any) => {
-			if (!sections) return;
-			talkingPointsLoading = true;
-			try {
-				const res = await fetch('/storybuilder/api/talking-points', {
-					method: 'POST',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({ sessionId, starSections: sections }),
-				});
-				const data = await res.json();
-				if (data.talkingPoints) talkingPoints = data.talkingPoints;
-			} catch (err) {
-				console.warn('Failed to fetch talking points:', err);
-			}
-			talkingPointsLoading = false;
-		};
+		if (anySectionFilled) {
+			// Primary path: build report from STAR extractor's sidebar sections
+			const filledSections = [starSections.situation, starSections.task, starSections.action, starSections.result].filter(Boolean);
+			const fullStory = filledSections.join('\n\n');
 
-		if (allSectionsFilled) {
-			const fullStory = [starSections.situation, starSections.task, starSections.action, starSections.result].join('\n\n');
-			report = { question: null, full_story: fullStory, star_sections: starSections };
+			report = {
+				question: extractedQuestion,
+				situation: starSections.situation,
+				task: starSections.task,
+				action: starSections.action,
+				result: starSections.result,
+				full_story: fullStory,
+			};
 			phase = 'report';
-			fetchTP(starSections);
+
+			// Generate talking points + strength signals in parallel
+			talkingPointsLoading = true;
+			strengthSignalsLoading = true;
+			const convHistory = messages.filter(m => m.role === 'interviewer' || m.role === 'user').map(m => ({
+				role: m.role === 'interviewer' ? 'assistant' : 'user',
+				content: m.content,
+			}));
+
+			fetch('/storybuilder/api/talking-points', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ sessionId, starSections }),
+			}).then(res => res.json()).then(data => {
+				if (data.talkingPoints) talkingPoints = data.talkingPoints;
+				talkingPointsLoading = false;
+				trySaveStory();
+			}).catch(() => { talkingPointsLoading = false; trySaveStory(); });
+
+			fetch('/storybuilder/api/strength-signals', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ sessionId, conversationHistory: convHistory, question: report.question, fullStory }),
+			}).then(res => res.json()).then(data => {
+				if (data.signals) strengthSignals = data.signals;
+				strengthSignalsLoading = false;
+				trySaveStory();
+			}).catch(() => { strengthSignalsLoading = false; trySaveStory(); });
+
+			// End server session and log cost
+			const starSectionsFilled = Object.values(starSections).filter(Boolean).length;
 			fetch('/storybuilder/api/end', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ sessionId, skipReport: true }),
+				body: JSON.stringify({ sessionId, generateReport: false, starSectionsFilled }),
 			}).catch(() => {});
 		} else {
+			// Fallback: extractor didn't capture sections — generate from full transcript
 			phase = 'loading-report';
 			try {
+				const fbStarSectionsFilled = Object.values(starSections).filter(Boolean).length;
 				const res = await fetch('/storybuilder/api/end', {
 					method: 'POST',
 					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({ sessionId }),
+					body: JSON.stringify({ sessionId, generateReport: true, starSectionsFilled: fbStarSectionsFilled }),
 				});
 				const data = await res.json();
-				report = data.scorecard;
+				if (data.error) {
+					report = { error: data.error, message: data.message };
+				} else if (data.report) {
+					report = data.report;
+					// Generate talking points + strength signals in parallel
+					talkingPointsLoading = true;
+					strengthSignalsLoading = true;
+					const fbConvHistory = messages.filter(m => m.role === 'interviewer' || m.role === 'user').map(m => ({
+						role: m.role === 'interviewer' ? 'assistant' : 'user',
+						content: m.content,
+					}));
+
+					fetch('/storybuilder/api/talking-points', {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify({ sessionId, fullStory: data.report.full_story }),
+					}).then(r => r.json()).then(d => {
+						if (d.talkingPoints) talkingPoints = d.talkingPoints;
+						talkingPointsLoading = false;
+						trySaveStory();
+					}).catch(() => { talkingPointsLoading = false; trySaveStory(); });
+
+					fetch('/storybuilder/api/strength-signals', {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify({ sessionId, conversationHistory: fbConvHistory, question: data.report.question, fullStory: data.report.full_story }),
+					}).then(r => r.json()).then(d => {
+						if (d.signals) strengthSignals = d.signals;
+						strengthSignalsLoading = false;
+						trySaveStory();
+					}).catch(() => { strengthSignalsLoading = false; trySaveStory(); });
+				} else {
+					report = { error: 'parse_error', message: 'Could not generate story.' };
+				}
 				phase = 'report';
 			} catch {
-				alert('Failed to generate story report.');
-				phase = 'coaching';
+				report = { error: 'api_error' };
+				phase = 'report';
 			}
 		}
 	}
 
 	async function handleRetry() {
+		retryCount++;
 		phase = 'loading-report';
 		try {
 			const res = await fetch('/storybuilder/api/end', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ sessionId }),
+				body: JSON.stringify({ sessionId, generateReport: true }),
 			});
 			const data = await res.json();
-			report = data.scorecard;
+			if (data.report) {
+				report = data.report;
+				retryCount = 0; // success — reset
+				// Generate talking points + strength signals in parallel
+				talkingPointsLoading = true;
+				strengthSignalsLoading = true;
+				const retryConvHistory = messages.filter(m => m.role === 'interviewer' || m.role === 'user').map(m => ({
+					role: m.role === 'interviewer' ? 'assistant' : 'user',
+					content: m.content,
+				}));
+
+				fetch('/storybuilder/api/talking-points', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ sessionId, fullStory: data.report.full_story }),
+				}).then(r => r.json()).then(d => {
+					if (d.talkingPoints) talkingPoints = d.talkingPoints;
+					talkingPointsLoading = false;
+					trySaveStory();
+				}).catch(() => { talkingPointsLoading = false; trySaveStory(); });
+
+				fetch('/storybuilder/api/strength-signals', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ sessionId, conversationHistory: retryConvHistory, question: data.report.question, fullStory: data.report.full_story }),
+				}).then(r => r.json()).then(d => {
+					if (d.signals) strengthSignals = d.signals;
+					strengthSignalsLoading = false;
+					trySaveStory();
+				}).catch(() => { strengthSignalsLoading = false; trySaveStory(); });
+			} else {
+				report = { error: 'api_error' };
+				if (retryCount >= 2) logGlitch();
+			}
 			phase = 'report';
 		} catch {
 			report = { error: 'api_error' };
+			if (retryCount >= 2) logGlitch();
 			phase = 'report';
 		}
+	}
+
+	function logGlitch() {
+		const glitchStarFilled = Object.values(starSections).filter(Boolean).length;
+		fetch('/storybuilder/api/glitch', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ sessionId, starSectionsFilled: glitchStarFilled }),
+		}).catch(err => console.warn('Failed to log glitch:', err));
 	}
 
 	function handleBackToSession() {
@@ -568,7 +803,9 @@
 		input = '';
 		userConfirmedEnd = false;
 		talkingPoints = null;
+		extractedFlags = null;
 		starSections = { situation: null, task: null, action: null, result: null } as Record<string, string | null>;
+		ttsStop();
 	}
 
 	function handleInterrupt() {
@@ -605,9 +842,10 @@
 		}
 	}
 
-	// ── Auto-scroll ──
-	$: if (messages || interimTranscript) {
-		setTimeout(() => messagesEndEl?.scrollIntoView({ behavior: 'smooth' }), 50);
+	// ── Auto-scroll (only after conversation has multiple messages) ──
+	$: if ((messages?.length > 1 || interimTranscript) && messagesEndEl) {
+		const scrollBehavior = isListening && interimTranscript ? 'instant' : 'smooth';
+		setTimeout(() => messagesEndEl?.scrollIntoView({ behavior: scrollBehavior }), 50);
 	}
 
 	// ── Timer display ──
@@ -628,22 +866,48 @@
 	// ── Credits check ──
 	$: noCredits = $userStore.credits === 0 && !$userStore.subscriptionID;
 
+	function handleBeforeUnload() {
+		if (!sessionId || sessionEnded || phase !== 'coaching') return;
+		const durationMs = startTimeMs ? Date.now() - startTimeMs : 0;
+		const starSectionsFilled = Object.values(starSections).filter(Boolean).length;
+		const payload = JSON.stringify({ sessionId, durationMs, starSectionsFilled });
+		navigator.sendBeacon('/storybuilder/api/abandon', new Blob([payload], { type: 'application/json' }));
+	}
+
 	onMount(() => {
 		const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 		browserSupported = !!SR;
 		window.addEventListener('mousemove', handleMouseMove);
 		window.addEventListener('mouseup', handleMouseUp);
+		window.addEventListener('beforeunload', handleBeforeUnload);
 	});
 
 	onDestroy(() => {
 		if (!browser) return;
 		stopListening();
 		ttsStop();
+		ttsStop();
 		if (timerInterval) clearInterval(timerInterval);
 		window.removeEventListener('mousemove', handleMouseMove);
 		window.removeEventListener('mouseup', handleMouseUp);
+		window.removeEventListener('beforeunload', handleBeforeUnload);
 	});
 </script>
+
+{#if toast}
+	<!-- svelte-ignore a11y-click-events-have-key-events -->
+	<!-- svelte-ignore a11y-no-static-element-interactions -->
+	<div class="toast toast-{toast.type}" on:click={() => toast = null}>
+		<span class="toast-icon">
+			{#if toast.type === 'error'}&#9888;&#65039;
+			{:else if toast.type === 'success'}&#9989;
+			{:else}&#8505;&#65039;
+			{/if}
+		</span>
+		<span class="toast-msg">{toast.message}</span>
+		<span class="toast-close">&times;</span>
+	</div>
+{/if}
 
 {#if !browserSupported}
 	<div class="sb-container">
@@ -658,37 +922,41 @@
 	</div>
 
 {:else if phase === 'lobby'}
+	<div class="sb-back-row">
+		<a href="/dashboard" class="sb-back-link">&larr; Dashboard</a>
+	</div>
 	<div class="sb-container">
 		<div class="sb-lobby">
 			{#if noCredits}
-				<p style="text-align: center;">
-					Uh oh, looks like you're out of credits. Please buy more before continuing.
-				</p>
-				<button class="sb-start-btn" on:click={() => goto('/credits')}>Buy Credits</button>
+				<div class="sb-no-credits">
+					<p>Uh oh, looks like you're out of credits. Please buy more before continuing.</p>
+					<button class="sb-start-btn" on:click={() => goto('/credits')}>Buy Credits</button>
+				</div>
 			{:else}
 				<div class="sb-lobby-icon">&#10024;</div>
-				<h1>STAR Story Builder</h1>
-				<p>Build a compelling behavioral interview answer in 20 minutes. Your AI coach will help you turn a real work experience into a polished STAR story.</p>
+				<h1>You are 20 minutes away from <span style="color: #c96442; font-weight: 700;">impressing your interviewer!</span></h1>
+				<br>
 				<div class="sb-lobby-tips">
 					<h3>How it works</h3>
 					<ul>
-						<li>Share a rough experience from your work</li>
-						<li>Your coach asks questions to extract the key details</li>
-						<li>Together you shape it into a Situation, Task, Action, Result story</li>
-						<li>Walk away with a ready-to-use interview answer</li>
+						<li>Tell your coach what type of questions you want to practice. Clarify as needed.</li>
+						<li>Share a rough experience from your work. <strong>Feel free to ramble here!</strong></li>
+						<li>Your coach will ask insightful questions to extract the key details.</li>
+						<li>Together you shape it into a Situation, Task, Action, Result story.</li>
+						<li>Walk away with a ready-to-use interview answer, plus talking points.</li>
 					</ul>
 				</div>
 				<div class="sb-lobby-tips" style="margin-top: 0;">
-					<h3>Voice Mode</h3>
+					<h3>Voice Mode for now</h3>
 					<p style="color: #555; font-size: 0.9rem; margin-bottom: 0;">
 						Your microphone will be used for hands-free conversation.
 						The coach speaks, then listens to you automatically.
-						You can also type if you prefer.
+						You can click on the text wall to interrupt at any time.
 					</p>
 				</div>
 				{#if !$userStore.subscriptionID}
 					<p style="text-align: center; color: #888; font-size: 0.85rem;">
-						One credit will be deducted when you begin.
+						One credit will be deducted once you begin.
 					</p>
 				{/if}
 				<button class="sb-start-btn" on:click={handleStart} disabled={loading}>
@@ -736,27 +1004,82 @@
 			<!-- Story Report -->
 			<div class="sb-scorecard">
 				{#if report?.error}
-					<h2>Story not generated</h2>
-					<div class="sb-score-section">
-						<p style="color: #555;">
-							{#if report.error === 'too_short'}
-								The session ended before enough details were shared to build a complete story.
-							{:else if report.error === 'parse_error'}
-								The coach couldn't organize the conversation into a structured story. Retrying usually fixes it.
-							{:else if report.error === 'api_error'}
-								We lost connection to the AI service while generating your story. Just retry.
+					{#if report.error === 'too_short'}
+						<h2>Not enough to build a story</h2>
+						<div class="sb-score-section">
+							<p style="color: #555;">
+								{#if userConfirmedEnd}
+									You ended the session before sharing enough details for a complete STAR story. A story needs a fleshed-out Situation, Task, Action, and Result to be useful in interviews.
+								{:else}
+									The session ended before enough details were shared to build a complete story.
+								{/if}
+							</p>
+						</div>
+						<div class="sb-scorecard-actions">
+							{#if !userConfirmedEnd}
+								<button class="sb-start-btn" on:click={handleBackToSession}>Back to Session</button>
 							{:else}
-								Something unexpected happened. You can retry generating your story.
+								<a href="/dashboard" class="sb-error-dashboard-link">Back to Dashboard</a>
 							{/if}
-						</p>
-					</div>
-					<div class="sb-scorecard-actions">
-						{#if report.error === 'too_short' && !userConfirmedEnd}
-							<button class="sb-start-btn" on:click={handleBackToSession}>Back to Session</button>
-						{:else}
-							<button class="sb-start-btn" on:click={handleRetry}>Retry</button>
+						</div>
+
+						<!-- Inline support form for credit request -->
+						{#if userConfirmedEnd}
+							<div class="sb-support-inline">
+								{#if supportSubmitted}
+									<div class="sb-support-done">
+										<span class="sb-support-done-icon">✓</span>
+										<p>Request submitted — we'll review and get back to you within 24 hours.</p>
+									</div>
+								{:else if showSupportForm}
+									<h4>Request credit support</h4>
+									<p class="sb-support-hint">Tell us what happened and we'll review your session.</p>
+									<textarea class="sb-support-textarea" bind:value={supportDescription} placeholder="e.g. I started the session but the coach wasn't responding to my answers…" rows="3"></textarea>
+									<div class="sb-support-btns">
+										<button class="sb-support-cancel" on:click={() => showSupportForm = false}>Cancel</button>
+										<button class="sb-support-submit" on:click={submitSupportRequest} disabled={!supportDescription.trim() || supportSubmitting}>
+											{supportSubmitting ? 'Submitting…' : 'Submit'}
+										</button>
+									</div>
+								{:else}
+									<button class="sb-support-trigger" on:click={() => showSupportForm = true}>
+										Think you deserve a credit? Request support &rarr;
+									</button>
+								{/if}
+							</div>
 						{/if}
-					</div>
+					{:else if retryCount < 2}
+						<h2>We hit a hiccup</h2>
+						<div class="sb-score-section">
+							<p style="color: #555;">
+								{#if report.error === 'parse_error'}
+									Your coaching session is complete, but we couldn't assemble the final polished story. This is usually a one-time glitch — retrying typically fixes it.
+								{:else if report.error === 'api_error'}
+									Your coaching session is complete, but we lost connection while generating your polished story. Your session data is safe.
+								{:else}
+									Your coaching session is complete, but something went wrong generating the final story.
+								{/if}
+							</p>
+							{#if retryCount === 1}
+								<p style="color: #8E8CA0; font-size: 0.85rem;">Attempt {retryCount} of 2 failed — one more try.</p>
+							{/if}
+						</div>
+						<div class="sb-scorecard-actions">
+							<button class="sb-start-btn" on:click={handleRetry}>Re-generate My Story</button>
+							<a href="/dashboard" class="sb-error-dashboard-link">Back to Dashboard</a>
+						</div>
+					{:else}
+						<h2>We've saved your session</h2>
+						<div class="sb-score-section">
+							<p style="color: #555;">
+								We tried twice but couldn't generate your polished story right now. Don't worry — your full coaching session is saved on our end. Your story will appear in your Story Bank once we resolve this.
+							</p>
+							<p class="sb-glitch-notice">We've flagged this session for review.</p>
+						</div>
+						<div class="sb-scorecard-actions">
+							<a href="/dashboard" class="sb-error-dashboard-link" style="font-size: 0.95rem;">Back to Dashboard</a>
+						</div>
+					{/if}
 				{:else}
 					<h2>Your STAR Story</h2>
 					{#if report?.question}
@@ -774,6 +1097,63 @@
 					{/if}
 				{/if}
 			</div>
+			<!-- Strength Signals -->
+			{#if !report?.error}
+				<div class="sb-signals-card">
+					<h3>Story Strength Signals</h3>
+					<p class="sb-signals-subtitle">How interviewers will evaluate your story based on the question's theme.</p>
+					{#if strengthSignalsLoading}
+						<p class="sb-signals-loading">Analyzing your story against interview rubrics...</p>
+					{:else if strengthSignals}
+						{#if strengthSignals.strong.length > 0}
+							<div class="sb-signals-group">
+								<div class="sb-signals-group-label sb-signals-strong-label">Strong signals</div>
+								{#each strengthSignals.strong as item}
+									<div class="sb-signal-item sb-signal-strong">
+										<span class="sb-signal-icon">✓</span>
+										<div>
+											<span class="sb-signal-name">{item.signal}</span>
+											<span class="sb-signal-explain">{item.explanation}</span>
+										</div>
+									</div>
+								{/each}
+							</div>
+						{/if}
+						{#if strengthSignals.improve.length > 0}
+							<div class="sb-signals-group">
+								<div class="sb-signals-group-label sb-signals-improve-label">Could be stronger</div>
+								{#each strengthSignals.improve as item}
+									<div class="sb-signal-item sb-signal-improve">
+										<span class="sb-signal-icon">⚡</span>
+										<div>
+											<span class="sb-signal-name">{item.signal}</span>
+											<span class="sb-signal-explain">{item.explanation}</span>
+										</div>
+									</div>
+								{/each}
+							</div>
+						{/if}
+					{/if}
+				</div>
+			{/if}
+
+			<!-- Interview Watch Outs -->
+			{#if extractedFlags && extractedFlags.length > 0}
+				<div class="sb-flags-card">
+					<h3>Watch Out</h3>
+					<p class="sb-flags-subtitle">Things to avoid saying in the real interview — based on patterns from your coaching session.</p>
+					{#each extractedFlags as item}
+						<div class="sb-flag-item">
+							<span class="sb-flag-icon">⚠</span>
+							<div>
+								<span class="sb-flag-text">{item.flag}</span>
+								<span class="sb-flag-suggestion">{item.suggestion}</span>
+							</div>
+						</div>
+					{/each}
+				</div>
+			{/if}
+
 			{#if (!report?.error || userConfirmedEnd)}
 				<div class="sb-scorecard-actions">
 					<button class="sb-start-btn" on:click={handleBuildAnother}>Build Another Story</button>
@@ -796,10 +1176,6 @@
 						<span class="sb-mic-label">{micLabel}</span>
 					</div>
 				</div>
-				<div class="sb-session-timer" class:warning={timerWarning}>
-					{timerMinutes}:{timerSeconds}
-				</div>
-				<button class="sb-end-btn" on:click={handleEnd} disabled={loading}>Finish</button>
 			</div>
 
 			<!-- Messages -->
@@ -813,7 +1189,7 @@
 				{#each messages as msg}
 					<div class="sb-message {msg.role}">
 						<div class="sb-message-label">
-							{msg.role === 'interviewer' ? '&#10024; Coach' : '&#128587; You'}
+							{msg.role === 'interviewer' ? '✨ Coach' : '🙋 You'}
 						</div>
 						<div class="sb-message-content" class:typing={msg.role === 'interviewer' && !msg.content}>
 							{msg.content || 'Thinking...'}
@@ -826,7 +1202,7 @@
 						<div class="sb-message-content interim">{interimTranscript}</div>
 					</div>
 				{/if}
-				{#if loading}
+				{#if loading && !messages.some(m => m.streaming)}
 					<div class="sb-message interviewer">
 						<div class="sb-message-label">&#10024; Coach</div>
 						<div class="sb-message-content typing">Thinking...</div>
@@ -840,9 +1216,9 @@
 				<textarea
 					value={voiceMode && isListening ? interimTranscript : input}
 					on:input={(e) => { if (!isListening) input = e.currentTarget.value; }}
-					placeholder={isListening ? 'Listening... tell me about your experience' : 'Or type here...'}
+					placeholder={sessionExpired ? 'Session ended — saving your story...' : isListening ? 'Listening... tell me about your experience' : 'Or type here...'}
 					rows="2"
-					disabled={loading || isSpeaking}
+					disabled={loading || isSpeaking || sessionExpired}
 					on:keydown={(e) => {
 						if (e.key === 'Enter' && !e.shiftKey) {
 							e.preventDefault();
@@ -866,15 +1242,21 @@
 
 		<!-- STAR sidebar -->
 		<div class="sb-coaching-sidebar" style="width: {sidebarWidth}px;">
+			<div class="sb-sidebar-top">
+				<div class="sb-session-timer" class:warning={timerWarning}>
+					{timerMinutes}:{timerSeconds}
+				</div>
+				<button class="sb-end-btn" on:click={handleEnd} disabled={loading}>Finish</button>
+			</div>
 			<div class="sb-star-progress-panel">
 				<div class="sb-star-progress-header">
-					<h3>Your Story</h3>
+					<h3>Your Story in Progress…</h3>
 					<span class="sb-star-progress-count">{completedCount}/4</span>
 				</div>
 				{#each [{ key: 'situation', label: 'Situation' }, { key: 'task', label: 'Task' }, { key: 'action', label: 'Action' }, { key: 'result', label: 'Result' }] as section}
 					<div class="sb-star-progress-section" class:filled={starSections[section.key]} class:empty={!starSections[section.key]}>
 						<div class="sb-star-progress-label">
-							<span class="sb-star-progress-dot">{starSections[section.key] ? '&#10003;' : '&#9675;'}</span>
+							<span class="sb-star-progress-dot">{starSections[section.key] ? '✓' : '○'}</span>
 							<span>{section.label}</span>
 						</div>
 						{#if starSections[section.key]}
@@ -894,9 +1276,9 @@
 	/* ── All styles scoped with sb- prefix to avoid conflicts with global styles ── */
 
 	.sb-container {
-		max-width: 768px;
+		max-width: 960px;
 		margin: 0 auto;
-		padding: 24px 24px 0;
+		padding: 12px 12px 0;
 		min-height: calc(100vh - 50px);
 		display: flex;
 		flex-direction: column;
@@ -904,12 +1286,38 @@
 
 	.sb-lobby {
 		text-align: center;
-		padding: 80px 24px;
-		flex: 1;
+		padding: 20px 16px 0;
 		display: flex;
 		flex-direction: column;
 		align-items: center;
-		justify-content: center;
+	}
+	.sb-no-credits {
+		text-align: center;
+		margin-bottom: auto;
+		padding-top: 20vh;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+	}
+	.sb-back-row {
+		max-width: 1200px;
+		margin: 0 auto;
+		padding: 68px 20px 0;
+	}
+	.sb-back-link {
+		display: inline-block;
+		padding: 10px 24px;
+		font-size: 0.9rem;
+		font-weight: 600;
+		color: #c96442;
+		text-decoration: none;
+		border: 1px solid #c96442;
+		border-radius: 24px;
+		transition: all 0.2s;
+		&:hover {
+			background: #c96442;
+			color: white;
+		}
 	}
 	.sb-lobby-icon { font-size: 2.5rem; margin-bottom: 16px; }
 	.sb-lobby h1 {
@@ -936,7 +1344,9 @@
 		border-radius: 12px;
 		padding: 20px 24px;
 		text-align: left;
-		max-width: 480px;
+		width: 100%;
+		max-width: 640px;
+		box-sizing: border-box;
 		margin-bottom: 28px;
 	}
 	.sb-lobby-tips h3 {
@@ -952,7 +1362,7 @@
 		color: #555;
 		font-size: 0.9rem;
 		margin-bottom: 4px;
-		margin-left: 18px;
+		margin-left: 0px;
 		list-style-type: disc;
 	}
 
@@ -966,6 +1376,7 @@
 		font-weight: 500;
 		cursor: pointer;
 		transition: background 0.2s, transform 0.1s;
+		margin-top:0px;
 	}
 	.sb-start-btn:hover { background: #b5593a; transform: translateY(-1px); }
 	.sb-start-btn:active { transform: translateY(0); }
@@ -974,25 +1385,35 @@
 	/* ── Coaching Layout ── */
 	.sb-coaching-layout {
 		display: flex;
-		min-height: calc(100vh - 50px);
+		height: calc(100vh - 56px);
+		margin-top: 56px;
+		overflow: hidden;
 	}
 	.sb-coaching-main {
 		flex: 1;
 		min-width: 0;
-		padding: 24px 24px 0;
+		padding: 0;
 		display: flex;
 		flex-direction: column;
-		min-height: calc(100vh - 50px);
+		height: 100%;
+		overflow: hidden;
 		background: #f9f9f8;
 	}
 	.sb-coaching-sidebar {
 		flex-shrink: 0;
-		padding: 24px;
-		overflow-y: auto;
-		position: sticky;
-		top: 50px;
-		height: calc(100vh - 50px);
+		display: flex;
+		flex-direction: column;
+		height: 100%;
 		background: #ffffff;
+		overflow: hidden;
+	}
+	.sb-sidebar-top {
+		flex-shrink: 0;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding: 16px 24px;
+		border-bottom: 1px solid #eee;
 	}
 	.sb-coaching-resize-handle {
 		width: 6px;
@@ -1029,13 +1450,10 @@
 		display: flex;
 		align-items: center;
 		gap: 12px;
-		padding: 12px 0;
+		padding: 12px 24px;
 		border-bottom: 1px solid #e5e5e3;
-		margin-bottom: 8px;
-		position: sticky;
-		top: 50px;
 		background: #f9f9f8;
-		z-index: 100;
+		flex-shrink: 0;
 	}
 	.sb-avatar-placeholder {
 		width: 40px;
@@ -1054,6 +1472,12 @@
 		text-align: left;
 		margin: 0;
 	}
+	.sb-header-actions {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		flex-shrink: 0;
+	}
 	.sb-session-timer {
 		font-size: 0.9rem;
 		font-weight: 600;
@@ -1062,10 +1486,19 @@
 		padding: 4px 12px;
 		border-radius: 16px;
 		background: #f0ebe4;
+		transition: all 0.3s ease;
 	}
 	.sb-session-timer.warning {
-		color: #dc2626;
-		background: #fef2f2;
+		color: #fff;
+		background: #dc2626;
+		font-size: 1.1rem;
+		padding: 6px 16px;
+		animation: pulse-timer 1s ease-in-out infinite;
+		box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.4);
+	}
+	@keyframes pulse-timer {
+		0%, 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.4); }
+		50% { box-shadow: 0 0 0 8px rgba(220, 38, 38, 0); }
 	}
 	.sb-end-btn {
 		background: transparent;
@@ -1077,6 +1510,7 @@
 		font-weight: 500;
 		cursor: pointer;
 		transition: all 0.2s;
+		margin: 0;
 	}
 	.sb-end-btn:hover {
 		background: #fef2f2;
@@ -1126,7 +1560,7 @@
 	.sb-messages {
 		flex: 1;
 		overflow-y: auto;
-		padding: 16px 0;
+		padding: 24px 0 16px;
 		display: flex;
 		flex-direction: column;
 		gap: 20px;
@@ -1216,6 +1650,11 @@
 	.sb-input-bar button:hover:not(:disabled) { background: #b5593a; }
 
 	/* ── STAR Progress Panel ── */
+	.sb-star-progress-panel {
+		flex: 1;
+		overflow-y: auto;
+		padding: 24px;
+	}
 	.sb-star-progress-header {
 		display: flex;
 		align-items: center;
@@ -1335,6 +1774,24 @@
 		margin-bottom: 12px;
 		text-align: left;
 	}
+	.sb-report-star-section {
+		margin-bottom: 16px;
+	}
+	.sb-report-star-label {
+		font-weight: 600;
+		font-size: 0.9rem;
+		color: #555;
+		margin-bottom: 4px;
+	}
+	.sb-report-star-content {
+		background: #faf8f5;
+		border-left: 3px solid #e07a5f;
+		padding: 10px 14px;
+		color: #2d2d2d;
+		font-size: 0.92rem;
+		line-height: 1.6;
+		border-radius: 0 6px 6px 0;
+	}
 	.sb-full-story {
 		background: #faf8f5;
 		border: 1px solid #e5e5e3;
@@ -1348,6 +1805,257 @@
 	.sb-scorecard-actions {
 		text-align: center;
 		padding: 24px 0;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 12px;
+	}
+	.sb-error-dashboard-link {
+		font-size: 0.85rem;
+		color: #8E8CA0;
+		text-decoration: none;
+		&:hover {
+			color: #2D2B3D;
+			text-decoration: underline;
+		}
+	}
+	.sb-glitch-notice {
+		color: #c96442 !important;
+		font-weight: 600;
+		font-size: 0.88rem;
+		margin-top: 12px;
+	}
+
+	/* Inline support form */
+	.sb-support-inline {
+		margin-top: 28px;
+		padding-top: 24px;
+		border-top: 1px solid #f0ece6;
+		text-align: center;
+	}
+	.sb-support-inline h4 {
+		font-size: 0.95rem;
+		font-weight: 700;
+		color: #2D2B3D;
+		margin: 0 0 4px;
+	}
+	.sb-support-hint {
+		font-size: 0.82rem;
+		color: #8E8CA0;
+		margin: 0 0 12px;
+	}
+	.sb-support-textarea {
+		display: block;
+		width: 100%;
+		box-sizing: border-box;
+		padding: 12px 14px;
+		border: 1px solid #e0dcd6;
+		border-radius: 10px;
+		font-size: 0.88rem;
+		font-family: inherit;
+		color: #2D2B3D;
+		resize: vertical;
+		line-height: 1.5;
+		margin-bottom: 12px;
+		&:focus {
+			outline: none;
+			border-color: #c96442;
+		}
+		&::placeholder {
+			color: #bbb;
+		}
+	}
+	.sb-support-btns {
+		display: flex;
+		justify-content: flex-end;
+		gap: 8px;
+	}
+	.sb-support-cancel {
+		padding: 8px 18px;
+		border: 1px solid #e0dcd6;
+		border-radius: 20px;
+		background: white;
+		font-size: 0.85rem;
+		font-weight: 600;
+		color: #8E8CA0;
+		cursor: pointer;
+		&:hover { border-color: #ccc; color: #2D2B3D; }
+	}
+	.sb-support-submit {
+		padding: 8px 22px;
+		border: none;
+		border-radius: 20px;
+		background: #c96442;
+		color: white;
+		font-size: 0.85rem;
+		font-weight: 600;
+		cursor: pointer;
+		&:hover:not(:disabled) { background: #b5593a; }
+		&:disabled { opacity: 0.5; cursor: not-allowed; }
+	}
+	.sb-support-trigger {
+		background: none;
+		border: none;
+		font-size: 0.85rem;
+		color: #8E8CA0;
+		cursor: pointer;
+		padding: 0;
+		&:hover { color: #c96442; text-decoration: underline; }
+	}
+	.sb-support-done {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 8px;
+	}
+	.sb-support-done-icon {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 36px;
+		height: 36px;
+		border-radius: 50%;
+		background: #e8f5e9;
+		color: #2e7d32;
+		font-size: 1rem;
+		font-weight: 700;
+	}
+	.sb-support-done p {
+		font-size: 0.85rem;
+		color: #8E8CA0;
+		margin: 0;
+	}
+
+	/* ── Strength Signals Card ── */
+	.sb-signals-card {
+		background: #fff;
+		border: 1px solid #e5e5e3;
+		border-radius: 16px;
+		padding: 28px;
+		margin-top: 20px;
+	}
+	.sb-signals-card h3 {
+		font-size: 1.1rem;
+		font-weight: 700;
+		color: #2d2b3d;
+		margin: 0 0 4px;
+		text-align: left;
+	}
+	.sb-signals-subtitle {
+		font-size: 0.84rem;
+		color: #999;
+		margin: 0 0 20px;
+	}
+	.sb-signals-loading {
+		font-size: 0.88rem;
+		color: #999;
+		font-style: italic;
+	}
+	.sb-signals-group {
+		margin-bottom: 20px;
+		&:last-child { margin-bottom: 0; }
+	}
+	.sb-signals-group-label {
+		font-size: 0.78rem;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+		margin-bottom: 10px;
+	}
+	.sb-signals-strong-label { color: #2e7d32; }
+	.sb-signals-improve-label { color: #c96442; }
+
+	.sb-signal-item {
+		display: flex;
+		gap: 10px;
+		padding: 10px 0;
+		border-bottom: 1px solid #f0ece6;
+		&:last-child { border-bottom: none; }
+	}
+	.sb-signal-icon {
+		flex-shrink: 0;
+		width: 22px;
+		height: 22px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		border-radius: 50%;
+		font-size: 0.75rem;
+		font-weight: 700;
+		margin-top: 2px;
+	}
+	.sb-signal-strong .sb-signal-icon {
+		background: #e8f5e9;
+		color: #2e7d32;
+	}
+	.sb-signal-improve .sb-signal-icon {
+		background: #fff3e0;
+		color: #c96442;
+	}
+	.sb-signal-name {
+		font-weight: 700;
+		font-size: 0.9rem;
+		color: #2d2b3d;
+		margin-right: 6px;
+	}
+	.sb-signal-explain {
+		font-size: 0.88rem;
+		color: #666;
+		line-height: 1.45;
+	}
+
+	/* ── Watch Out Flags ── */
+	.sb-flags-card {
+		background: #fff;
+		border: 1px solid #e5e5e3;
+		border-radius: 16px;
+		padding: 28px;
+		margin-top: 20px;
+	}
+	.sb-flags-card h3 {
+		font-size: 1.1rem;
+		font-weight: 700;
+		color: #2d2b3d;
+		margin: 0 0 4px;
+		text-align: left;
+	}
+	.sb-flags-subtitle {
+		font-size: 0.84rem;
+		color: #999;
+		margin: 0 0 20px;
+	}
+	.sb-flag-item {
+		display: flex;
+		gap: 10px;
+		padding: 10px 0;
+		border-bottom: 1px solid #f0ece6;
+		&:last-child { border-bottom: none; }
+	}
+	.sb-flag-icon {
+		flex-shrink: 0;
+		width: 22px;
+		height: 22px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		border-radius: 50%;
+		font-size: 0.75rem;
+		font-weight: 700;
+		margin-top: 2px;
+		background: #fff3e0;
+		color: #e65100;
+	}
+	.sb-flag-text {
+		font-weight: 700;
+		font-size: 0.9rem;
+		color: #2d2b3d;
+		display: block;
+		margin-bottom: 2px;
+	}
+	.sb-flag-suggestion {
+		font-size: 0.88rem;
+		color: #666;
+		line-height: 1.45;
 	}
 
 	/* ── Talking Points Panel ── */
@@ -1425,5 +2133,56 @@
 	@media (max-width: 600px) {
 		.sb-container { padding: 16px 16px 0; }
 		.sb-coaching-main { padding: 16px 16px 0; }
+	}
+
+	/* ══════════ TOAST ══════════ */
+	.toast {
+		position: fixed;
+		top: 72px;
+		left: 50%;
+		transform: translateX(-50%);
+		z-index: 2000;
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		padding: 14px 24px;
+		border-radius: 12px;
+		font-size: 14px;
+		font-weight: 500;
+		box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+		cursor: pointer;
+		animation: toast-in 0.3s ease-out;
+		max-width: 520px;
+	}
+
+	.toast-error {
+		background: #FFF0F0;
+		color: #C53030;
+		border: 1px solid #FEB2B2;
+	}
+
+	.toast-success {
+		background: #F0FFF4;
+		color: #276749;
+		border: 1px solid #9AE6B4;
+	}
+
+	.toast-info {
+		background: #EBF8FF;
+		color: #2B6CB0;
+		border: 1px solid #90CDF4;
+	}
+
+	.toast-icon { font-size: 18px; }
+	.toast-msg { flex: 1; }
+	.toast-close {
+		font-size: 20px;
+		opacity: 0.5;
+		&:hover { opacity: 1; }
+	}
+
+	@keyframes toast-in {
+		from { opacity: 0; transform: translateX(-50%) translateY(-12px); }
+		to { opacity: 1; transform: translateX(-50%) translateY(0); }
 	}
 </style>
