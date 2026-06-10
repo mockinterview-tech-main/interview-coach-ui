@@ -311,7 +311,6 @@ export async function streamCoachResponse(
   let messagesToSend = conversationHistory;
   if (userMsgCount > SUMMARIZE_AFTER_TURNS) {
     messagesToSend = await summarizeHistory(conversationHistory);
-    console.log(`[summarize] Compressed ${conversationHistory.length} messages → ${messagesToSend.length}`);
   }
 
   const maxTokens = getMaxTokens(conversationHistory);
@@ -334,13 +333,6 @@ export async function streamCoachResponse(
 
   if (sessionId && finalMessage.usage) {
     trackUsage(sessionId, finalMessage.usage as MessageUsage);
-    const cost = getSessionCost(sessionId);
-    const cacheInfo = (finalMessage.usage as any).cache_read_input_tokens
-      ? ` (cache hit: ${(finalMessage.usage as any).cache_read_input_tokens})`
-      : (finalMessage.usage as any).cache_creation_input_tokens
-        ? ` (cache created: ${(finalMessage.usage as any).cache_creation_input_tokens})`
-        : '';
-    console.log(`[tokens] session=${sessionId} call=${cost?.api_calls} maxTok=${maxTokens} in=${finalMessage.usage.input_tokens} out=${finalMessage.usage.output_tokens}${cacheInfo} | cumulative: ${cost?.total_tokens} tokens, ${cost?.total_cost}`);
   }
 
   return fullText;
@@ -385,13 +377,6 @@ export async function getCoachResponse(
 
   if (sessionId && response.usage) {
     trackUsage(sessionId, response.usage as MessageUsage);
-    const cost = getSessionCost(sessionId);
-    const cacheInfo = (response.usage as any).cache_read_input_tokens
-      ? ` (cache hit: ${(response.usage as any).cache_read_input_tokens})`
-      : (response.usage as any).cache_creation_input_tokens
-        ? ` (cache created: ${(response.usage as any).cache_creation_input_tokens})`
-        : '';
-    console.log(`[tokens] session=${sessionId} call=${cost?.api_calls} maxTok=${maxTokens} in=${response.usage.input_tokens} out=${response.usage.output_tokens}${cacheInfo} | cumulative: ${cost?.total_tokens} tokens, ${cost?.total_cost}`);
   }
 
   return (response.content[0] as { type: 'text'; text: string }).text;
@@ -429,8 +414,6 @@ Write in a natural speaking voice — this will be read aloud in an interview. U
 
   if (sessionId && response.usage) {
     trackUsage(sessionId, response.usage as MessageUsage);
-    const cost = getSessionCost(sessionId);
-    console.log(`[tokens] session=${sessionId} REPORT in=${response.usage.input_tokens} out=${response.usage.output_tokens} | SESSION TOTAL: ${cost?.total_tokens} tokens, ${cost?.total_cost}`);
   }
 
   try {
@@ -495,8 +478,6 @@ Respond with ONLY a JSON object:
 
     if (sessionId && response.usage) {
       trackUsage(sessionId, response.usage as MessageUsage);
-      const cost = getSessionCost(sessionId);
-      console.log(`[tokens] session=${sessionId} STRENGTH_SIGNALS in=${response.usage.input_tokens} out=${response.usage.output_tokens} | cumulative: ${cost?.total_tokens} tokens, ${cost?.total_cost}`);
     }
 
     const text = (response.content[0] as { type: 'text'; text: string }).text;
@@ -556,8 +537,6 @@ Respond with ONLY a JSON object:
 
     if (sessionId && response.usage) {
       trackUsage(sessionId, response.usage as MessageUsage);
-      const cost = getSessionCost(sessionId);
-      console.log(`[tokens] session=${sessionId} TALKING_POINTS in=${response.usage.input_tokens} out=${response.usage.output_tokens} | cumulative: ${cost?.total_tokens} tokens, ${cost?.total_cost}`);
     }
 
     const text = (response.content[0] as { type: 'text'; text: string }).text;
@@ -613,8 +592,6 @@ Respond with ONLY a JSON object:
 
     if (sessionId && response.usage) {
       trackUsage(sessionId, response.usage as MessageUsage);
-      const cost = getSessionCost(sessionId);
-      console.log(`[tokens] session=${sessionId} STAR_EXTRACT in=${response.usage.input_tokens} out=${response.usage.output_tokens} | cumulative: ${cost?.total_tokens} tokens, ${cost?.total_cost}`);
     }
 
     const text = (response.content[0] as { type: 'text'; text: string }).text;

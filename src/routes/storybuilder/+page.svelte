@@ -605,7 +605,6 @@
 		}).then(res => res.json()).then(data => {
 			if (data.saved) {
 				savedStoryId = data.id;
-				console.log('Story saved:', data.id);
 			}
 		}).catch(err => console.warn('Failed to save story:', err));
 	}

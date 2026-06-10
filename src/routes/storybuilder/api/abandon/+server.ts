@@ -59,10 +59,7 @@ export const POST: RequestHandler = async ({ locals, request }) => {
                     .update({ credits: profile.credits + 1 })
                     .eq('id', userId);
 
-                console.log(`[refund] Auto-refunded 1 credit for user=${userId} session=${sessionId} (duration=${durationMs}ms, stars=${starSectionsFilled})`);
             }
-        } else {
-            console.log(`[abandon] Session abandoned without refund: user=${userId} session=${sessionId} (duration=${durationMs}ms, stars=${starSectionsFilled})`);
         }
 
         return json({ status, refunded: shouldRefund });

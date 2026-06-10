@@ -245,10 +245,6 @@ export async function endSession(sessionId: string, { generateReport = false } =
   session.completedAt = new Date().toISOString();
 
   const cost = getSessionCost(sessionId);
-  if (cost) {
-    console.log(`\n══ SESSION COMPLETE: ${sessionId} ══`);
-    console.log(`  API calls: ${cost.api_calls} | TOTAL: ${cost.total_tokens.toLocaleString()} tokens → ${cost.total_cost}`);
-  }
 
   const durationMs = session.completedAt && session.startedAt
     ? new Date(session.completedAt).getTime() - new Date(session.startedAt).getTime()

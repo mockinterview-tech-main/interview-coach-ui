@@ -23,7 +23,7 @@ export const POST: RequestHandler = async ({ locals, request }) => {
             .update({ status: 'glitch', star_sections_filled: starSectionsFilled ?? null })
             .eq('session_id', sessionId);
 
-        console.log(`[glitch] Story generation failed after retries: user=${userId} session=${sessionId}`);
+        // Slack alert below handles notification
 
         // Send Slack alert (fire and forget)
         if (ALERT_SLACK_WEBHOOK) {
