@@ -1,5 +1,5 @@
 import { json } from '@sveltejs/kit';
-import { ALERT_SLACK_WEBHOOK } from '$env/static/private';
+import { env } from '$env/dynamic/private';
 import type { RequestHandler } from './$types';
 
 export const POST: RequestHandler = async ({ locals, request }) => {
@@ -26,8 +26,8 @@ export const POST: RequestHandler = async ({ locals, request }) => {
         // Slack alert below handles notification
 
         // Send Slack alert (fire and forget)
-        if (ALERT_SLACK_WEBHOOK) {
-            fetch(ALERT_SLACK_WEBHOOK, {
+        if (env.ALERT_SLACK_WEBHOOK) {
+            fetch(env.ALERT_SLACK_WEBHOOK, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
