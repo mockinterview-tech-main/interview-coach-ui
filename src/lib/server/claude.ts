@@ -25,13 +25,16 @@ export function trackUsageToDb(sessionId: string, usage: MessageUsage, supabase:
   const outputCost = (usage.output_tokens / 1_000_000) * SONNET_OUTPUT_PRICE;
   const callCost = parseFloat((inputCost + outputCost).toFixed(6));
 
+  console.log(`[trackUsage] session=${sessionId} input=${usage.input_tokens} output=${usage.output_tokens} cost=${callCost}`);
+
   supabase.rpc('increment_session_usage', {
     p_session_id: sessionId,
     p_input_tokens: usage.input_tokens,
     p_output_tokens: usage.output_tokens,
     p_cost: callCost,
-  }).then(({ error }: any) => {
-    if (error) console.error('Failed to track usage:', error.message);
+  }).then(({ data, error }: any) => {
+    if (error) console.error('[trackUsage] RPC FAILED:', error.message, error.details, error.hint);
+    else console.log('[trackUsage] RPC OK for', sessionId);
   });
 }
 
