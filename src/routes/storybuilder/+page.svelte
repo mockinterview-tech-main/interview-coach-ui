@@ -63,6 +63,60 @@
 	let ttsStarted = false;
 	let ttsStopped = false;
 
+	// ── Filler phrases (bridging silence while Claude thinks) ──
+	const fillerPhrases = [
+		'Hmm, let me think about that.',
+		'Okay, let me consider that.',
+		'That\'s a great point, let me think.',
+		'Interesting, give me a moment.',
+		'Alright, let me work with that.',
+	];
+	let fillerCache: Map<string, Blob> = new Map();
+	let fillerAudio: HTMLAudioElement | null = null;
+	let fillerPlaying = false;
+
+	function prefetchFillers() {
+		for (const phrase of fillerPhrases) {
+			fetch('/storybuilder/api/tts', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ text: phrase }),
+			}).then(res => res.ok ? res.blob() : null)
+			  .then(blob => { if (blob) fillerCache.set(phrase, blob); })
+			  .catch(() => {});
+		}
+	}
+
+	function playFiller() {
+		if (!voiceMode || fillerCache.size === 0) return;
+		const phrases = Array.from(fillerCache.keys());
+		const phrase = phrases[Math.floor(Math.random() * phrases.length)];
+		const blob = fillerCache.get(phrase);
+		if (!blob) return;
+		const url = URL.createObjectURL(blob);
+		fillerAudio = new Audio(url);
+		fillerPlaying = true;
+		fillerAudio.onended = () => {
+			URL.revokeObjectURL(url);
+			fillerAudio = null;
+			fillerPlaying = false;
+		};
+		fillerAudio.onerror = () => {
+			URL.revokeObjectURL(url);
+			fillerAudio = null;
+			fillerPlaying = false;
+		};
+		fillerAudio.play().catch(() => { fillerPlaying = false; });
+	}
+
+	function stopFiller() {
+		if (fillerAudio) {
+			fillerAudio.pause();
+			fillerAudio = null;
+		}
+		fillerPlaying = false;
+	}
+
 	// ── Helpers ──
 	function stripMarkdown(text: string): string {
 		return text
@@ -229,6 +283,15 @@
 	async function ttsProcessQueue() {
 		if (isProcessingQueue) return;
 		isProcessingQueue = true;
+		// Wait for filler to finish naturally before starting real TTS
+		if (fillerPlaying && fillerAudio) {
+			await new Promise<void>(resolve => {
+				const fa = fillerAudio;
+				if (!fa || !fillerPlaying) { resolve(); return; }
+				fa.onended = () => { fillerAudio = null; fillerPlaying = false; resolve(); };
+				fa.onerror = () => { fillerAudio = null; fillerPlaying = false; resolve(); };
+			});
+		}
 		while (sentenceQueue.length > 0 && !ttsStopped) {
 			// Prefetch next sentence while current one plays
 			if (sentenceQueue.length > 1) {
@@ -335,6 +398,7 @@
 		sentenceQueue = [];
 		isProcessingQueue = false;
 		ttsFlush = false;
+		stopFiller();
 		if (ttsAudio) {
 			ttsAudio.pause();
 			ttsAudio = null;
@@ -350,6 +414,9 @@
 
 		messages = [...messages, { role: 'candidate', content: userMessage }];
 		loading = true;
+
+		// Play filler phrase to bridge silence while Claude thinks
+		if (voiceMode) playFiller();
 
 		// Add streaming placeholder
 		messages = [...messages, { role: 'interviewer', content: '', streaming: true }];
@@ -563,6 +630,7 @@
 
 			if (voiceMode) {
 				ttsSpeak(cleanOpening);
+				prefetchFillers(); // warm up filler audio while user listens to greeting
 			}
 		} catch {
 			// Refund the credit if session failed to start
