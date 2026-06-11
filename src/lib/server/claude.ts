@@ -6,7 +6,7 @@ const anthropic = new Anthropic({
 });
 
 // ── Model config ──
-const MODEL = 'claude-sonnet-4-latest';
+const MODEL = 'claude-sonnet-4-6';
 
 // ── Token usage tracking (per-call to Supabase) ──
 const SONNET_INPUT_PRICE = 3.0;   // $ per 1M input tokens
