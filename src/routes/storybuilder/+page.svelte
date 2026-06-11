@@ -377,16 +377,27 @@
 							if (voiceMode) {
 								const cleanSoFar = stripMarkdown(streamedText);
 								const unspoken = cleanSoFar.slice(spokenText.length);
-								// Split on sentences (allowing closing quotes after punctuation) OR long clauses
-								const chunkRegex = /[^.!?\n]+[.!?]+[""'')\]]*(?:\s|$)|[^.!?;:\n]{30,}[;:,](?:\s|$)/g;
-								let match;
-								let lastEnd = 0;
-								while ((match = chunkRegex.exec(unspoken)) !== null) {
-									const sentence = match[0].trim();
-									if (sentence.length > 5) ttsQueueSentence(sentence);
-									lastEnd = match.index + match[0].length;
+								// Scan for sentence/line break points to queue TTS chunks
+								const breaks = ['. ', '? ', '! ', '.\n', '?\n', '!\n', '."', '?"', '!"', '.”', '?”', '!”', '\n'];
+								let consumed = 0;
+								let remaining = unspoken;
+								while (remaining.length > 0) {
+									let earliest = -1;
+									let breakLen = 0;
+									for (const br of breaks) {
+										const idx = remaining.indexOf(br);
+										if (idx !== -1 && (earliest === -1 || idx < earliest)) {
+											earliest = idx;
+											breakLen = br.length;
+										}
+									}
+									if (earliest === -1) break; // no break found yet — wait for more streamed text
+									const chunk = remaining.slice(0, earliest + breakLen).trim();
+									if (chunk.length > 5) ttsQueueSentence(chunk);
+									consumed += earliest + breakLen;
+									remaining = remaining.slice(earliest + breakLen);
 								}
-								if (lastEnd > 0) spokenText = cleanSoFar.slice(0, spokenText.length + lastEnd);
+								if (consumed > 0) spokenText = cleanSoFar.slice(0, spokenText.length + consumed);
 							}
 						} else if (event.type === 'done') {
 							finalData = event;
