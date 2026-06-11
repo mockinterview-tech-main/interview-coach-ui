@@ -300,13 +300,23 @@ export async function streamCoachResponse(
     messagesToSend = await summarizeHistory(conversationHistory);
   }
 
+  // Add cache breakpoint on conversation history prefix (all messages except the latest user message)
+  // This way Claude skips re-reading the cached portion on each turn — faster + 90% cheaper on input
+  const messagesWithCache = messagesToSend.map((m, i) => {
+    if (i === messagesToSend.length - 2 && messagesToSend.length >= 3) {
+      // Cache up to the second-to-last message (the assistant reply before the new user message)
+      return { ...m, content: [{ type: 'text' as const, text: m.content as string, cache_control: { type: 'ephemeral' as const } }] };
+    }
+    return m;
+  });
+
   const maxTokens = getMaxTokens(conversationHistory);
 
   const stream = anthropic.messages.stream({
     model: MODEL,
     max_tokens: maxTokens,
     system: systemMessages,
-    messages: messagesToSend,
+    messages: messagesWithCache,
   });
 
   let fullText = '';
@@ -354,13 +364,20 @@ export async function getCoachResponse(
     messagesToSend = await summarizeHistory(conversationHistory);
   }
 
+  const messagesWithCache = messagesToSend.map((m, i) => {
+    if (i === messagesToSend.length - 2 && messagesToSend.length >= 3) {
+      return { ...m, content: [{ type: 'text' as const, text: m.content as string, cache_control: { type: 'ephemeral' as const } }] };
+    }
+    return m;
+  });
+
   const maxTokens = getMaxTokens(conversationHistory);
 
   const response = await anthropic.messages.create({
     model: MODEL,
     max_tokens: maxTokens,
     system: systemMessages,
-    messages: messagesToSend,
+    messages: messagesWithCache,
   });
 
   if (sessionId && response.usage) {
