@@ -71,6 +71,9 @@
 		'Got it.',
 		'Mm.',
 	];
+	// Words to strip from the start of coach response if they overlap with the filler we just played
+	const fillerWords = ['mm-hmm', 'mm', 'hmm', 'okay', 'ok', 'right', 'got it', 'alright', 'ah', 'oh', 'sure', 'yeah', 'yes'];
+	let lastFillerPlayed: string | null = null;
 	let fillerCache: Map<string, Blob> = new Map();
 	let fillerAudio: HTMLAudioElement | null = null;
 	let fillerPlaying = false;
@@ -91,6 +94,7 @@
 		if (!voiceMode || fillerCache.size === 0) return;
 		const phrases = Array.from(fillerCache.keys());
 		const phrase = phrases[Math.floor(Math.random() * phrases.length)];
+		lastFillerPlayed = phrase;
 		const blob = fillerCache.get(phrase);
 		if (!blob) return;
 		const url = URL.createObjectURL(blob);
@@ -417,6 +421,7 @@
 
 		// Play filler nod after substantial user replies (not early short exchanges)
 		const userMsgCount = messages.filter(m => m.role === 'candidate').length;
+		lastFillerPlayed = null;
 		if (voiceMode && userMsgCount >= 2 && userMessage.length > 40) playFiller();
 
 		// Add streaming placeholder
@@ -465,10 +470,24 @@
 
 							if (voiceMode) {
 								const cleanSoFar = stripMarkdown(streamedText);
-								const unspoken = cleanSoFar.slice(spokenText.length);
+								let unspoken = cleanSoFar.slice(spokenText.length);
+								// Strip leading filler words from TTS if we just played a filler
+								const isFirstChunk = spokenText.length === 0 || !ttsStarted;
+								if (isFirstChunk && lastFillerPlayed && unspoken.length > 10) {
+									for (const fw of fillerWords) {
+										const pattern = new RegExp('^' + fw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '[,!.\\s]*', 'i');
+										if (pattern.test(unspoken)) {
+											const stripped = unspoken.replace(pattern, '').trimStart();
+											// Advance spokenText past the stripped filler so it's never spoken
+											spokenText = cleanSoFar.slice(0, cleanSoFar.length - unspoken.length + (unspoken.length - stripped.length));
+											unspoken = stripped;
+											lastFillerPlayed = null;
+											break;
+										}
+									}
+								}
 								// Eager first chunk: split at comma/colon/semicolon after 30+ chars to start TTS fast
 								// Subsequent chunks: wait for proper sentence boundaries
-								const isFirstChunk = spokenText.length === 0 || !ttsStarted;
 								const eagerBreaks = [', ', '; ', ': ', ',\n', ';\n', ':\n'];
 								const sentenceBreaks = ['. ', '? ', '! ', '.\n', '?\n', '!\n', '.”', '?”', '!”', '”', '?”', '!”', '\n'];
 								const breaks = isFirstChunk && unspoken.length >= 30 ? [...sentenceBreaks, ...eagerBreaks] : sentenceBreaks;
