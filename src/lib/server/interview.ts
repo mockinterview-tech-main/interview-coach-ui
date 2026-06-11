@@ -122,7 +122,7 @@ export async function startSession(sessionId: string, supabase: any): Promise<st
   const shuffled = [...STARTER_PROMPTS].sort(() => Math.random() - 0.5);
   const suggestions = shuffled.slice(0, 3);
 
-  const openingMessage = `Hey! I'm here to help you build a strong STAR story for behavioral interviews. We've got 20 minutes, plenty of time to turn a real experience into a polished answer.
+  const openingMessage = `Hey! We've got 20 minutes, plenty of time to turn a real experience into a remarkable answer to impress your interviewer.
 
 You can start by telling me which interview question you want to prepare for, or just describe a work experience you think could make a good story. If you're not sure where to begin, here are a few ideas: ${suggestions[0]}, ${suggestions[1]}, or ${suggestions[2]}.
 
