@@ -331,8 +331,16 @@ export async function streamCoachResponse(
 
   const finalMessage = await stream.finalMessage();
 
+  console.log('[DEBUG] streamCoachResponse finished. sessionId:', sessionId, 'hasUsage:', !!finalMessage.usage, 'hasSupabase:', !!supabase);
+  if (finalMessage.usage) {
+    console.log('[DEBUG] usage:', JSON.stringify(finalMessage.usage));
+  }
+
   if (sessionId && finalMessage.usage) {
     if (supabase) trackUsageToDb(sessionId, finalMessage.usage as MessageUsage, supabase);
+    else console.error('[DEBUG] supabase is falsy!');
+  } else {
+    console.error('[DEBUG] skipped trackUsage — sessionId:', sessionId, 'usage:', finalMessage.usage);
   }
 
   return fullText;
