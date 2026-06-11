@@ -6,9 +6,7 @@ const anthropic = new Anthropic({
 });
 
 // ── Model config ──
-const MODEL = 'claude-sonnet-4-20250514';
-// Note: if this model ID becomes deprecated, update to the latest Sonnet version
-// Check https://docs.anthropic.com/en/docs/about-claude/models for current model IDs
+const MODEL = 'claude-sonnet-4-latest';
 
 // ── Token usage tracking (per-call to Supabase) ──
 const SONNET_INPUT_PRICE = 3.0;   // $ per 1M input tokens
