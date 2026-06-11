@@ -26,6 +26,7 @@
 	let isSpeaking = false;
 	let interimTranscript = '';
 	let browserSupported = true;
+	let showTranscript = false;
 	let toast: { message: string; type: 'error' | 'success' | 'info' } | null = null;
 	let toastTimeout: ReturnType<typeof setTimeout> | null = null;
 
@@ -1316,74 +1317,160 @@
 	<!-- Coaching two-column layout -->
 	<div class="sb-coaching-layout">
 		<div class="sb-coaching-main">
-			<!-- Header -->
-			<div class="sb-interview-header">
-				<div class="sb-avatar-placeholder">&#10024;</div>
-				<div style="flex: 1;">
-					<h2>Story Coaching</h2>
-					<div class="sb-mic-indicator {micState}">
-						<div class="sb-mic-dot"></div>
-						<span class="sb-mic-label">{micLabel}</span>
-					</div>
-				</div>
-			</div>
-
-			<!-- Messages -->
-			<!-- svelte-ignore a11y-click-events-have-key-events -->
-			<!-- svelte-ignore a11y-no-static-element-interactions -->
-			<div
-				class="sb-messages"
-				class:interruptable={isSpeaking}
-				on:click={handleInterrupt}
-			>
-				{#each messages as msg}
-					<div class="sb-message {msg.role}">
-						<div class="sb-message-label">
-							{msg.role === 'interviewer' ? '✨ Coach' : '🙋 You'}
+			{#if voiceMode}
+				<!-- ══════ CALL VIEW (voice mode) ══════ -->
+				<div class="sb-call-view">
+					<!-- Call status area -->
+					<!-- svelte-ignore a11y-click-events-have-key-events -->
+					<!-- svelte-ignore a11y-no-static-element-interactions -->
+					<div class="sb-call-stage" on:click={isSpeaking ? handleInterrupt : undefined}>
+						<div class="sb-call-avatar" class:speaking={isSpeaking} class:listening={isListening} class:thinking={loading && !isSpeaking}>
+							<span class="sb-call-avatar-icon">&#10024;</span>
+							<div class="sb-call-avatar-ring"></div>
 						</div>
-						<div class="sb-message-content" class:typing={msg.role === 'interviewer' && !msg.content}>
-							{#if msg.streaming && voiceMode && ttsRevealedText && msg.content}
-								<span class="tts-spoken">{ttsRevealedText}</span><span class="tts-upcoming">{msg.content.slice(ttsRevealedText.length)}</span>
+						<div class="sb-call-status">
+							{#if isSpeaking}
+								Coach is speaking...
+							{:else if loading}
+								Thinking...
+							{:else if isListening}
+								Listening to you...
 							{:else}
-								{msg.content || 'Thinking...'}
+								Ready
 							{/if}
 						</div>
+						{#if isSpeaking}
+							<button class="sb-call-interrupt" on:click|stopPropagation={handleInterrupt}>
+								Tap to interrupt
+							</button>
+						{/if}
+						{#if isListening && interimTranscript}
+							<div class="sb-call-interim">"{interimTranscript}"</div>
+						{/if}
 					</div>
-				{/each}
-				{#if isListening && interimTranscript}
-					<div class="sb-message candidate">
-						<div class="sb-message-label">&#128587; You (speaking...)</div>
-						<div class="sb-message-content interim">{interimTranscript}</div>
-					</div>
-				{/if}
-				{#if loading && !messages.some(m => m.streaming)}
-					<div class="sb-message interviewer">
-						<div class="sb-message-label">&#10024; Coach</div>
-						<div class="sb-message-content typing">Thinking...</div>
-					</div>
-				{/if}
-				<div bind:this={messagesEndEl}></div>
-			</div>
 
-			<!-- Input bar -->
-			<form class="sb-input-bar" on:submit|preventDefault={handleSend}>
-				<textarea
-					value={voiceMode && isListening ? interimTranscript : input}
-					on:input={(e) => { if (!isListening) input = e.currentTarget.value; }}
-					placeholder={sessionExpired ? 'Session ended — saving your story...' : isListening ? 'Listening... tell me about your experience' : 'Or type here...'}
-					rows="2"
-					disabled={loading || isSpeaking || sessionExpired}
-					on:keydown={(e) => {
-						if (e.key === 'Enter' && !e.shiftKey) {
-							e.preventDefault();
-							handleSend();
-						}
-					}}
-				></textarea>
-				<button type="submit" disabled={loading || isSpeaking || (!input.trim() && !isListening)}>
-					&#x2191;
-				</button>
-			</form>
+					<!-- Transcript (collapsible) -->
+					{#if showTranscript}
+						<div class="sb-transcript-panel">
+							<div class="sb-transcript-messages">
+								{#each messages as msg}
+									<div class="sb-transcript-msg {msg.role}">
+										<span class="sb-transcript-label">{msg.role === 'interviewer' ? 'Coach' : 'You'}:</span>
+										{#if msg.streaming && ttsRevealedText && msg.content}
+											<span class="tts-spoken">{ttsRevealedText}</span><span class="tts-upcoming">{msg.content.slice(ttsRevealedText.length)}</span>
+										{:else}
+											{msg.content || 'Thinking...'}
+										{/if}
+									</div>
+								{/each}
+								{#if loading && !messages.some(m => m.streaming)}
+									<div class="sb-transcript-msg interviewer">
+										<span class="sb-transcript-label">Coach:</span> Thinking...
+									</div>
+								{/if}
+								<div bind:this={messagesEndEl}></div>
+							</div>
+						</div>
+					{:else}
+						<!-- Hidden anchor for scroll tracking -->
+						<div bind:this={messagesEndEl} style="display:none"></div>
+					{/if}
+
+					<!-- Call controls -->
+					<div class="sb-call-controls">
+						<button
+							class="sb-call-control-btn"
+							class:active={isListening}
+							on:click={() => isListening ? stopListening() : startListening()}
+							disabled={isSpeaking || loading || sessionExpired}
+						>
+							<span class="sb-call-control-icon">{isListening ? '🔴' : '🎤'}</span>
+							<span class="sb-call-control-label">{isListening ? 'Listening' : 'Mic'}</span>
+						</button>
+						<button
+							class="sb-call-control-btn"
+							class:active={showTranscript}
+							on:click={() => { showTranscript = !showTranscript; if (showTranscript) setTimeout(() => messagesEndEl?.scrollIntoView({ behavior: 'instant' }), 50); }}
+						>
+							<span class="sb-call-control-icon">📝</span>
+							<span class="sb-call-control-label">Transcript</span>
+						</button>
+						<button
+							class="sb-call-control-btn end"
+							on:click={handleEnd}
+							disabled={loading}
+						>
+							<span class="sb-call-control-icon">⏹</span>
+							<span class="sb-call-control-label">Finish</span>
+						</button>
+					</div>
+				</div>
+			{:else}
+				<!-- ══════ CHAT VIEW (text mode) ══════ -->
+				<div class="sb-interview-header">
+					<div class="sb-avatar-placeholder">&#10024;</div>
+					<div style="flex: 1;">
+						<h2>Story Coaching</h2>
+						<div class="sb-mic-indicator {micState}">
+							<div class="sb-mic-dot"></div>
+							<span class="sb-mic-label">{micLabel}</span>
+						</div>
+					</div>
+				</div>
+
+				<!-- Messages -->
+				<!-- svelte-ignore a11y-click-events-have-key-events -->
+				<!-- svelte-ignore a11y-no-static-element-interactions -->
+				<div
+					class="sb-messages"
+					class:interruptable={isSpeaking}
+					on:click={handleInterrupt}
+				>
+					{#each messages as msg}
+						<div class="sb-message {msg.role}">
+							<div class="sb-message-label">
+								{msg.role === 'interviewer' ? '✨ Coach' : '🙋 You'}
+							</div>
+							<div class="sb-message-content" class:typing={msg.role === 'interviewer' && !msg.content}>
+								{msg.content || 'Thinking...'}
+							</div>
+						</div>
+					{/each}
+					{#if isListening && interimTranscript}
+						<div class="sb-message candidate">
+							<div class="sb-message-label">&#128587; You (speaking...)</div>
+							<div class="sb-message-content interim">{interimTranscript}</div>
+						</div>
+					{/if}
+					{#if loading && !messages.some(m => m.streaming)}
+						<div class="sb-message interviewer">
+							<div class="sb-message-label">&#10024; Coach</div>
+							<div class="sb-message-content typing">Thinking...</div>
+						</div>
+					{/if}
+					<div bind:this={messagesEndEl}></div>
+				</div>
+
+				<!-- Input bar -->
+				<form class="sb-input-bar" on:submit|preventDefault={handleSend}>
+					<textarea
+						value={input}
+						on:input={(e) => { input = e.currentTarget.value; }}
+						placeholder={sessionExpired ? 'Session ended — saving your story...' : 'Type here...'}
+						rows="2"
+						disabled={loading || isSpeaking || sessionExpired}
+						on:keydown={(e) => {
+							if (e.key === 'Enter' && !e.shiftKey) {
+								e.preventDefault();
+								handleSend();
+							}
+						}}
+					></textarea>
+					<button type="submit" disabled={loading || isSpeaking || !input.trim()}>
+						&#x2191;
+					</button>
+				</form>
+			{/if}
 		</div>
 
 		<!-- Resize handle -->
@@ -1597,6 +1684,170 @@
 	.sb-coaching-resize-handle:hover,
 	:global(.sb-coaching-resize-handle.dragging) {
 		background: rgba(201, 100, 66, 0.06);
+	}
+
+	/* ── Call View (voice mode) ── */
+	.sb-call-view {
+		display: flex;
+		flex-direction: column;
+		height: 100%;
+		overflow: hidden;
+	}
+	.sb-call-stage {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: 16px;
+		min-height: 200px;
+		cursor: default;
+		user-select: none;
+	}
+	.sb-call-avatar {
+		position: relative;
+		width: 120px;
+		height: 120px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+	.sb-call-avatar-icon {
+		font-size: 48px;
+		z-index: 1;
+	}
+	.sb-call-avatar-ring {
+		position: absolute;
+		inset: 0;
+		border-radius: 50%;
+		border: 3px solid #e0d6ce;
+		transition: all 0.3s ease;
+	}
+	.sb-call-avatar.speaking .sb-call-avatar-ring {
+		border-color: #c96442;
+		animation: pulse-ring 1.5s ease-in-out infinite;
+		box-shadow: 0 0 0 0 rgba(201, 100, 66, 0.3);
+	}
+	.sb-call-avatar.listening .sb-call-avatar-ring {
+		border-color: #16a34a;
+		box-shadow: 0 0 12px rgba(22, 163, 74, 0.2);
+	}
+	.sb-call-avatar.thinking .sb-call-avatar-ring {
+		border-color: #d97706;
+		animation: pulse-ring-slow 2s ease-in-out infinite;
+	}
+	@keyframes pulse-ring {
+		0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(201, 100, 66, 0.3); }
+		50% { transform: scale(1.08); box-shadow: 0 0 20px 4px rgba(201, 100, 66, 0.15); }
+	}
+	@keyframes pulse-ring-slow {
+		0%, 100% { transform: scale(1); opacity: 0.7; }
+		50% { transform: scale(1.04); opacity: 1; }
+	}
+	.sb-call-status {
+		font-size: 1.1rem;
+		color: #666;
+		font-weight: 500;
+	}
+	.sb-call-interrupt {
+		background: none;
+		border: 1px solid #d4c9be;
+		color: #999;
+		padding: 6px 16px;
+		border-radius: 16px;
+		font-size: 0.85rem;
+		cursor: pointer;
+		transition: all 0.2s;
+		animation: fade-in 0.8s ease;
+	}
+	.sb-call-interrupt:hover {
+		border-color: #c96442;
+		color: #c96442;
+	}
+	@keyframes fade-in {
+		from { opacity: 0; transform: translateY(4px); }
+		to { opacity: 1; transform: translateY(0); }
+	}
+	.sb-call-interim {
+		color: #888;
+		font-style: italic;
+		font-size: 0.95rem;
+		max-width: 80%;
+		text-align: center;
+		line-height: 1.4;
+	}
+
+	/* Transcript panel */
+	.sb-transcript-panel {
+		flex-shrink: 0;
+		max-height: 35%;
+		border-top: 1px solid #eee;
+		overflow: hidden;
+		display: flex;
+		flex-direction: column;
+	}
+	.sb-transcript-messages {
+		overflow-y: auto;
+		padding: 12px 20px;
+		font-size: 0.88rem;
+		line-height: 1.5;
+	}
+	.sb-transcript-msg {
+		margin-bottom: 8px;
+	}
+	.sb-transcript-msg.interviewer {
+		color: #444;
+	}
+	.sb-transcript-msg.candidate, .sb-transcript-msg.user {
+		color: #777;
+	}
+	.sb-transcript-label {
+		font-weight: 600;
+		margin-right: 4px;
+	}
+
+	/* Call controls */
+	.sb-call-controls {
+		flex-shrink: 0;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 24px;
+		padding: 16px 20px;
+		border-top: 1px solid #eee;
+		background: #fff;
+	}
+	.sb-call-control-btn {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 4px;
+		background: none;
+		border: none;
+		cursor: pointer;
+		padding: 8px 16px;
+		border-radius: 12px;
+		transition: background 0.15s;
+	}
+	.sb-call-control-btn:hover:not(:disabled) {
+		background: #f5f0ea;
+	}
+	.sb-call-control-btn:disabled {
+		opacity: 0.3;
+		cursor: not-allowed;
+	}
+	.sb-call-control-btn.active {
+		background: #f0ebe5;
+	}
+	.sb-call-control-btn.end {
+		color: #c96442;
+	}
+	.sb-call-control-icon {
+		font-size: 1.5rem;
+	}
+	.sb-call-control-label {
+		font-size: 0.75rem;
+		color: #888;
 	}
 
 	/* ── Interview Header ── */
