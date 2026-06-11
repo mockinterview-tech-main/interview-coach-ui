@@ -65,11 +65,11 @@
 
 	// ── Filler phrases (bridging silence while Claude thinks) ──
 	const fillerPhrases = [
-		'Hmm, let me think about that.',
-		'Okay, let me consider that.',
-		'That\'s a great point, let me think.',
-		'Interesting, give me a moment.',
-		'Alright, let me work with that.',
+		'Mm-hmm.',
+		'Okay.',
+		'Right.',
+		'Got it.',
+		'Mm.',
 	];
 	let fillerCache: Map<string, Blob> = new Map();
 	let fillerAudio: HTMLAudioElement | null = null;
