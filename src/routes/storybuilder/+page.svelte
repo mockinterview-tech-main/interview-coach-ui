@@ -243,8 +243,9 @@
 		if (finalTranscriptBuf.trim()) { finalizeTurn(); }
 	}
 
-	// ── TTS (via /storybuilder/api/tts) ──
+	// ── TTS (via /storybuilder/api/tts + browser SpeechSynthesis for instant first sentence) ──
 	let prefetchCache = new Map<string, Promise<Blob | null>>();
+	let usedBrowserTtsForFirst = false; // tracks if we used SpeechSynthesis for the first chunk this turn
 
 	function ttsFetchAudio(text: string): Promise<Blob | null> {
 		if (prefetchCache.has(text)) return prefetchCache.get(text)!;
@@ -255,6 +256,30 @@
 		}).then(res => res.ok ? res.blob() : null).catch(() => null);
 		prefetchCache.set(text, promise);
 		return promise;
+	}
+
+	// Instant browser TTS for first sentence (zero network latency)
+	function ttsBrowserSpeak(text: string): Promise<void> {
+		return new Promise<void>((resolve) => {
+			if (!window.speechSynthesis || ttsStopped) { resolve(); return; }
+			const utterance = new SpeechSynthesisUtterance(text);
+			utterance.rate = 1.05;
+			utterance.pitch = 1.0;
+			// Try to pick a natural English voice
+			const voices = window.speechSynthesis.getVoices();
+			const preferred = voices.find(v => v.name.includes('Samantha') || v.name.includes('Karen') || v.name.includes('Google US English'));
+			const english = preferred || voices.find(v => v.lang.startsWith('en'));
+			if (english) utterance.voice = english;
+			utterance.onend = () => resolve();
+			utterance.onerror = () => resolve();
+			window.speechSynthesis.speak(utterance);
+		});
+	}
+
+	function ttsBrowserStop() {
+		if (typeof window !== 'undefined' && window.speechSynthesis) {
+			window.speechSynthesis.cancel();
+		}
 	}
 
 	async function ttsPlaySentence(text: string): Promise<void> {
@@ -297,12 +322,22 @@
 			});
 		}
 		while (sentenceQueue.length > 0 && !ttsStopped) {
-			// Prefetch next sentence while current one plays
-			if (sentenceQueue.length > 1) {
-				ttsFetchAudio(sentenceQueue[1]);
-			}
 			const next = sentenceQueue.shift()!;
-			await ttsPlaySentence(next);
+			// First sentence: use instant browser TTS while prefetching Google TTS for the rest
+			if (!usedBrowserTtsForFirst) {
+				usedBrowserTtsForFirst = true;
+				// Prefetch the next chunks from Google TTS while browser speaks
+				for (let i = 0; i < Math.min(sentenceQueue.length, 3); i++) {
+					ttsFetchAudio(sentenceQueue[i]);
+				}
+				await ttsBrowserSpeak(next);
+			} else {
+				// Prefetch next sentence while current one plays
+				if (sentenceQueue.length > 0) {
+					ttsFetchAudio(sentenceQueue[0]);
+				}
+				await ttsPlaySentence(next);
+			}
 		}
 		isProcessingQueue = false;
 		if (ttsFlush && !ttsStopped) {
@@ -356,6 +391,7 @@
 		ttsStarted = false;
 		sentenceQueue = [];
 		isProcessingQueue = false;
+		usedBrowserTtsForFirst = false;
 	}
 
 	function ttsSpeak(text: string) {
@@ -403,6 +439,7 @@
 		isProcessingQueue = false;
 		ttsFlush = false;
 		stopFiller();
+		ttsBrowserStop();
 		if (ttsAudio) {
 			ttsAudio.pause();
 			ttsAudio = null;
@@ -486,11 +523,11 @@
 										}
 									}
 								}
-								// Eager first chunk: split at comma/colon/semicolon after 30+ chars to start TTS fast
+								// Eager first chunk: split at comma/colon/semicolon after 15+ chars to start TTS fast
 								// Subsequent chunks: wait for proper sentence boundaries
 								const eagerBreaks = [', ', '; ', ': ', ',\n', ';\n', ':\n'];
 								const sentenceBreaks = ['. ', '? ', '! ', '.\n', '?\n', '!\n', '.”', '?”', '!”', '”', '?”', '!”', '\n'];
-								const breaks = isFirstChunk && unspoken.length >= 30 ? [...sentenceBreaks, ...eagerBreaks] : sentenceBreaks;
+								const breaks = isFirstChunk && unspoken.length >= 15 ? [...sentenceBreaks, ...eagerBreaks] : sentenceBreaks;
 								let consumed = 0;
 								let remaining = unspoken;
 								while (remaining.length > 0) {
@@ -500,7 +537,7 @@
 										const idx = remaining.indexOf(br);
 										if (idx !== -1 && (earliest === -1 || idx < earliest)) {
 											// For eager breaks, only use them if we have 30+ chars
-											if (eagerBreaks.includes(br) && idx < 29) continue;
+											if (eagerBreaks.includes(br) && idx < 14) continue;
 											earliest = idx;
 											breakLen = br.length;
 										}
