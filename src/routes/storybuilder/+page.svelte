@@ -66,63 +66,7 @@
 	let ttsRevealedText = ''; // text revealed in sync with TTS playback
 	let ttsFullText = ''; // full final text (set on stream done)
 
-	// ── Filler phrases (bridging silence while Claude thinks) ──
-	const fillerPhrases = [
-		'Mm-hmm.',
-		'Okay.',
-		'Right.',
-		'Got it.',
-		'Mm.',
-	];
-	// Words to strip from the start of coach response if they overlap with the filler we just played
-	const fillerWords = ['mm-hmm', 'mm', 'hmm', 'okay', 'ok', 'right', 'got it', 'alright', 'ah', 'oh', 'sure', 'yeah', 'yes'];
-	let lastFillerPlayed: string | null = null;
-	let fillerCache: Map<string, Blob> = new Map();
-	let fillerAudio: HTMLAudioElement | null = null;
-	let fillerPlaying = false;
-
-	function prefetchFillers() {
-		for (const phrase of fillerPhrases) {
-			fetch('/storybuilder/api/tts', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ text: phrase }),
-			}).then(res => res.ok ? res.blob() : null)
-			  .then(blob => { if (blob) fillerCache.set(phrase, blob); })
-			  .catch(() => {});
-		}
-	}
-
-	function playFiller() {
-		if (!voiceMode || fillerCache.size === 0) return;
-		const phrases = Array.from(fillerCache.keys());
-		const phrase = phrases[Math.floor(Math.random() * phrases.length)];
-		lastFillerPlayed = phrase;
-		const blob = fillerCache.get(phrase);
-		if (!blob) return;
-		const url = URL.createObjectURL(blob);
-		fillerAudio = new Audio(url);
-		fillerPlaying = true;
-		fillerAudio.onended = () => {
-			URL.revokeObjectURL(url);
-			fillerAudio = null;
-			fillerPlaying = false;
-		};
-		fillerAudio.onerror = () => {
-			URL.revokeObjectURL(url);
-			fillerAudio = null;
-			fillerPlaying = false;
-		};
-		fillerAudio.play().catch(() => { fillerPlaying = false; });
-	}
-
-	function stopFiller() {
-		if (fillerAudio) {
-			fillerAudio.pause();
-			fillerAudio = null;
-		}
-		fillerPlaying = false;
-	}
+	// (Filler phrases removed — call view "Thinking..." status is sufficient feedback)
 
 	// ── Helpers ──
 	function stripMarkdown(text: string): string {
@@ -304,15 +248,6 @@
 	async function ttsProcessQueue() {
 		if (isProcessingQueue) return;
 		isProcessingQueue = true;
-		// Wait for filler to finish naturally before starting real TTS
-		if (fillerPlaying && fillerAudio) {
-			await new Promise<void>(resolve => {
-				const fa = fillerAudio;
-				if (!fa || !fillerPlaying) { resolve(); return; }
-				fa.onended = () => { fillerAudio = null; fillerPlaying = false; resolve(); };
-				fa.onerror = () => { fillerAudio = null; fillerPlaying = false; resolve(); };
-			});
-		}
 		while (sentenceQueue.length > 0 && !ttsStopped) {
 			// Prefetch next sentence while current one plays
 			if (sentenceQueue.length > 1) {
@@ -435,7 +370,6 @@
 		sentenceQueue = [];
 		isProcessingQueue = false;
 		ttsFlush = false;
-		stopFiller();
 		if (ttsAudio) {
 			ttsAudio.pause();
 			ttsAudio = null;
@@ -453,11 +387,6 @@
 
 		messages = [...messages, { role: 'candidate', content: userMessage }];
 		loading = true;
-
-		// Play filler nod after substantial user replies (not early short exchanges)
-		const userMsgCount = messages.filter(m => m.role === 'candidate').length;
-		lastFillerPlayed = null;
-		if (voiceMode && userMsgCount >= 2 && userMessage.length > 40) playFiller();
 
 		// Add streaming placeholder
 		messages = [...messages, { role: 'interviewer', content: '', streaming: true }];
@@ -504,24 +433,9 @@
 							loading = false;
 
 							if (voiceMode) {
-								// In voice mode: only show text up to what's been queued for TTS (syncs text with audio)
 								const cleanSoFar = stripMarkdown(streamedText);
 								let unspoken = cleanSoFar.slice(spokenText.length);
-								// Strip leading filler words from TTS if we just played a filler
 								const isFirstChunk = spokenText.length === 0 || !ttsStarted;
-								if (isFirstChunk && lastFillerPlayed && unspoken.length > 10) {
-									for (const fw of fillerWords) {
-										const pattern = new RegExp('^' + fw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '[,!.\\s]*', 'i');
-										if (pattern.test(unspoken)) {
-											const stripped = unspoken.replace(pattern, '').trimStart();
-											// Advance spokenText past the stripped filler so it's never spoken
-											spokenText = cleanSoFar.slice(0, cleanSoFar.length - unspoken.length + (unspoken.length - stripped.length));
-											unspoken = stripped;
-											lastFillerPlayed = null;
-											break;
-										}
-									}
-								}
 								// Eager first chunk: split at comma/colon/semicolon after 15+ chars to start TTS fast
 								// Subsequent chunks: wait for proper sentence boundaries
 								const eagerBreaks = [', ', '; ', ': ', ',\n', ';\n', ':\n'];
@@ -707,7 +621,6 @@
 
 			if (voiceMode) {
 				ttsSpeak(cleanOpening);
-				prefetchFillers(); // warm up filler audio while user listens to greeting
 			}
 		} catch {
 			// Refund the credit if session failed to start
