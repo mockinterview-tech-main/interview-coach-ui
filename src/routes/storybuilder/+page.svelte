@@ -304,18 +304,17 @@
 				ttsFetchAudio(sentenceQueue[1]);
 			}
 			const next = sentenceQueue.shift()!;
-			// Reveal this sentence's text as audio starts playing
+			// Track what's been spoken so template can dim upcoming text
 			if (voiceMode) {
 				ttsRevealedText += (ttsRevealedText ? ' ' : '') + next;
-				messages = messages.map(m => m.streaming ? { ...m, content: ttsRevealedText } : m);
 			}
 			await ttsPlaySentence(next);
 		}
 		isProcessingQueue = false;
 		if (ttsFlush && !ttsStopped) {
-			// TTS done — finalize: show full text and drop streaming flag
-			if (voiceMode && ttsFullText) {
-				messages = messages.map(m => m.streaming ? { role: 'interviewer', content: ttsFullText } : m);
+			// TTS done — drop streaming flag so dimming stops
+			if (voiceMode) {
+				messages = messages.map(m => m.streaming ? { role: 'interviewer', content: m.content } : m);
 			}
 			isSpeaking = false;
 			ttsStarted = false;
@@ -346,9 +345,9 @@
 	function ttsFlushQueue() {
 		ttsFlush = true;
 		if (sentenceQueue.length === 0 && !isProcessingQueue) {
-			// Finalize text display
-			if (voiceMode && ttsFullText) {
-				messages = messages.map(m => m.streaming ? { role: 'interviewer', content: ttsFullText } : m);
+			// Drop streaming flag so dimming stops
+			if (voiceMode) {
+				messages = messages.map(m => m.streaming ? { role: 'interviewer', content: m.content } : m);
 			}
 			if (ttsStarted) {
 				isSpeaking = false;
@@ -429,10 +428,8 @@
 		prefetchCache.clear();
 		isSpeaking = false;
 		ttsStarted = false;
-		// On stop, reveal full text and finalize message
-		if (ttsFullText) {
-			messages = messages.map(m => m.streaming ? { role: 'interviewer', content: ttsFullText } : m);
-		}
+		// Drop streaming flag so dimming stops
+		messages = messages.map(m => m.streaming ? { role: 'interviewer', content: m.content } : m);
 	}
 
 	// ── Send message (streaming SSE) ──
@@ -488,10 +485,7 @@
 						if (event.type === 'chunk') {
 							streamedText += event.text;
 							const clean = stripMarkdown(streamedText);
-							// In text mode: show text immediately as it streams
-							if (!voiceMode) {
-								messages = messages.map(m => m.streaming ? { ...m, content: clean } : m);
-							}
+							messages = messages.map(m => m.streaming ? { ...m, content: clean } : m);
 							loading = false;
 
 							if (voiceMode) {
@@ -564,10 +558,10 @@
 
 			if (finalData) {
 				const cleanMessage = stripMarkdown(finalData.message);
+				ttsFullText = cleanMessage;
+				// In voice mode, keep streaming flag so template can show spoken/upcoming split
 				if (voiceMode) {
-					// Keep streaming flag — TTS will update text as it plays, then finalize
-					ttsFullText = cleanMessage;
-					messages = messages.map(m => m.streaming ? { ...m, content: ttsRevealedText } : m);
+					messages = messages.map(m => m.streaming ? { ...m, content: cleanMessage } : m);
 				} else {
 					messages = messages.map(m => m.streaming ? { role: 'interviewer', content: cleanMessage } : m);
 				}
@@ -1348,7 +1342,11 @@
 							{msg.role === 'interviewer' ? '✨ Coach' : '🙋 You'}
 						</div>
 						<div class="sb-message-content" class:typing={msg.role === 'interviewer' && !msg.content}>
-							{msg.content || 'Thinking...'}
+							{#if msg.streaming && voiceMode && ttsRevealedText && msg.content}
+								<span class="tts-spoken">{ttsRevealedText}</span><span class="tts-upcoming">{msg.content.slice(ttsRevealedText.length)}</span>
+							{:else}
+								{msg.content || 'Thinking...'}
+							{/if}
 						</div>
 					</div>
 				{/each}
@@ -1759,6 +1757,14 @@
 		border: 1px dashed #d4c9be;
 		border-radius: 12px;
 		padding: 12px 16px;
+	}
+	/* TTS text sync: spoken text is normal, upcoming text is dimmed */
+	.tts-spoken {
+		color: inherit;
+	}
+	.tts-upcoming {
+		color: #b0a89e;
+		transition: color 0.3s ease;
 	}
 
 	/* ── Input Bar ── */
