@@ -7,6 +7,8 @@ const anthropic = new Anthropic({
 
 // ── Model config ──
 const MODEL = 'claude-sonnet-4-20250514';
+// Note: if this model ID becomes deprecated, update to the latest Sonnet version
+// Check https://docs.anthropic.com/en/docs/about-claude/models for current model IDs
 
 // ── Token usage tracking (per-call to Supabase) ──
 const SONNET_INPUT_PRICE = 3.0;   // $ per 1M input tokens
@@ -20,22 +22,22 @@ interface MessageUsage {
 }
 
 // Fire-and-forget: increment token counts directly in Supabase per API call
-export function trackUsageToDb(sessionId: string, usage: MessageUsage, supabase: any) {
+export async function trackUsageToDb(sessionId: string, usage: MessageUsage, supabase: any) {
   const inputCost = (usage.input_tokens / 1_000_000) * SONNET_INPUT_PRICE;
   const outputCost = (usage.output_tokens / 1_000_000) * SONNET_OUTPUT_PRICE;
   const callCost = parseFloat((inputCost + outputCost).toFixed(6));
 
-  console.log(`[trackUsage] session=${sessionId} input=${usage.input_tokens} output=${usage.output_tokens} cost=${callCost}`);
-
-  supabase.rpc('increment_session_usage', {
-    p_session_id: sessionId,
-    p_input_tokens: usage.input_tokens,
-    p_output_tokens: usage.output_tokens,
-    p_cost: callCost,
-  }).then(({ data, error }: any) => {
-    if (error) console.error('[trackUsage] RPC FAILED:', error.message, error.details, error.hint);
-    else console.log('[trackUsage] RPC OK for', sessionId);
-  });
+  try {
+    const { error } = await supabase.rpc('increment_session_usage', {
+      p_session_id: sessionId,
+      p_input_tokens: usage.input_tokens,
+      p_output_tokens: usage.output_tokens,
+      p_cost: callCost,
+    });
+    if (error) console.error('[trackUsage] RPC FAILED:', error.message);
+  } catch (err: any) {
+    console.error('[trackUsage] RPC exception:', err.message);
+  }
 }
 
 // ── Conversation summarization ──
@@ -337,7 +339,7 @@ export async function streamCoachResponse(
   }
 
   if (sessionId && finalMessage.usage) {
-    if (supabase) trackUsageToDb(sessionId, finalMessage.usage as MessageUsage, supabase);
+    if (supabase) await trackUsageToDb(sessionId, finalMessage.usage as MessageUsage, supabase);
     else console.error('[DEBUG] supabase is falsy!');
   } else {
     console.error('[DEBUG] skipped trackUsage — sessionId:', sessionId, 'usage:', finalMessage.usage);
@@ -392,7 +394,7 @@ export async function getCoachResponse(
   });
 
   if (sessionId && response.usage) {
-    if (supabase) trackUsageToDb(sessionId, response.usage as MessageUsage, supabase);
+    if (supabase) await trackUsageToDb(sessionId, response.usage as MessageUsage, supabase);
   }
 
   return (response.content[0] as { type: 'text'; text: string }).text;
@@ -429,7 +431,7 @@ Write in a natural speaking voice — this will be read aloud in an interview. U
   });
 
   if (sessionId && response.usage) {
-    if (supabase) trackUsageToDb(sessionId, response.usage as MessageUsage, supabase);
+    if (supabase) await trackUsageToDb(sessionId, response.usage as MessageUsage, supabase);
   }
 
   try {
@@ -494,7 +496,7 @@ Respond with ONLY a JSON object:
     });
 
     if (sessionId && response.usage) {
-      if (supabase) trackUsageToDb(sessionId, response.usage as MessageUsage, supabase);
+      if (supabase) await trackUsageToDb(sessionId, response.usage as MessageUsage, supabase);
     }
 
     const text = (response.content[0] as { type: 'text'; text: string }).text;
@@ -554,7 +556,7 @@ Respond with ONLY a JSON object:
     });
 
     if (sessionId && response.usage) {
-      if (supabase) trackUsageToDb(sessionId, response.usage as MessageUsage, supabase);
+      if (supabase) await trackUsageToDb(sessionId, response.usage as MessageUsage, supabase);
     }
 
     const text = (response.content[0] as { type: 'text'; text: string }).text;
@@ -610,7 +612,7 @@ Respond with ONLY a JSON object:
     });
 
     if (sessionId && response.usage) {
-      if (supabase) trackUsageToDb(sessionId, response.usage as MessageUsage, supabase);
+      if (supabase) await trackUsageToDb(sessionId, response.usage as MessageUsage, supabase);
     }
 
     const text = (response.content[0] as { type: 'text'; text: string }).text;

@@ -76,20 +76,22 @@ async function loadSession(sessionId: string, supabase: any): Promise<Session | 
   return session;
 }
 
-// ── Persist session state to Supabase (fire-and-forget) ──
-function persistSession(sessionId: string, session: Session, supabase: any) {
-  supabase
-    .from('session_logs')
-    .update({
-      conversation_history: session.conversationHistory,
-      star_sections: session.starSections,
-      extracted_question: session.extractedQuestion,
-      extracted_flags: session.extractedFlags,
-    })
-    .eq('session_id', sessionId)
-    .then(({ error }: any) => {
-      if (error) console.error('Failed to persist session state:', error.message);
-    });
+// ── Persist session state to Supabase ──
+async function persistSession(sessionId: string, session: Session, supabase: any) {
+  try {
+    const { error } = await supabase
+      .from('session_logs')
+      .update({
+        conversation_history: session.conversationHistory,
+        star_sections: session.starSections,
+        extracted_question: session.extractedQuestion,
+        extracted_flags: session.extractedFlags,
+      })
+      .eq('session_id', sessionId);
+    if (error) console.error('Failed to persist session state:', error.message);
+  } catch (err: any) {
+    console.error('persistSession exception:', err.message);
+  }
 }
 
 export function createSession(): Session {
@@ -134,7 +136,7 @@ What would you like to work on?`;
   });
 
   // Persist opening message to Supabase
-  persistSession(sessionId, session, supabase);
+  await persistSession(sessionId, session, supabase);
 
   return openingMessage;
 }
@@ -161,7 +163,7 @@ export async function handleUserMessageStream(
     session.conversationHistory.push({ role: 'assistant', content: closingMessage });
     session.status = 'completed';
     session.completedAt = new Date().toISOString();
-    persistSession(sessionId, session, supabase);
+    await persistSession(sessionId, session, supabase);
     writer.write(`data: ${JSON.stringify({ type: 'chunk', text: closingMessage })}\n\n`);
     writer.write(`data: ${JSON.stringify({ type: 'done', message: closingMessage, done: true, remainingMs: 0 })}\n\n`);
     writer.end();
@@ -197,7 +199,7 @@ export async function handleUserMessageStream(
   })}\n\n`);
 
   // Persist after coach reply (fire-and-forget)
-  persistSession(sessionId, session, supabase);
+  await persistSession(sessionId, session, supabase);
 
   // Fire STAR extraction in parallel — don't block the conversation
   const userMsgCount = session.conversationHistory.filter(m => m.role === 'user').length;
@@ -222,7 +224,7 @@ export async function handleUserMessageStream(
         if (updates.length > 0 || sections.question || sections.flags) {
           writer.write(`data: ${JSON.stringify({ type: 'star_update', updates, question: sections.question || null, flags: sections.flags || null })}\n\n`);
           // Persist updated STAR sections
-          persistSession(sessionId, session, supabase);
+          await persistSession(sessionId, session, supabase);
         }
         writer.end();
       })
@@ -252,7 +254,7 @@ export async function handleUserMessage(sessionId: string, userMessage: string, 
     session.conversationHistory.push({ role: 'assistant', content: closingMessage });
     session.status = 'completed';
     session.completedAt = new Date().toISOString();
-    persistSession(sessionId, session, supabase);
+    await persistSession(sessionId, session, supabase);
     return { message: closingMessage, done: true, remainingMs: 0 };
   }
 
@@ -267,7 +269,7 @@ export async function handleUserMessage(sessionId: string, userMessage: string, 
   const remainingMs = Math.max(0, SESSION_LIMIT_MS - (Date.now() - new Date(session.startedAt).getTime()));
 
   // Persist after coach reply
-  persistSession(sessionId, session, supabase);
+  await persistSession(sessionId, session, supabase);
 
   // Extract STAR sections in parallel
   const userMsgCount = session.conversationHistory.filter(m => m.role === 'user').length;
@@ -289,7 +291,7 @@ export async function handleUserMessage(sessionId: string, userMessage: string, 
         }
       }
       // Persist updated STAR sections
-      persistSession(sessionId, session, supabase);
+      await persistSession(sessionId, session, supabase);
     }
   }
 
