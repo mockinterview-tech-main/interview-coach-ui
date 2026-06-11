@@ -8,10 +8,8 @@
 	let phase: 'lobby' | 'coaching' | 'loading-report' | 'report' = 'lobby';
 	let sessionId: string | null = null;
 	let messages: Array<{ role: string; content: string; streaming?: boolean }> = [];
-	let input = '';
 	let loading = false;
 	let report: any = null;
-	let voiceMode = true;
 	let remainingTime = 20 * 60 * 1000;
 	let userConfirmedEnd = false;
 	let starSections: Record<string, string | null> = { situation: null, task: null, action: null, result: null };
@@ -255,17 +253,13 @@
 			}
 			const next = sentenceQueue.shift()!;
 			// Track what's been spoken so template can dim upcoming text
-			if (voiceMode) {
-				ttsRevealedText += (ttsRevealedText ? ' ' : '') + next;
-			}
+			ttsRevealedText += (ttsRevealedText ? ' ' : '') + next;
 			await ttsPlaySentence(next);
 		}
 		isProcessingQueue = false;
 		if (ttsFlush && !ttsStopped) {
 			// TTS done — drop streaming flag so dimming stops
-			if (voiceMode) {
-				messages = messages.map(m => m.streaming ? { role: 'interviewer', content: m.content } : m);
-			}
+			messages = messages.map(m => m.streaming ? { role: 'interviewer', content: m.content } : m);
 			isSpeaking = false;
 			ttsStarted = false;
 			if (pendingAutoEnd) {
@@ -274,7 +268,7 @@
 				return;
 			}
 			setTimeout(() => {
-				if (voiceMode && phase === 'coaching') startListening();
+				if (phase === 'coaching') startListening();
 			}, 300);
 		}
 	}
@@ -296,9 +290,7 @@
 		ttsFlush = true;
 		if (sentenceQueue.length === 0 && !isProcessingQueue) {
 			// Drop streaming flag so dimming stops
-			if (voiceMode) {
-				messages = messages.map(m => m.streaming ? { role: 'interviewer', content: m.content } : m);
-			}
+			messages = messages.map(m => m.streaming ? { role: 'interviewer', content: m.content } : m);
 			if (ttsStarted) {
 				isSpeaking = false;
 				ttsStarted = false;
@@ -308,7 +300,7 @@
 					return;
 				}
 				setTimeout(() => {
-					if (voiceMode && phase === 'coaching') startListening();
+					if (phase === 'coaching') startListening();
 				}, 300);
 			}
 		}
@@ -414,7 +406,7 @@
 			let spokenText = '';
 			let finalData: any = null;
 
-			if (voiceMode) ttsStartStreaming();
+			ttsStartStreaming();
 
 			while (true) {
 				const { done, value } = await reader.read();
@@ -432,40 +424,35 @@
 							messages = messages.map(m => m.streaming ? { ...m, content: clean } : m);
 							loading = false;
 
-							if (voiceMode) {
-								const cleanSoFar = stripMarkdown(streamedText);
-								let unspoken = cleanSoFar.slice(spokenText.length);
-								const isFirstChunk = spokenText.length === 0 || !ttsStarted;
-								// Eager first chunk: split at comma/colon/semicolon after 15+ chars to start TTS fast
-								// Subsequent chunks: wait for proper sentence boundaries
-								const eagerBreaks = [', ', '; ', ': ', ',\n', ';\n', ':\n'];
-								const sentenceBreaks = ['. ', '? ', '! ', '.\n', '?\n', '!\n', '.”', '?”', '!”', '”', '?”', '!”', '\n'];
-								const breaks = isFirstChunk && unspoken.length >= 15 ? [...sentenceBreaks, ...eagerBreaks] : sentenceBreaks;
-								let consumed = 0;
-								let remaining = unspoken;
-								while (remaining.length > 0) {
-									let earliest = -1;
-									let breakLen = 0;
-									for (const br of breaks) {
-										const idx = remaining.indexOf(br);
-										if (idx !== -1 && (earliest === -1 || idx < earliest)) {
-											// For eager breaks, only use them if we have 30+ chars
-											if (eagerBreaks.includes(br) && idx < 14) continue;
-											earliest = idx;
-											breakLen = br.length;
-										}
+							// TTS chunking: split streamed text into sentences for TTS
+							const cleanSoFar = stripMarkdown(streamedText);
+							let unspoken = cleanSoFar.slice(spokenText.length);
+							const isFirstChunk = spokenText.length === 0 || !ttsStarted;
+							const eagerBreaks = [', ', '; ', ': ', ',\n', ';\n', ':\n'];
+							const sentenceBreaks = ['. ', '? ', '! ', '.\n', '?\n', '!\n', '.”', '?”', '!”', '”', '?”', '!”', '\n'];
+							const breaks = isFirstChunk && unspoken.length >= 15 ? [...sentenceBreaks, ...eagerBreaks] : sentenceBreaks;
+							let consumed = 0;
+							let remaining = unspoken;
+							while (remaining.length > 0) {
+								let earliest = -1;
+								let breakLen = 0;
+								for (const br of breaks) {
+									const idx = remaining.indexOf(br);
+									if (idx !== -1 && (earliest === -1 || idx < earliest)) {
+										if (eagerBreaks.includes(br) && idx < 14) continue;
+										earliest = idx;
+										breakLen = br.length;
 									}
-									if (earliest === -1) break;
-									const chunk = remaining.slice(0, earliest + breakLen).trim();
-									if (chunk.length > 5) ttsQueueSentence(chunk);
-									consumed += earliest + breakLen;
-									remaining = remaining.slice(earliest + breakLen);
-									// After first chunk is queued, switch to sentence-only breaks
-									if (isFirstChunk && consumed > 0) break;
 								}
-								if (consumed > 0) {
-									spokenText = cleanSoFar.slice(0, spokenText.length + consumed);
-								}
+								if (earliest === -1) break;
+								const chunk = remaining.slice(0, earliest + breakLen).trim();
+								if (chunk.length > 5) ttsQueueSentence(chunk);
+								consumed += earliest + breakLen;
+								remaining = remaining.slice(earliest + breakLen);
+								if (isFirstChunk && consumed > 0) break;
+							}
+							if (consumed > 0) {
+								spokenText = cleanSoFar.slice(0, spokenText.length + consumed);
 							}
 						} else if (event.type === 'done') {
 							finalData = event;
@@ -489,41 +476,36 @@
 				const cleanMessage = stripMarkdown(finalData.message);
 				ttsFullText = cleanMessage;
 				// In voice mode, keep streaming flag so template can show spoken/upcoming split
-				if (voiceMode) {
-					messages = messages.map(m => m.streaming ? { ...m, content: cleanMessage } : m);
-				} else {
-					messages = messages.map(m => m.streaming ? { role: 'interviewer', content: cleanMessage } : m);
-				}
+				// Keep streaming flag so template shows spoken/upcoming split
+				messages = messages.map(m => m.streaming ? { ...m, content: cleanMessage } : m);
 
-				if (voiceMode) {
-					// Split remaining text into sentences (same breaks as streaming) instead of one giant chunk
-					const remaining = cleanMessage.slice(spokenText.length).trim();
-					if (remaining.length > 5) {
-						const sentBreaks = ['. ', '? ', '! ', '.\n', '?\n', '!\n', '."', '?"', '!"'];
-						let rest = remaining;
-						while (rest.length > 0) {
-							let earliest = -1;
-							let bLen = 0;
-							for (const br of sentBreaks) {
-								const idx = rest.indexOf(br);
-								if (idx !== -1 && (earliest === -1 || idx < earliest)) { earliest = idx; bLen = br.length; }
-							}
-							if (earliest === -1) {
-								if (rest.trim().length > 3) ttsQueueSentence(rest.trim());
-								break;
-							}
-							const chunk = rest.slice(0, earliest + bLen).trim();
-							if (chunk.length > 3) ttsQueueSentence(chunk);
-							rest = rest.slice(earliest + bLen);
+				// Split remaining text into sentences for TTS
+				const remaining = cleanMessage.slice(spokenText.length).trim();
+				if (remaining.length > 5) {
+					const sentBreaks = ['. ', '? ', '! ', '.\n', '?\n', '!\n', '."', '?"', '!"'];
+					let rest = remaining;
+					while (rest.length > 0) {
+						let earliest = -1;
+						let bLen = 0;
+						for (const br of sentBreaks) {
+							const idx = rest.indexOf(br);
+							if (idx !== -1 && (earliest === -1 || idx < earliest)) { earliest = idx; bLen = br.length; }
 						}
+						if (earliest === -1) {
+							if (rest.trim().length > 3) ttsQueueSentence(rest.trim());
+							break;
+						}
+						const chunk = rest.slice(0, earliest + bLen).trim();
+						if (chunk.length > 3) ttsQueueSentence(chunk);
+						rest = rest.slice(earliest + bLen);
 					}
-					// Append time warning to the end of this response's TTS stream
-					if (pendingTtsWarning) {
-						ttsQueueSentence(pendingTtsWarning);
-						pendingTtsWarning = null;
-					}
-					ttsFlushQueue();
 				}
+				// Append time warning to the end of this response's TTS stream
+				if (pendingTtsWarning) {
+					ttsQueueSentence(pendingTtsWarning);
+					pendingTtsWarning = null;
+				}
+				ttsFlushQueue();
 
 				if (finalData.done) {
 					stopListening();
@@ -609,19 +591,13 @@
 						pendingAutoEnd = true;
 					} else {
 						// Idle — speak time-up then end
-						if (voiceMode) {
-							ttsSpeak(timeUpMsg);
-							pendingAutoEnd = true;
-						} else {
-							handleEnd(true);
-						}
+						ttsSpeak(timeUpMsg);
+						pendingAutoEnd = true;
 					}
 				}
 			}, 1000);
 
-			if (voiceMode) {
-				ttsSpeak(cleanOpening);
-			}
+			ttsSpeak(cleanOpening);
 		} catch {
 			// Refund the credit if session failed to start
 			try {
@@ -643,14 +619,6 @@
 	}
 
 	// ── Send text input ──
-	function handleSend(e?: Event) {
-		e?.preventDefault();
-		if (!input.trim() || loading) return;
-		const msg = input.trim();
-		input = '';
-		sendMessage(msg);
-	}
-
 	// ── Auto-save story to Supabase ──
 	let savedStoryId: string | null = null;
 	let sessionEnded = false;
@@ -889,7 +857,7 @@
 	function handleBackToSession() {
 		report = null;
 		phase = 'coaching';
-		if (voiceMode) startListening();
+		startListening();
 	}
 
 	function handleBuildAnother() {
@@ -897,7 +865,6 @@
 		messages = [];
 		sessionId = null;
 		report = null;
-		input = '';
 		userConfirmedEnd = false;
 		talkingPoints = null;
 		extractedFlags = null;
@@ -1263,8 +1230,7 @@
 	<!-- Coaching two-column layout -->
 	<div class="sb-coaching-layout">
 		<div class="sb-coaching-main">
-			{#if voiceMode}
-				<!-- ══════ CALL VIEW (voice mode) ══════ -->
+			<!-- ══════ CALL VIEW ══════ -->
 				<div class="sb-call-view">
 					<!-- Call status area -->
 					<!-- svelte-ignore a11y-click-events-have-key-events -->
@@ -1351,72 +1317,6 @@
 						</button>
 					</div>
 				</div>
-			{:else}
-				<!-- ══════ CHAT VIEW (text mode) ══════ -->
-				<div class="sb-interview-header">
-					<div class="sb-avatar-placeholder">&#10024;</div>
-					<div style="flex: 1;">
-						<h2>Story Coaching</h2>
-						<div class="sb-mic-indicator {micState}">
-							<div class="sb-mic-dot"></div>
-							<span class="sb-mic-label">{micLabel}</span>
-						</div>
-					</div>
-				</div>
-
-				<!-- Messages -->
-				<!-- svelte-ignore a11y-click-events-have-key-events -->
-				<!-- svelte-ignore a11y-no-static-element-interactions -->
-				<div
-					class="sb-messages"
-					class:interruptable={isSpeaking}
-					on:click={handleInterrupt}
-				>
-					{#each messages as msg}
-						<div class="sb-message {msg.role}">
-							<div class="sb-message-label">
-								{msg.role === 'interviewer' ? '✨ Coach' : '🙋 You'}
-							</div>
-							<div class="sb-message-content" class:typing={msg.role === 'interviewer' && !msg.content}>
-								{msg.content || 'Thinking...'}
-							</div>
-						</div>
-					{/each}
-					{#if isListening && interimTranscript}
-						<div class="sb-message candidate">
-							<div class="sb-message-label">&#128587; You (speaking...)</div>
-							<div class="sb-message-content interim">{interimTranscript}</div>
-						</div>
-					{/if}
-					{#if loading && !messages.some(m => m.streaming)}
-						<div class="sb-message interviewer">
-							<div class="sb-message-label">&#10024; Coach</div>
-							<div class="sb-message-content typing">Thinking...</div>
-						</div>
-					{/if}
-					<div bind:this={messagesEndEl}></div>
-				</div>
-
-				<!-- Input bar -->
-				<form class="sb-input-bar" on:submit|preventDefault={handleSend}>
-					<textarea
-						value={input}
-						on:input={(e) => { input = e.currentTarget.value; }}
-						placeholder={sessionExpired ? 'Session ended — saving your story...' : 'Type here...'}
-						rows="2"
-						disabled={loading || isSpeaking || sessionExpired}
-						on:keydown={(e) => {
-							if (e.key === 'Enter' && !e.shiftKey) {
-								e.preventDefault();
-								handleSend();
-							}
-						}}
-					></textarea>
-					<button type="submit" disabled={loading || isSpeaking || !input.trim()}>
-						&#x2191;
-					</button>
-				</form>
-			{/if}
 		</div>
 
 		<!-- Resize handle -->
@@ -1796,39 +1696,7 @@
 		color: #888;
 	}
 
-	/* ── Interview Header ── */
-	.sb-interview-header {
-		display: flex;
-		align-items: center;
-		gap: 12px;
-		padding: 12px 24px;
-		border-bottom: 1px solid #e5e5e3;
-		background: #f9f9f8;
-		flex-shrink: 0;
-	}
-	.sb-avatar-placeholder {
-		width: 40px;
-		height: 40px;
-		border-radius: 50%;
-		background: #f0ebe4;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		font-size: 1.2rem;
-	}
-	.sb-interview-header h2 {
-		font-size: 1rem;
-		font-weight: 600;
-		color: #1a1a1a;
-		text-align: left;
-		margin: 0;
-	}
-	.sb-header-actions {
-		display: flex;
-		align-items: center;
-		gap: 10px;
-		flex-shrink: 0;
-	}
+	/* ── Session Controls ── */
 	.sb-session-timer {
 		font-size: 0.9rem;
 		font-weight: 600;
@@ -1868,93 +1736,7 @@
 		border-color: #c96442;
 	}
 
-	/* ── Mic Indicator ── */
-	.sb-mic-indicator {
-		display: flex;
-		align-items: center;
-		gap: 8px;
-		margin-top: 2px;
-	}
-	.sb-mic-dot {
-		width: 8px;
-		height: 8px;
-		border-radius: 50%;
-		background: #ccc;
-		transition: background 0.3s;
-	}
-	.sb-mic-indicator.listening .sb-mic-dot {
-		background: #16a34a;
-		animation: sb-mic-pulse 1.2s ease-in-out infinite;
-	}
-	.sb-mic-indicator.speaking .sb-mic-dot {
-		background: #c96442;
-		animation: sb-mic-pulse 0.8s ease-in-out infinite;
-	}
-	.sb-mic-indicator.processing .sb-mic-dot {
-		background: #d97706;
-		animation: sb-mic-pulse 0.6s ease-in-out infinite;
-	}
-	@keyframes sb-mic-pulse {
-		0%, 100% { transform: scale(1); opacity: 1; }
-		50% { transform: scale(1.5); opacity: 0.5; }
-	}
-	.sb-mic-label {
-		font-size: 0.7rem;
-		color: #999;
-		font-weight: 500;
-	}
-	.sb-mic-indicator.listening .sb-mic-label { color: #16a34a; }
-	.sb-mic-indicator.speaking .sb-mic-label { color: #c96442; }
-	.sb-mic-indicator.processing .sb-mic-label { color: #d97706; }
 
-	/* ── Messages ── */
-	.sb-messages {
-		flex: 1;
-		overflow-y: auto;
-		padding: 24px 0 16px;
-		display: flex;
-		flex-direction: column;
-		gap: 20px;
-	}
-	.sb-messages.interruptable { cursor: pointer; }
-	.sb-message { max-width: 100%; }
-	.sb-message-label {
-		font-size: 0.75rem;
-		font-weight: 600;
-		color: #999;
-		margin-bottom: 4px;
-		text-transform: uppercase;
-		letter-spacing: 0.03em;
-	}
-	.sb-message-content {
-		padding: 0;
-		font-size: 0.95rem;
-		line-height: 1.7;
-		white-space: pre-wrap;
-		color: #2d2d2d;
-	}
-	.sb-message.interviewer .sb-message-content {
-		border-left: 3px solid #c96442;
-		padding: 8px 0 8px 16px;
-		color: #1a1a1a;
-	}
-	.sb-message.candidate .sb-message-content {
-		background: #f0ebe4;
-		border-radius: 12px;
-		padding: 12px 16px;
-		color: #2d2d2d;
-	}
-	.sb-message-content.typing {
-		color: #999;
-		font-style: italic;
-	}
-	.sb-message-content.interim {
-		opacity: 0.6;
-		background: #f5f0ea;
-		border: 1px dashed #d4c9be;
-		border-radius: 12px;
-		padding: 12px 16px;
-	}
 	/* TTS text sync: spoken text is normal, upcoming text is dimmed */
 	.tts-spoken {
 		color: inherit;
@@ -1963,50 +1745,6 @@
 		color: #b0a89e;
 		transition: color 0.3s ease;
 	}
-
-	/* ── Input Bar ── */
-	.sb-input-bar {
-		display: flex;
-		gap: 10px;
-		padding: 16px 0;
-		border-top: 1px solid #e5e5e3;
-		position: sticky;
-		bottom: 0;
-		background: #f9f9f8;
-	}
-	.sb-input-bar textarea {
-		flex: 1;
-		background: #ffffff;
-		border: 1px solid #e5e5e3;
-		border-radius: 20px;
-		padding: 10px 16px;
-		color: #2d2d2d;
-		font-family: inherit;
-		font-size: 0.9rem;
-		resize: none;
-	}
-	.sb-input-bar textarea:focus {
-		outline: none;
-		border-color: #c96442;
-		box-shadow: 0 0 0 2px rgba(201, 100, 66, 0.12);
-	}
-	.sb-input-bar button {
-		background: #c96442;
-		color: white;
-		border: none;
-		width: 40px;
-		height: 40px;
-		border-radius: 50%;
-		font-weight: 600;
-		font-size: 1.1rem;
-		cursor: pointer;
-		align-self: flex-end;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-	}
-	.sb-input-bar button:disabled { opacity: 0.3; cursor: not-allowed; }
-	.sb-input-bar button:hover:not(:disabled) { background: #b5593a; }
 
 	/* ── STAR Progress Panel ── */
 	.sb-star-progress-panel {
