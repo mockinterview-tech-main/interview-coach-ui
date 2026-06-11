@@ -265,22 +265,32 @@
 		try {
 			const blob = await ttsFetchAudio(text);
 			prefetchCache.delete(text);
-			if (!blob || ttsStopped) return;
+			if (!blob || ttsStopped) {
+				console.warn('[TTS] skip:', !blob ? 'no blob' : 'stopped', text.slice(0, 30));
+				return;
+			}
+			console.log('[TTS] playing:', text.slice(0, 40), 'size:', blob.size);
 			const url = URL.createObjectURL(blob);
 			return new Promise<void>((resolve) => {
 				const audio = new Audio(url);
 				ttsAudio = audio;
-				audio.onended = () => {
+				let resolved = false;
+				const done = () => {
+					if (resolved) return;
+					resolved = true;
+					clearTimeout(safetyTimeout);
 					URL.revokeObjectURL(url);
 					ttsAudio = null;
 					resolve();
 				};
-				audio.onerror = () => {
-					URL.revokeObjectURL(url);
-					ttsAudio = null;
-					resolve();
-				};
-				audio.play().catch(() => resolve());
+				// Safety timeout: if audio never fires ended/error, resolve after 15s
+				const safetyTimeout = setTimeout(() => {
+					console.warn('[TTS] safety timeout — audio playback hung');
+					done();
+				}, 15000);
+				audio.onended = done;
+				audio.onerror = done;
+				audio.play().catch(() => done());
 			});
 		} catch (err) {
 			console.warn('[TTS] fetch failed:', err);
