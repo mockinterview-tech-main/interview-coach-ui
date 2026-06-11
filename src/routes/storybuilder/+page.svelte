@@ -613,12 +613,6 @@
 				if (!startTimeMs) return;
 				const elapsed = Date.now() - startTimeMs;
 				remainingTime = Math.max(0, 20 * 60 * 1000 - elapsed);
-				// 2-minute warning — shown as Coach message
-				if (remainingTime <= 2 * 60 * 1000 && remainingTime > 0 && !warningSent) {
-					warningSent = true;
-					messages = [...messages, { role: 'interviewer', content: '⏰ 2 minutes remaining — wrapping up soon.' }];
-					if (voiceMode) pendingTtsWarning = "By the way, we have about 2 minutes left, so let's start wrapping up.";
-				}
 				// 20-minute mark — gracefully end after TTS completes
 				if (remainingTime === 0 && timerInterval) {
 					clearInterval(timerInterval);
