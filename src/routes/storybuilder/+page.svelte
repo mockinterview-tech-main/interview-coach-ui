@@ -62,6 +62,8 @@
 	let ttsFlush = false;
 	let ttsStarted = false;
 	let ttsStopped = false;
+	let ttsRevealedText = ''; // text revealed in sync with TTS playback
+	let ttsFullText = ''; // full final text (set on stream done)
 
 	// ── Filler phrases (bridging silence while Claude thinks) ──
 	const fillerPhrases = [
@@ -243,9 +245,8 @@
 		if (finalTranscriptBuf.trim()) { finalizeTurn(); }
 	}
 
-	// ── TTS (via /storybuilder/api/tts + browser SpeechSynthesis for instant first sentence) ──
+	// ── TTS (via /storybuilder/api/tts) ──
 	let prefetchCache = new Map<string, Promise<Blob | null>>();
-	let usedBrowserTtsForFirst = false; // tracks if we used SpeechSynthesis for the first chunk this turn
 
 	function ttsFetchAudio(text: string): Promise<Blob | null> {
 		if (prefetchCache.has(text)) return prefetchCache.get(text)!;
@@ -256,30 +257,6 @@
 		}).then(res => res.ok ? res.blob() : null).catch(() => null);
 		prefetchCache.set(text, promise);
 		return promise;
-	}
-
-	// Instant browser TTS for first sentence (zero network latency)
-	function ttsBrowserSpeak(text: string): Promise<void> {
-		return new Promise<void>((resolve) => {
-			if (!window.speechSynthesis || ttsStopped) { resolve(); return; }
-			const utterance = new SpeechSynthesisUtterance(text);
-			utterance.rate = 1.05;
-			utterance.pitch = 1.0;
-			// Try to pick a natural English voice
-			const voices = window.speechSynthesis.getVoices();
-			const preferred = voices.find(v => v.name.includes('Samantha') || v.name.includes('Karen') || v.name.includes('Google US English'));
-			const english = preferred || voices.find(v => v.lang.startsWith('en'));
-			if (english) utterance.voice = english;
-			utterance.onend = () => resolve();
-			utterance.onerror = () => resolve();
-			window.speechSynthesis.speak(utterance);
-		});
-	}
-
-	function ttsBrowserStop() {
-		if (typeof window !== 'undefined' && window.speechSynthesis) {
-			window.speechSynthesis.cancel();
-		}
 	}
 
 	async function ttsPlaySentence(text: string): Promise<void> {
@@ -322,25 +299,24 @@
 			});
 		}
 		while (sentenceQueue.length > 0 && !ttsStopped) {
-			const next = sentenceQueue.shift()!;
-			// First sentence: use instant browser TTS while prefetching Google TTS for the rest
-			if (!usedBrowserTtsForFirst) {
-				usedBrowserTtsForFirst = true;
-				// Prefetch the next chunks from Google TTS while browser speaks
-				for (let i = 0; i < Math.min(sentenceQueue.length, 3); i++) {
-					ttsFetchAudio(sentenceQueue[i]);
-				}
-				await ttsBrowserSpeak(next);
-			} else {
-				// Prefetch next sentence while current one plays
-				if (sentenceQueue.length > 0) {
-					ttsFetchAudio(sentenceQueue[0]);
-				}
-				await ttsPlaySentence(next);
+			// Prefetch next sentence while current one plays
+			if (sentenceQueue.length > 1) {
+				ttsFetchAudio(sentenceQueue[1]);
 			}
+			const next = sentenceQueue.shift()!;
+			// Reveal this sentence's text as audio starts playing
+			if (voiceMode) {
+				ttsRevealedText += (ttsRevealedText ? ' ' : '') + next;
+				messages = messages.map(m => m.streaming ? { ...m, content: ttsRevealedText } : m);
+			}
+			await ttsPlaySentence(next);
 		}
 		isProcessingQueue = false;
 		if (ttsFlush && !ttsStopped) {
+			// Show full text once all TTS is done
+			if (voiceMode && ttsFullText) {
+				messages = messages.map(m => m.streaming ? { ...m, content: ttsFullText } : m);
+			}
 			isSpeaking = false;
 			ttsStarted = false;
 			if (pendingAutoEnd) {
@@ -391,7 +367,8 @@
 		ttsStarted = false;
 		sentenceQueue = [];
 		isProcessingQueue = false;
-		usedBrowserTtsForFirst = false;
+		ttsRevealedText = '';
+		ttsFullText = '';
 	}
 
 	function ttsSpeak(text: string) {
@@ -401,6 +378,8 @@
 		ttsFlush = true;
 		ttsStarted = true;
 		isSpeaking = true;
+		ttsRevealedText = '';
+		ttsFullText = text;
 		stopListening();
 		// Split into sentences using string scan (same break points as streaming)
 		const breaks = ['. ', '? ', '! ', '.\n', '?\n', '!\n', '."', '?"', '!"', '”', '?”', '!”', '\n'];
@@ -439,7 +418,6 @@
 		isProcessingQueue = false;
 		ttsFlush = false;
 		stopFiller();
-		ttsBrowserStop();
 		if (ttsAudio) {
 			ttsAudio.pause();
 			ttsAudio = null;
@@ -447,6 +425,10 @@
 		prefetchCache.clear();
 		isSpeaking = false;
 		ttsStarted = false;
+		// On stop, reveal any remaining text immediately
+		if (ttsFullText) {
+			messages = messages.map(m => m.streaming ? { ...m, content: ttsFullText } : m);
+		}
 	}
 
 	// ── Send message (streaming SSE) ──
@@ -502,10 +484,14 @@
 						if (event.type === 'chunk') {
 							streamedText += event.text;
 							const clean = stripMarkdown(streamedText);
-							messages = messages.map(m => m.streaming ? { ...m, content: clean } : m);
+							// In text mode: show text immediately as it streams
+							if (!voiceMode) {
+								messages = messages.map(m => m.streaming ? { ...m, content: clean } : m);
+							}
 							loading = false;
 
 							if (voiceMode) {
+								// In voice mode: only show text up to what's been queued for TTS (syncs text with audio)
 								const cleanSoFar = stripMarkdown(streamedText);
 								let unspoken = cleanSoFar.slice(spokenText.length);
 								// Strip leading filler words from TTS if we just played a filler
@@ -550,7 +536,9 @@
 									// After first chunk is queued, switch to sentence-only breaks
 									if (isFirstChunk && consumed > 0) break;
 								}
-								if (consumed > 0) spokenText = cleanSoFar.slice(0, spokenText.length + consumed);
+								if (consumed > 0) {
+									spokenText = cleanSoFar.slice(0, spokenText.length + consumed);
+								}
 							}
 						} else if (event.type === 'done') {
 							finalData = event;
@@ -572,7 +560,11 @@
 
 			if (finalData) {
 				const cleanMessage = stripMarkdown(finalData.message);
-				messages = messages.map(m => m.streaming ? { role: 'interviewer', content: cleanMessage } : m);
+				// In voice mode, don't reveal full text yet — let TTS reveal it sentence by sentence
+				if (voiceMode) {
+					ttsFullText = cleanMessage;
+				}
+				messages = messages.map(m => m.streaming ? { role: 'interviewer', content: voiceMode ? ttsRevealedText : cleanMessage } : m);
 
 				if (voiceMode) {
 					const remaining = cleanMessage.slice(spokenText.length).trim();
