@@ -377,8 +377,12 @@
 							if (voiceMode) {
 								const cleanSoFar = stripMarkdown(streamedText);
 								const unspoken = cleanSoFar.slice(spokenText.length);
-								// Scan for sentence/line break points to queue TTS chunks
-								const breaks = ['. ', '? ', '! ', '.\n', '?\n', '!\n', '."', '?"', '!"', '.”', '?”', '!”', '\n'];
+								// Eager first chunk: split at comma/colon/semicolon after 30+ chars to start TTS fast
+								// Subsequent chunks: wait for proper sentence boundaries
+								const isFirstChunk = spokenText.length === 0 || !ttsStarted;
+								const eagerBreaks = [', ', '; ', ': ', ',\n', ';\n', ':\n'];
+								const sentenceBreaks = ['. ', '? ', '! ', '.\n', '?\n', '!\n', '.”', '?”', '!”', '”', '?”', '!”', '\n'];
+								const breaks = isFirstChunk && unspoken.length >= 30 ? [...sentenceBreaks, ...eagerBreaks] : sentenceBreaks;
 								let consumed = 0;
 								let remaining = unspoken;
 								while (remaining.length > 0) {
@@ -387,15 +391,19 @@
 									for (const br of breaks) {
 										const idx = remaining.indexOf(br);
 										if (idx !== -1 && (earliest === -1 || idx < earliest)) {
+											// For eager breaks, only use them if we have 30+ chars
+											if (eagerBreaks.includes(br) && idx < 29) continue;
 											earliest = idx;
 											breakLen = br.length;
 										}
 									}
-									if (earliest === -1) break; // no break found yet — wait for more streamed text
+									if (earliest === -1) break;
 									const chunk = remaining.slice(0, earliest + breakLen).trim();
 									if (chunk.length > 5) ttsQueueSentence(chunk);
 									consumed += earliest + breakLen;
 									remaining = remaining.slice(earliest + breakLen);
+									// After first chunk is queued, switch to sentence-only breaks
+									if (isFirstChunk && consumed > 0) break;
 								}
 								if (consumed > 0) spokenText = cleanSoFar.slice(0, spokenText.length + consumed);
 							}
