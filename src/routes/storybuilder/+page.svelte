@@ -313,9 +313,9 @@
 		}
 		isProcessingQueue = false;
 		if (ttsFlush && !ttsStopped) {
-			// Show full text once all TTS is done
+			// TTS done — finalize: show full text and drop streaming flag
 			if (voiceMode && ttsFullText) {
-				messages = messages.map(m => m.streaming ? { ...m, content: ttsFullText } : m);
+				messages = messages.map(m => m.streaming ? { role: 'interviewer', content: ttsFullText } : m);
 			}
 			isSpeaking = false;
 			ttsStarted = false;
@@ -346,6 +346,10 @@
 	function ttsFlushQueue() {
 		ttsFlush = true;
 		if (sentenceQueue.length === 0 && !isProcessingQueue) {
+			// Finalize text display
+			if (voiceMode && ttsFullText) {
+				messages = messages.map(m => m.streaming ? { role: 'interviewer', content: ttsFullText } : m);
+			}
 			if (ttsStarted) {
 				isSpeaking = false;
 				ttsStarted = false;
@@ -425,9 +429,9 @@
 		prefetchCache.clear();
 		isSpeaking = false;
 		ttsStarted = false;
-		// On stop, reveal any remaining text immediately
+		// On stop, reveal full text and finalize message
 		if (ttsFullText) {
-			messages = messages.map(m => m.streaming ? { ...m, content: ttsFullText } : m);
+			messages = messages.map(m => m.streaming ? { role: 'interviewer', content: ttsFullText } : m);
 		}
 	}
 
@@ -560,11 +564,13 @@
 
 			if (finalData) {
 				const cleanMessage = stripMarkdown(finalData.message);
-				// In voice mode, don't reveal full text yet — let TTS reveal it sentence by sentence
 				if (voiceMode) {
+					// Keep streaming flag — TTS will update text as it plays, then finalize
 					ttsFullText = cleanMessage;
+					messages = messages.map(m => m.streaming ? { ...m, content: ttsRevealedText } : m);
+				} else {
+					messages = messages.map(m => m.streaming ? { role: 'interviewer', content: cleanMessage } : m);
 				}
-				messages = messages.map(m => m.streaming ? { role: 'interviewer', content: voiceMode ? ttsRevealedText : cleanMessage } : m);
 
 				if (voiceMode) {
 					const remaining = cleanMessage.slice(spokenText.length).trim();
