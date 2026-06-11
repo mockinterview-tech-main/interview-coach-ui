@@ -251,11 +251,15 @@
 
 	function ttsFetchAudio(text: string): Promise<Blob | null> {
 		if (prefetchCache.has(text)) return prefetchCache.get(text)!;
+		const controller = new AbortController();
+		const timeout = setTimeout(() => controller.abort(), 8000); // 8s timeout
 		const promise = fetch('/storybuilder/api/tts', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({ text }),
-		}).then(res => res.ok ? res.blob() : null).catch(() => null);
+			signal: controller.signal,
+		}).then(res => { clearTimeout(timeout); return res.ok ? res.blob() : null; })
+		  .catch(() => { clearTimeout(timeout); return null; });
 		prefetchCache.set(text, promise);
 		return promise;
 	}
@@ -578,8 +582,27 @@
 				}
 
 				if (voiceMode) {
+					// Split remaining text into sentences (same breaks as streaming) instead of one giant chunk
 					const remaining = cleanMessage.slice(spokenText.length).trim();
-					if (remaining.length > 5) ttsQueueSentence(remaining);
+					if (remaining.length > 5) {
+						const sentBreaks = ['. ', '? ', '! ', '.\n', '?\n', '!\n', '."', '?"', '!"'];
+						let rest = remaining;
+						while (rest.length > 0) {
+							let earliest = -1;
+							let bLen = 0;
+							for (const br of sentBreaks) {
+								const idx = rest.indexOf(br);
+								if (idx !== -1 && (earliest === -1 || idx < earliest)) { earliest = idx; bLen = br.length; }
+							}
+							if (earliest === -1) {
+								if (rest.trim().length > 3) ttsQueueSentence(rest.trim());
+								break;
+							}
+							const chunk = rest.slice(0, earliest + bLen).trim();
+							if (chunk.length > 3) ttsQueueSentence(chunk);
+							rest = rest.slice(earliest + bLen);
+						}
+					}
 					// Append time warning to the end of this response's TTS stream
 					if (pendingTtsWarning) {
 						ttsQueueSentence(pendingTtsWarning);
