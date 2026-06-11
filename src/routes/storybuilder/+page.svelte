@@ -377,8 +377,8 @@
 							if (voiceMode) {
 								const cleanSoFar = stripMarkdown(streamedText);
 								const unspoken = cleanSoFar.slice(spokenText.length);
-								// Split on sentences OR long clauses (commas/semicolons/colons) for faster TTS
-								const chunkRegex = /[^.!?;:\n]+[.!?]+(?:\s|$)|[^.!?;:\n]{30,}[;:,](?:\s|$)/g;
+								// Split on sentences (allowing closing quotes after punctuation) OR long clauses
+								const chunkRegex = /[^.!?\n]+[.!?]+[""'')\]]*(?:\s|$)|[^.!?;:\n]{30,}[;:,](?:\s|$)/g;
 								let match;
 								let lastEnd = 0;
 								while ((match = chunkRegex.exec(unspoken)) !== null) {
