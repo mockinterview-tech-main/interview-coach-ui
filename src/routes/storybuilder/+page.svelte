@@ -299,13 +299,34 @@
 		ttsStarted = true;
 		isSpeaking = true;
 		stopListening();
-		// Split into sentences so first sentence plays fast
-		const sentences = text.match(/[^.!?\n]+[.!?]+(?:\s|$)/g) || [text];
-		const remaining = text.slice(sentences.join('').length).trim();
-		for (const s of sentences) {
-			if (s.trim().length > 3) sentenceQueue.push(s.trim());
+		// Split into sentences using string scan (same break points as streaming)
+		const breaks = ['. ', '? ', '! ', '.\n', '?\n', '!\n', '."', '?"', '!"', '”', '?”', '!”', '\n'];
+		let remaining = text;
+		while (remaining.length > 0) {
+			let earliest = -1;
+			let breakLen = 0;
+			for (const br of breaks) {
+				const idx = remaining.indexOf(br);
+				if (idx !== -1 && (earliest === -1 || idx < earliest)) {
+					earliest = idx;
+					breakLen = br.length;
+				}
+			}
+			if (earliest === -1) {
+				// No more break points — queue the rest
+				if (remaining.trim().length > 3) {
+					sentenceQueue.push(remaining.trim());
+					ttsFetchAudio(remaining.trim()); // prefetch
+				}
+				break;
+			}
+			const chunk = remaining.slice(0, earliest + breakLen).trim();
+			if (chunk.length > 3) {
+				sentenceQueue.push(chunk);
+				ttsFetchAudio(chunk); // prefetch all chunks immediately
+			}
+			remaining = remaining.slice(earliest + breakLen);
 		}
-		if (remaining.length > 3) sentenceQueue.push(remaining);
 		ttsProcessQueue();
 	}
 
