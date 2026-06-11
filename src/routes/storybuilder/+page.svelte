@@ -415,8 +415,9 @@
 		messages = [...messages, { role: 'candidate', content: userMessage }];
 		loading = true;
 
-		// Play filler phrase to bridge silence while Claude thinks
-		if (voiceMode) playFiller();
+		// Play filler nod after substantial user replies (not early short exchanges)
+		const userMsgCount = messages.filter(m => m.role === 'candidate').length;
+		if (voiceMode && userMsgCount >= 2 && userMessage.length > 40) playFiller();
 
 		// Add streaming placeholder
 		messages = [...messages, { role: 'interviewer', content: '', streaming: true }];
