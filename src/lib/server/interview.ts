@@ -205,7 +205,7 @@ export async function handleUserMessageStream(
   const userMsgCount = session.conversationHistory.filter(m => m.role === 'user').length;
   if (userMsgCount >= 2) {
     extractStarSections(session.conversationHistory, sessionId, supabase)
-      .then((sections) => {
+      .then(async (sections) => {
         if (!sections) return;
         // Update server-side session with extracted sections
         const updates: { section: string; content: string }[] = [];
