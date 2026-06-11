@@ -1659,7 +1659,7 @@
 		align-items: center;
 		justify-content: center;
 		gap: 24px;
-		padding: 16px 20px;
+		padding: 0px 8px 20px;
 		border-top: 1px solid #eee;
 		background: #fff;
 	}
@@ -1668,6 +1668,7 @@
 		flex-direction: column;
 		align-items: center;
 		gap: 4px;
+		margin: 10px;
 		background: none;
 		border: none;
 		cursor: pointer;
