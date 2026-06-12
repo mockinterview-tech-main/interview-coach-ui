@@ -222,22 +222,38 @@
 				const audio = new Audio(url);
 				ttsAudio = audio;
 				let resolved = false;
-				const done = () => {
+				const playStartTime = Date.now();
+				const done = (reason: string) => {
 					if (resolved) return;
 					resolved = true;
+					const elapsed = Date.now() - playStartTime;
+					console.log(`[TTS] done (${reason}) after ${elapsed}ms:`, text.slice(0, 40));
 					clearTimeout(safetyTimeout);
 					URL.revokeObjectURL(url);
 					ttsAudio = null;
 					resolve();
 				};
-				// Safety timeout: if audio never fires ended/error, resolve after 15s
+				audio.onloadedmetadata = () => {
+					console.log('[TTS] metadata: duration=', audio.duration, 'readyState=', audio.readyState, text.slice(0, 30));
+				};
+				audio.onstalled = () => console.warn('[TTS] stalled:', text.slice(0, 30));
+				audio.onsuspend = () => console.log('[TTS] suspend:', text.slice(0, 30));
+				audio.onwaiting = () => console.warn('[TTS] waiting:', text.slice(0, 30));
+				// Safety timeout: scale with audio size (~1s per 16KB of MP3), minimum 5s
+				const estimatedDurationMs = Math.max(5000, (blob.size / 16000) * 1000 + 2000);
 				const safetyTimeout = setTimeout(() => {
-					console.warn('[TTS] safety timeout — audio playback hung');
-					done();
-				}, 15000);
-				audio.onended = done;
-				audio.onerror = done;
-				audio.play().catch(() => done());
+					console.warn('[TTS] safety timeout after', Math.round(estimatedDurationMs / 1000), 's — duration was', audio.duration, 'readyState=', audio.readyState, 'paused=', audio.paused, 'ended=', audio.ended);
+					done('safety-timeout');
+				}, estimatedDurationMs);
+				audio.onended = () => done('ended');
+				audio.onerror = () => {
+					console.error('[TTS] audio error:', audio.error?.code, audio.error?.message, text.slice(0, 30));
+					done('error');
+				};
+				audio.play().catch((err) => {
+					console.error('[TTS] play() rejected:', err.message, text.slice(0, 30));
+					done('play-rejected');
+				});
 			});
 		} catch (err) {
 			console.warn('[TTS] fetch failed:', err);
