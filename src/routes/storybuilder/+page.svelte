@@ -25,6 +25,7 @@
 	let interimTranscript = '';
 	let browserSupported = true;
 	let showTranscript = false;
+	let starExpanded = false;
 	let toast: { message: string; type: 'error' | 'success' | 'info' } | null = null;
 	let toastTimeout: ReturnType<typeof setTimeout> | null = null;
 
@@ -422,7 +423,7 @@
 							streamedText += event.text;
 							const clean = stripMarkdown(streamedText);
 							messages = messages.map(m => m.streaming ? { ...m, content: clean } : m);
-							loading = false;
+							if (loading) { loading = false; stopListening(); isSpeaking = true; }
 
 							// TTS chunking: split streamed text into sentences for TTS
 							const cleanSoFar = stripMarkdown(streamedText);
@@ -1340,19 +1341,22 @@
 					<h3>Your Story in Progress…</h3>
 					<span class="sb-star-progress-count">{completedCount}/4</span>
 				</div>
+				<button class="sb-star-expand-btn" on:click={() => starExpanded = !starExpanded} disabled={completedCount === 0}>
+					{starExpanded ? 'Collapse' : 'Expand'}
+				</button>
 				{#each [{ key: 'situation', label: 'Situation' }, { key: 'task', label: 'Task' }, { key: 'action', label: 'Action' }, { key: 'result', label: 'Result' }] as section}
 					<div class="sb-star-progress-section" class:filled={starSections[section.key]} class:empty={!starSections[section.key]}>
 						<div class="sb-star-progress-label">
 							<span class="sb-star-progress-dot">{starSections[section.key] ? '✓' : '○'}</span>
 							<span>{section.label}</span>
 						</div>
-						{#if starSections[section.key]}
+						{#if starExpanded && starSections[section.key]}
 							<div class="sb-star-progress-content">{starSections[section.key]}</div>
 						{/if}
 					</div>
 				{/each}
 				{#if completedCount === 0}
-					<p class="sb-star-progress-hint">Sections will appear here as your coach helps you build each part of your story.</p>
+					<p class="sb-star-progress-hint">Sections will be filled here as your coach helps you build each part of your story.</p>
 				{/if}
 			</div>
 		</div>
@@ -1549,6 +1553,7 @@
 		min-height: 200px;
 		cursor: default;
 		user-select: none;
+		background: #f0ebe5;
 	}
 	.sb-call-avatar {
 		position: relative;
@@ -1660,8 +1665,8 @@
 		justify-content: center;
 		gap: 24px;
 		padding: 0px 8px 20px;
-		border-top: 1px solid #eee;
-		background: #fff;
+		border-top: 1px solid #e5e5e3;
+		background: #f9f9f8;
 	}
 	.sb-call-control-btn {
 		display: flex;
@@ -1677,7 +1682,7 @@
 		transition: background 0.15s;
 	}
 	.sb-call-control-btn:hover:not(:disabled) {
-		background: #f5f0ea;
+		background: #f0ebe5;
 	}
 	.sb-call-control-btn:disabled {
 		opacity: 0.3;
@@ -1766,6 +1771,26 @@
 		font-weight: 600;
 		color: #1a1a1a;
 		text-align: left;
+	}
+	.sb-star-expand-btn {
+		display: block;
+		margin: 0 0 12px;
+		font-size: 0.75rem;
+		font-weight: 500;
+		color: #c96442;
+		background: none;
+		border: 1px solid #e5e5e3;
+		border-radius: 8px;
+		padding: 2px 10px;
+		cursor: pointer;
+		transition: background 0.15s;
+	}
+	.sb-star-expand-btn:hover:not(:disabled) {
+		background: #fef2f2;
+	}
+	.sb-star-expand-btn:disabled {
+		opacity: 0.4;
+		cursor: not-allowed;
 	}
 	.sb-star-progress-count {
 		font-size: 0.8rem;
