@@ -902,7 +902,7 @@
 	}
 
 	function handleInterrupt() {
-		if (isSpeaking) {
+		if (isSpeaking && !sessionExpired) {
 			ttsStop();
 			startListening();
 		}
@@ -1264,7 +1264,7 @@
 					<!-- Call status area -->
 					<!-- svelte-ignore a11y-click-events-have-key-events -->
 					<!-- svelte-ignore a11y-no-static-element-interactions -->
-					<div class="sb-call-stage" on:click={isSpeaking ? handleInterrupt : undefined}>
+					<div class="sb-call-stage" on:click={isSpeaking && !sessionExpired ? handleInterrupt : undefined}>
 						<div class="sb-call-avatar" class:speaking={isSpeaking} class:listening={isListening} class:thinking={loading && !isSpeaking}>
 							<span class="sb-call-avatar-icon">&#10024;</span>
 							<div class="sb-call-avatar-ring"></div>
@@ -1280,7 +1280,7 @@
 								Ready
 							{/if}
 						</div>
-						{#if isSpeaking}
+						{#if isSpeaking && !sessionExpired}
 							<button class="sb-call-interrupt" on:click|stopPropagation={handleInterrupt}>
 								Tap to interrupt
 							</button>
