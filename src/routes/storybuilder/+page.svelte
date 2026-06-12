@@ -1338,7 +1338,7 @@
 						</button>
 						<button
 							class="sb-call-control-btn end"
-							on:click={handleEnd}
+							on:click={() => handleEnd()}
 							disabled={loading}
 						>
 							<span class="sb-call-control-icon">⏹</span>
@@ -1362,7 +1362,7 @@
 				<div class="sb-session-timer" class:warning={timerWarning}>
 					{timerMinutes}:{timerSeconds}
 				</div>
-				<button class="sb-end-btn" on:click={handleEnd} disabled={loading}>Finish</button>
+				<button class="sb-end-btn" on:click={() => handleEnd()} disabled={loading}>Finish</button>
 			</div>
 			<div class="sb-star-progress-panel">
 				<div class="sb-star-progress-header">
