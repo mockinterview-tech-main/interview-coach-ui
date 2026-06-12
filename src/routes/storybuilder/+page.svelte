@@ -957,7 +957,7 @@
 	$: showTwoColumn = (talkingPoints || talkingPointsLoading) && !report?.error;
 
 	// ── Credits check ──
-	$: noCredits = $userStore.credits === 0 && !$userStore.subscriptionID;
+	$: noCredits = $userStore.credits === 0 && !$userStore.subscriptionID && !loading;
 
 	function handleBeforeUnload() {
 		if (!sessionId || sessionEnded || phase !== 'coaching') return;
