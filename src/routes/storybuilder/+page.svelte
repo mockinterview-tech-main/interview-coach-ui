@@ -274,6 +274,7 @@
 	async function ttsProcessQueue() {
 		if (isProcessingQueue) return;
 		isProcessingQueue = true;
+		console.log('[TTS] queue processing start, items:', sentenceQueue.length);
 		while (sentenceQueue.length > 0 && !ttsStopped) {
 			// Prefetch next sentence while current one plays
 			if (sentenceQueue.length > 1) {
@@ -285,6 +286,7 @@
 			await ttsPlaySentence(next);
 		}
 		isProcessingQueue = false;
+		console.log('[TTS] queue drained, flush:', ttsFlush, 'stopped:', ttsStopped);
 		if (ttsFlush && !ttsStopped) {
 			// TTS done — drop streaming flag so dimming stops
 			messages = messages.map(m => m.streaming ? { role: 'interviewer', content: m.content } : m);
@@ -509,9 +511,11 @@
 
 				// Split remaining text into sentences for TTS
 				const remaining = cleanMessage.slice(spokenText.length).trim();
+				console.log('[TTS] stream done — remaining text:', remaining.length, 'chars, queue:', sentenceQueue.length, 'processing:', isProcessingQueue);
 				if (remaining.length > 5) {
 					const sentBreaks = ['. ', '? ', '! ', '.\n', '?\n', '!\n', '."', '?"', '!"'];
 					let rest = remaining;
+					const pendingSentences: string[] = [];
 					while (rest.length > 0) {
 						let earliest = -1;
 						let bLen = 0;
@@ -520,13 +524,17 @@
 							if (idx !== -1 && (earliest === -1 || idx < earliest)) { earliest = idx; bLen = br.length; }
 						}
 						if (earliest === -1) {
-							if (rest.trim().length > 3) ttsQueueSentence(rest.trim());
+							if (rest.trim().length > 3) pendingSentences.push(rest.trim());
 							break;
 						}
 						const chunk = rest.slice(0, earliest + bLen).trim();
-						if (chunk.length > 3) ttsQueueSentence(chunk);
+						if (chunk.length > 3) pendingSentences.push(chunk);
 						rest = rest.slice(earliest + bLen);
 					}
+					// Prefetch all remaining sentences in parallel before queuing
+					console.log('[TTS] prefetching', pendingSentences.length, 'remaining sentences');
+					pendingSentences.forEach(s => ttsFetchAudio(s));
+					pendingSentences.forEach(s => ttsQueueSentence(s));
 				}
 				// Append time warning to the end of this response's TTS stream
 				if (pendingTtsWarning) {
