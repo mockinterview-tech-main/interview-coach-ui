@@ -8,10 +8,8 @@
 	let phase: 'lobby' | 'coaching' | 'loading-report' | 'report' = 'lobby';
 	let sessionId: string | null = null;
 	let messages: Array<{ role: string; content: string; streaming?: boolean }> = [];
-	let input = '';
 	let loading = false;
 	let report: any = null;
-	let voiceMode = true;
 	let remainingTime = 20 * 60 * 1000;
 	let userConfirmedEnd = false;
 	let starSections: Record<string, string | null> = { situation: null, task: null, action: null, result: null };
@@ -26,6 +24,8 @@
 	let isSpeaking = false;
 	let interimTranscript = '';
 	let browserSupported = true;
+	let showTranscript = false;
+	let starExpanded = false;
 	let toast: { message: string; type: 'error' | 'success' | 'info' } | null = null;
 	let toastTimeout: ReturnType<typeof setTimeout> | null = null;
 
@@ -62,64 +62,10 @@
 	let ttsFlush = false;
 	let ttsStarted = false;
 	let ttsStopped = false;
+	let ttsRevealedText = ''; // text revealed in sync with TTS playback
+	let ttsFullText = ''; // full final text (set on stream done)
 
-	// ── Filler phrases (bridging silence while Claude thinks) ──
-	const fillerPhrases = [
-		'Mm-hmm.',
-		'Okay.',
-		'Right.',
-		'Got it.',
-		'Mm.',
-	];
-	// Words to strip from the start of coach response if they overlap with the filler we just played
-	const fillerWords = ['mm-hmm', 'mm', 'hmm', 'okay', 'ok', 'right', 'got it', 'alright', 'ah', 'oh', 'sure', 'yeah', 'yes'];
-	let lastFillerPlayed: string | null = null;
-	let fillerCache: Map<string, Blob> = new Map();
-	let fillerAudio: HTMLAudioElement | null = null;
-	let fillerPlaying = false;
-
-	function prefetchFillers() {
-		for (const phrase of fillerPhrases) {
-			fetch('/storybuilder/api/tts', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ text: phrase }),
-			}).then(res => res.ok ? res.blob() : null)
-			  .then(blob => { if (blob) fillerCache.set(phrase, blob); })
-			  .catch(() => {});
-		}
-	}
-
-	function playFiller() {
-		if (!voiceMode || fillerCache.size === 0) return;
-		const phrases = Array.from(fillerCache.keys());
-		const phrase = phrases[Math.floor(Math.random() * phrases.length)];
-		lastFillerPlayed = phrase;
-		const blob = fillerCache.get(phrase);
-		if (!blob) return;
-		const url = URL.createObjectURL(blob);
-		fillerAudio = new Audio(url);
-		fillerPlaying = true;
-		fillerAudio.onended = () => {
-			URL.revokeObjectURL(url);
-			fillerAudio = null;
-			fillerPlaying = false;
-		};
-		fillerAudio.onerror = () => {
-			URL.revokeObjectURL(url);
-			fillerAudio = null;
-			fillerPlaying = false;
-		};
-		fillerAudio.play().catch(() => { fillerPlaying = false; });
-	}
-
-	function stopFiller() {
-		if (fillerAudio) {
-			fillerAudio.pause();
-			fillerAudio = null;
-		}
-		fillerPlaying = false;
-	}
+	// (Filler phrases removed — call view "Thinking..." status is sufficient feedback)
 
 	// ── Helpers ──
 	function stripMarkdown(text: string): string {
@@ -248,11 +194,15 @@
 
 	function ttsFetchAudio(text: string): Promise<Blob | null> {
 		if (prefetchCache.has(text)) return prefetchCache.get(text)!;
+		const controller = new AbortController();
+		const timeout = setTimeout(() => controller.abort(), 8000); // 8s timeout
 		const promise = fetch('/storybuilder/api/tts', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({ text }),
-		}).then(res => res.ok ? res.blob() : null).catch(() => null);
+			signal: controller.signal,
+		}).then(res => { clearTimeout(timeout); return res.ok ? res.blob() : null; })
+		  .catch(() => { clearTimeout(timeout); return null; });
 		prefetchCache.set(text, promise);
 		return promise;
 	}
@@ -262,22 +212,59 @@
 		try {
 			const blob = await ttsFetchAudio(text);
 			prefetchCache.delete(text);
-			if (!blob || ttsStopped) return;
+			if (!blob || ttsStopped) {
+				console.warn('[TTS] skip:', !blob ? 'no blob' : 'stopped', text.slice(0, 30));
+				return;
+			}
+			console.log('[TTS] playing:', text.slice(0, 40), 'size:', blob.size);
 			const url = URL.createObjectURL(blob);
 			return new Promise<void>((resolve) => {
 				const audio = new Audio(url);
 				ttsAudio = audio;
-				audio.onended = () => {
+				let resolved = false;
+				let safetyTimeout: ReturnType<typeof setTimeout>;
+				const playStartTime = Date.now();
+				const done = (reason: string) => {
+					if (resolved) return;
+					resolved = true;
+					const elapsed = Date.now() - playStartTime;
+					console.log(`[TTS] done (${reason}) after ${elapsed}ms:`, text.slice(0, 40));
+					clearTimeout(safetyTimeout);
+					try { audio.pause(); } catch {}
 					URL.revokeObjectURL(url);
 					ttsAudio = null;
 					resolve();
 				};
+				audio.onloadedmetadata = () => {
+					console.log('[TTS] metadata: duration=', audio.duration, 'readyState=', audio.readyState, text.slice(0, 30));
+					// Reset safety timeout using actual duration if available
+					if (audio.duration && isFinite(audio.duration)) {
+						clearTimeout(safetyTimeout);
+						const actualTimeoutMs = audio.duration * 1000 + 3000;
+						safetyTimeout = setTimeout(() => {
+							console.warn('[TTS] safety timeout (actual duration) — expected', audio.duration, 's, readyState=', audio.readyState, 'paused=', audio.paused, 'ended=', audio.ended);
+							done('safety-timeout');
+						}, actualTimeoutMs);
+					}
+				};
+				audio.onstalled = () => console.warn('[TTS] stalled:', text.slice(0, 30));
+				audio.onsuspend = () => console.log('[TTS] suspend:', text.slice(0, 30));
+				audio.onwaiting = () => console.warn('[TTS] waiting:', text.slice(0, 30));
+				// Initial safety timeout based on blob size estimate, replaced by actual duration when metadata loads
+				const estimatedDurationMs = Math.max(8000, (blob.size / 16000) * 1000 + 4000);
+				safetyTimeout = setTimeout(() => {
+					console.warn('[TTS] safety timeout (estimated) after', Math.round(estimatedDurationMs / 1000), 's — duration was', audio.duration, 'readyState=', audio.readyState, 'paused=', audio.paused, 'ended=', audio.ended);
+					done('safety-timeout');
+				}, estimatedDurationMs);
+				audio.onended = () => done('ended');
 				audio.onerror = () => {
-					URL.revokeObjectURL(url);
-					ttsAudio = null;
-					resolve();
+					console.error('[TTS] audio error:', audio.error?.code, audio.error?.message, text.slice(0, 30));
+					done('error');
 				};
-				audio.play().catch(() => resolve());
+				audio.play().catch((err) => {
+					console.error('[TTS] play() rejected:', err.message, text.slice(0, 30));
+					done('play-rejected');
+				});
 			});
 		} catch (err) {
 			console.warn('[TTS] fetch failed:', err);
@@ -287,25 +274,22 @@
 	async function ttsProcessQueue() {
 		if (isProcessingQueue) return;
 		isProcessingQueue = true;
-		// Wait for filler to finish naturally before starting real TTS
-		if (fillerPlaying && fillerAudio) {
-			await new Promise<void>(resolve => {
-				const fa = fillerAudio;
-				if (!fa || !fillerPlaying) { resolve(); return; }
-				fa.onended = () => { fillerAudio = null; fillerPlaying = false; resolve(); };
-				fa.onerror = () => { fillerAudio = null; fillerPlaying = false; resolve(); };
-			});
-		}
+		console.log('[TTS] queue processing start, items:', sentenceQueue.length);
 		while (sentenceQueue.length > 0 && !ttsStopped) {
 			// Prefetch next sentence while current one plays
 			if (sentenceQueue.length > 1) {
 				ttsFetchAudio(sentenceQueue[1]);
 			}
 			const next = sentenceQueue.shift()!;
+			// Track what's been spoken so template can dim upcoming text
+			ttsRevealedText += (ttsRevealedText ? ' ' : '') + next;
 			await ttsPlaySentence(next);
 		}
 		isProcessingQueue = false;
+		console.log('[TTS] queue drained, flush:', ttsFlush, 'stopped:', ttsStopped);
 		if (ttsFlush && !ttsStopped) {
+			// TTS done — drop streaming flag so dimming stops
+			messages = messages.map(m => m.streaming ? { role: 'interviewer', content: m.content } : m);
 			isSpeaking = false;
 			ttsStarted = false;
 			if (pendingAutoEnd) {
@@ -314,7 +298,7 @@
 				return;
 			}
 			setTimeout(() => {
-				if (voiceMode && phase === 'coaching') startListening();
+				if (phase === 'coaching') startListening();
 			}, 300);
 		}
 	}
@@ -335,6 +319,8 @@
 	function ttsFlushQueue() {
 		ttsFlush = true;
 		if (sentenceQueue.length === 0 && !isProcessingQueue) {
+			// Drop streaming flag so dimming stops
+			messages = messages.map(m => m.streaming ? { role: 'interviewer', content: m.content } : m);
 			if (ttsStarted) {
 				isSpeaking = false;
 				ttsStarted = false;
@@ -344,7 +330,7 @@
 					return;
 				}
 				setTimeout(() => {
-					if (voiceMode && phase === 'coaching') startListening();
+					if (phase === 'coaching') startListening();
 				}, 300);
 			}
 		}
@@ -356,6 +342,8 @@
 		ttsStarted = false;
 		sentenceQueue = [];
 		isProcessingQueue = false;
+		ttsRevealedText = '';
+		ttsFullText = '';
 	}
 
 	function ttsSpeak(text: string) {
@@ -365,6 +353,8 @@
 		ttsFlush = true;
 		ttsStarted = true;
 		isSpeaking = true;
+		ttsRevealedText = '';
+		ttsFullText = text;
 		stopListening();
 		// Split into sentences using string scan (same break points as streaming)
 		const breaks = ['. ', '? ', '! ', '.\n', '?\n', '!\n', '."', '?"', '!"', '”', '?”', '!”', '\n'];
@@ -402,7 +392,6 @@
 		sentenceQueue = [];
 		isProcessingQueue = false;
 		ttsFlush = false;
-		stopFiller();
 		if (ttsAudio) {
 			ttsAudio.pause();
 			ttsAudio = null;
@@ -410,6 +399,8 @@
 		prefetchCache.clear();
 		isSpeaking = false;
 		ttsStarted = false;
+		// Drop streaming flag so dimming stops
+		messages = messages.map(m => m.streaming ? { role: 'interviewer', content: m.content } : m);
 	}
 
 	// ── Send message (streaming SSE) ──
@@ -418,11 +409,6 @@
 
 		messages = [...messages, { role: 'candidate', content: userMessage }];
 		loading = true;
-
-		// Play filler nod after substantial user replies (not early short exchanges)
-		const userMsgCount = messages.filter(m => m.role === 'candidate').length;
-		lastFillerPlayed = null;
-		if (voiceMode && userMsgCount >= 2 && userMessage.length > 40) playFiller();
 
 		// Add streaming placeholder
 		messages = [...messages, { role: 'interviewer', content: '', streaming: true }];
@@ -450,7 +436,7 @@
 			let spokenText = '';
 			let finalData: any = null;
 
-			if (voiceMode) ttsStartStreaming();
+			ttsStartStreaming();
 
 			while (true) {
 				const { done, value } = await reader.read();
@@ -466,57 +452,74 @@
 							streamedText += event.text;
 							const clean = stripMarkdown(streamedText);
 							messages = messages.map(m => m.streaming ? { ...m, content: clean } : m);
-							loading = false;
+							if (loading) { loading = false; stopListening(); isSpeaking = true; }
 
-							if (voiceMode) {
-								const cleanSoFar = stripMarkdown(streamedText);
-								let unspoken = cleanSoFar.slice(spokenText.length);
-								// Strip leading filler words from TTS if we just played a filler
-								const isFirstChunk = spokenText.length === 0 || !ttsStarted;
-								if (isFirstChunk && lastFillerPlayed && unspoken.length > 10) {
-									for (const fw of fillerWords) {
-										const pattern = new RegExp('^' + fw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '[,!.\\s]*', 'i');
-										if (pattern.test(unspoken)) {
-											const stripped = unspoken.replace(pattern, '').trimStart();
-											// Advance spokenText past the stripped filler so it's never spoken
-											spokenText = cleanSoFar.slice(0, cleanSoFar.length - unspoken.length + (unspoken.length - stripped.length));
-											unspoken = stripped;
-											lastFillerPlayed = null;
-											break;
-										}
+							// TTS chunking: split streamed text into sentences for TTS
+							const cleanSoFar = stripMarkdown(streamedText);
+							let unspoken = cleanSoFar.slice(spokenText.length);
+							const isFirstChunk = spokenText.length === 0 || !ttsStarted;
+							const eagerBreaks = [', ', '; ', ': ', ',\n', ';\n', ':\n'];
+							const sentenceBreaks = ['. ', '? ', '! ', '.\n', '?\n', '!\n', '.”', '?”', '!”', '”', '?”', '!”', '\n'];
+							const breaks = isFirstChunk && unspoken.length >= 15 ? [...sentenceBreaks, ...eagerBreaks] : sentenceBreaks;
+							let consumed = 0;
+							let remaining = unspoken;
+							while (remaining.length > 0) {
+								let earliest = -1;
+								let breakLen = 0;
+								for (const br of breaks) {
+									const idx = remaining.indexOf(br);
+									if (idx !== -1 && (earliest === -1 || idx < earliest)) {
+										if (eagerBreaks.includes(br) && idx < 14) continue;
+										earliest = idx;
+										breakLen = br.length;
 									}
 								}
-								// Eager first chunk: split at comma/colon/semicolon after 30+ chars to start TTS fast
-								// Subsequent chunks: wait for proper sentence boundaries
-								const eagerBreaks = [', ', '; ', ': ', ',\n', ';\n', ':\n'];
-								const sentenceBreaks = ['. ', '? ', '! ', '.\n', '?\n', '!\n', '.”', '?”', '!”', '”', '?”', '!”', '\n'];
-								const breaks = isFirstChunk && unspoken.length >= 30 ? [...sentenceBreaks, ...eagerBreaks] : sentenceBreaks;
-								let consumed = 0;
-								let remaining = unspoken;
-								while (remaining.length > 0) {
-									let earliest = -1;
-									let breakLen = 0;
-									for (const br of breaks) {
-										const idx = remaining.indexOf(br);
-										if (idx !== -1 && (earliest === -1 || idx < earliest)) {
-											// For eager breaks, only use them if we have 30+ chars
-											if (eagerBreaks.includes(br) && idx < 29) continue;
-											earliest = idx;
-											breakLen = br.length;
-										}
-									}
-									if (earliest === -1) break;
-									const chunk = remaining.slice(0, earliest + breakLen).trim();
-									if (chunk.length > 5) ttsQueueSentence(chunk);
-									consumed += earliest + breakLen;
-									remaining = remaining.slice(earliest + breakLen);
-									// After first chunk is queued, switch to sentence-only breaks
-									if (isFirstChunk && consumed > 0) break;
-								}
-								if (consumed > 0) spokenText = cleanSoFar.slice(0, spokenText.length + consumed);
+								if (earliest === -1) break;
+								const chunk = remaining.slice(0, earliest + breakLen).trim();
+								if (chunk.length > 5) ttsQueueSentence(chunk);
+								consumed += earliest + breakLen;
+								remaining = remaining.slice(earliest + breakLen);
+								if (isFirstChunk && consumed > 0) break;
+							}
+							if (consumed > 0) {
+								spokenText = cleanSoFar.slice(0, spokenText.length + consumed);
 							}
 						} else if (event.type === 'done') {
 							finalData = event;
+							// Process remaining text for TTS immediately — don't wait for stream close
+							const cleanMessage = stripMarkdown(event.message);
+							ttsFullText = cleanMessage;
+							messages = messages.map(m => m.streaming ? { ...m, content: cleanMessage } : m);
+							const remaining = cleanMessage.slice(spokenText.length).trim();
+							console.log('[TTS] done event — remaining text:', remaining.length, 'chars, queue:', sentenceQueue.length, 'processing:', isProcessingQueue);
+							if (remaining.length > 5) {
+								const sentBreaks = ['. ', '? ', '! ', '.\n', '?\n', '!\n', '."', '?"', '!"'];
+								let rest = remaining;
+								const pendingSentences: string[] = [];
+								while (rest.length > 0) {
+									let earliest = -1;
+									let bLen = 0;
+									for (const br of sentBreaks) {
+										const idx = rest.indexOf(br);
+										if (idx !== -1 && (earliest === -1 || idx < earliest)) { earliest = idx; bLen = br.length; }
+									}
+									if (earliest === -1) {
+										if (rest.trim().length > 3) pendingSentences.push(rest.trim());
+										break;
+									}
+									const chunk = rest.slice(0, earliest + bLen).trim();
+									if (chunk.length > 3) pendingSentences.push(chunk);
+									rest = rest.slice(earliest + bLen);
+								}
+								console.log('[TTS] prefetching', pendingSentences.length, 'remaining sentences');
+								pendingSentences.forEach(s => ttsFetchAudio(s));
+								pendingSentences.forEach(s => ttsQueueSentence(s));
+							}
+							if (pendingTtsWarning) {
+								ttsQueueSentence(pendingTtsWarning);
+								pendingTtsWarning = null;
+							}
+							ttsFlushQueue();
 						} else if (event.type === 'star_update') {
 							// Real-time STAR section updates from parallel extractor
 							if (event.question) extractedQuestion = event.question;
@@ -533,26 +536,11 @@
 				}
 			}
 
-			if (finalData) {
-				const cleanMessage = stripMarkdown(finalData.message);
-				messages = messages.map(m => m.streaming ? { role: 'interviewer', content: cleanMessage } : m);
-
-				if (voiceMode) {
-					const remaining = cleanMessage.slice(spokenText.length).trim();
-					if (remaining.length > 5) ttsQueueSentence(remaining);
-					// Append time warning to the end of this response's TTS stream
-					if (pendingTtsWarning) {
-						ttsQueueSentence(pendingTtsWarning);
-						pendingTtsWarning = null;
-					}
-					ttsFlushQueue();
-				}
-
-				if (finalData.done) {
-					stopListening();
-					ttsStop();
-					await handleEnd(true);
-				}
+			// After stream closes, handle session-ending if needed
+			if (finalData?.done) {
+				stopListening();
+				ttsStop();
+				await handleEnd(true);
 			}
 		} catch {
 			messages = messages.filter(m => !m.streaming).concat([
@@ -632,20 +620,13 @@
 						pendingAutoEnd = true;
 					} else {
 						// Idle — speak time-up then end
-						if (voiceMode) {
-							ttsSpeak(timeUpMsg);
-							pendingAutoEnd = true;
-						} else {
-							handleEnd(true);
-						}
+						ttsSpeak(timeUpMsg);
+						pendingAutoEnd = true;
 					}
 				}
 			}, 1000);
 
-			if (voiceMode) {
-				ttsSpeak(cleanOpening);
-				prefetchFillers(); // warm up filler audio while user listens to greeting
-			}
+			ttsSpeak(cleanOpening);
 		} catch {
 			// Refund the credit if session failed to start
 			try {
@@ -667,14 +648,6 @@
 	}
 
 	// ── Send text input ──
-	function handleSend(e?: Event) {
-		e?.preventDefault();
-		if (!input.trim() || loading) return;
-		const msg = input.trim();
-		input = '';
-		sendMessage(msg);
-	}
-
 	// ── Auto-save story to Supabase ──
 	let savedStoryId: string | null = null;
 	let sessionEnded = false;
@@ -913,7 +886,7 @@
 	function handleBackToSession() {
 		report = null;
 		phase = 'coaching';
-		if (voiceMode) startListening();
+		startListening();
 	}
 
 	function handleBuildAnother() {
@@ -921,7 +894,6 @@
 		messages = [];
 		sessionId = null;
 		report = null;
-		input = '';
 		userConfirmedEnd = false;
 		talkingPoints = null;
 		extractedFlags = null;
@@ -930,7 +902,7 @@
 	}
 
 	function handleInterrupt() {
-		if (isSpeaking) {
+		if (isSpeaking && !sessionExpired) {
 			ttsStop();
 			startListening();
 		}
@@ -1287,70 +1259,93 @@
 	<!-- Coaching two-column layout -->
 	<div class="sb-coaching-layout">
 		<div class="sb-coaching-main">
-			<!-- Header -->
-			<div class="sb-interview-header">
-				<div class="sb-avatar-placeholder">&#10024;</div>
-				<div style="flex: 1;">
-					<h2>Story Coaching</h2>
-					<div class="sb-mic-indicator {micState}">
-						<div class="sb-mic-dot"></div>
-						<span class="sb-mic-label">{micLabel}</span>
+			<!-- ══════ CALL VIEW ══════ -->
+				<div class="sb-call-view">
+					<!-- Call status area -->
+					<!-- svelte-ignore a11y-click-events-have-key-events -->
+					<!-- svelte-ignore a11y-no-static-element-interactions -->
+					<div class="sb-call-stage" on:click={isSpeaking && !sessionExpired ? handleInterrupt : undefined}>
+						<div class="sb-call-avatar" class:speaking={isSpeaking} class:listening={isListening} class:thinking={loading && !isSpeaking}>
+							<span class="sb-call-avatar-icon">&#10024;</span>
+							<div class="sb-call-avatar-ring"></div>
+						</div>
+						<div class="sb-call-status">
+							{#if isSpeaking}
+								Coach is speaking...
+							{:else if loading}
+								Thinking...
+							{:else if isListening}
+								Listening to you...
+							{:else}
+								Ready
+							{/if}
+						</div>
+						{#if isSpeaking && !sessionExpired}
+							<button class="sb-call-interrupt" on:click|stopPropagation={handleInterrupt}>
+								Tap to interrupt
+							</button>
+						{/if}
+						{#if isListening && interimTranscript}
+							<div class="sb-call-interim">"{interimTranscript}"</div>
+						{/if}
+					</div>
+
+					<!-- Transcript (collapsible) -->
+					{#if showTranscript}
+						<div class="sb-transcript-panel">
+							<div class="sb-transcript-messages">
+								{#each messages as msg}
+									<div class="sb-transcript-msg {msg.role}">
+										<span class="sb-transcript-label">{msg.role === 'interviewer' ? 'Coach' : 'You'}:</span>
+										{#if msg.streaming && ttsRevealedText && msg.content}
+											<span class="tts-spoken">{ttsRevealedText}</span><span class="tts-upcoming">{msg.content.slice(ttsRevealedText.length)}</span>
+										{:else}
+											{msg.content || 'Thinking...'}
+										{/if}
+									</div>
+								{/each}
+								{#if loading && !messages.some(m => m.streaming)}
+									<div class="sb-transcript-msg interviewer">
+										<span class="sb-transcript-label">Coach:</span> Thinking...
+									</div>
+								{/if}
+								<div bind:this={messagesEndEl}></div>
+							</div>
+						</div>
+					{:else}
+						<!-- Hidden anchor for scroll tracking -->
+						<div bind:this={messagesEndEl} style="display:none"></div>
+					{/if}
+
+					<!-- Call controls -->
+					<div class="sb-call-controls">
+						<button
+							class="sb-call-control-btn"
+							class:active={isListening}
+							on:click={() => isListening ? stopListening() : startListening()}
+							disabled={isSpeaking || loading || sessionExpired}
+						>
+							<span class="sb-call-control-icon">{isListening ? '🔴' : '🎤'}</span>
+							<span class="sb-call-control-label">{isListening ? 'Listening' : 'Mic'}</span>
+						</button>
+						<button
+							class="sb-call-control-btn"
+							class:active={showTranscript}
+							on:click={() => { showTranscript = !showTranscript; if (showTranscript) setTimeout(() => messagesEndEl?.scrollIntoView({ behavior: 'instant' }), 50); }}
+						>
+							<span class="sb-call-control-icon">📝</span>
+							<span class="sb-call-control-label">Transcript</span>
+						</button>
+						<button
+							class="sb-call-control-btn end"
+							on:click={handleEnd}
+							disabled={loading}
+						>
+							<span class="sb-call-control-icon">⏹</span>
+							<span class="sb-call-control-label">Finish</span>
+						</button>
 					</div>
 				</div>
-			</div>
-
-			<!-- Messages -->
-			<!-- svelte-ignore a11y-click-events-have-key-events -->
-			<!-- svelte-ignore a11y-no-static-element-interactions -->
-			<div
-				class="sb-messages"
-				class:interruptable={isSpeaking}
-				on:click={handleInterrupt}
-			>
-				{#each messages as msg}
-					<div class="sb-message {msg.role}">
-						<div class="sb-message-label">
-							{msg.role === 'interviewer' ? '✨ Coach' : '🙋 You'}
-						</div>
-						<div class="sb-message-content" class:typing={msg.role === 'interviewer' && !msg.content}>
-							{msg.content || 'Thinking...'}
-						</div>
-					</div>
-				{/each}
-				{#if isListening && interimTranscript}
-					<div class="sb-message candidate">
-						<div class="sb-message-label">&#128587; You (speaking...)</div>
-						<div class="sb-message-content interim">{interimTranscript}</div>
-					</div>
-				{/if}
-				{#if loading && !messages.some(m => m.streaming)}
-					<div class="sb-message interviewer">
-						<div class="sb-message-label">&#10024; Coach</div>
-						<div class="sb-message-content typing">Thinking...</div>
-					</div>
-				{/if}
-				<div bind:this={messagesEndEl}></div>
-			</div>
-
-			<!-- Input bar -->
-			<form class="sb-input-bar" on:submit|preventDefault={handleSend}>
-				<textarea
-					value={voiceMode && isListening ? interimTranscript : input}
-					on:input={(e) => { if (!isListening) input = e.currentTarget.value; }}
-					placeholder={sessionExpired ? 'Session ended — saving your story...' : isListening ? 'Listening... tell me about your experience' : 'Or type here...'}
-					rows="2"
-					disabled={loading || isSpeaking || sessionExpired}
-					on:keydown={(e) => {
-						if (e.key === 'Enter' && !e.shiftKey) {
-							e.preventDefault();
-							handleSend();
-						}
-					}}
-				></textarea>
-				<button type="submit" disabled={loading || isSpeaking || (!input.trim() && !isListening)}>
-					&#x2191;
-				</button>
-			</form>
 		</div>
 
 		<!-- Resize handle -->
@@ -1374,19 +1369,22 @@
 					<h3>Your Story in Progress…</h3>
 					<span class="sb-star-progress-count">{completedCount}/4</span>
 				</div>
+				<button class="sb-star-expand-btn" on:click={() => starExpanded = !starExpanded} disabled={completedCount === 0}>
+					{starExpanded ? 'Collapse' : 'Expand'}
+				</button>
 				{#each [{ key: 'situation', label: 'Situation' }, { key: 'task', label: 'Task' }, { key: 'action', label: 'Action' }, { key: 'result', label: 'Result' }] as section}
 					<div class="sb-star-progress-section" class:filled={starSections[section.key]} class:empty={!starSections[section.key]}>
 						<div class="sb-star-progress-label">
 							<span class="sb-star-progress-dot">{starSections[section.key] ? '✓' : '○'}</span>
 							<span>{section.label}</span>
 						</div>
-						{#if starSections[section.key]}
+						{#if starExpanded && starSections[section.key]}
 							<div class="sb-star-progress-content">{starSections[section.key]}</div>
 						{/if}
 					</div>
 				{/each}
 				{#if completedCount === 0}
-					<p class="sb-star-progress-hint">Sections will appear here as your coach helps you build each part of your story.</p>
+					<p class="sb-star-progress-hint">Sections will be filled here as your coach helps you build each part of your story.</p>
 				{/if}
 			</div>
 		</div>
@@ -1566,39 +1564,173 @@
 		background: rgba(201, 100, 66, 0.06);
 	}
 
-	/* ── Interview Header ── */
-	.sb-interview-header {
+	/* ── Call View (voice mode) ── */
+	.sb-call-view {
 		display: flex;
-		align-items: center;
-		gap: 12px;
-		padding: 12px 24px;
-		border-bottom: 1px solid #e5e5e3;
-		background: #f9f9f8;
-		flex-shrink: 0;
+		flex-direction: column;
+		height: 100%;
+		overflow: hidden;
 	}
-	.sb-avatar-placeholder {
-		width: 40px;
-		height: 40px;
-		border-radius: 50%;
-		background: #f0ebe4;
+	.sb-call-stage {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: 16px;
+		min-height: 200px;
+		cursor: default;
+		user-select: none;
+		background: #f0ebe5;
+	}
+	.sb-call-avatar {
+		position: relative;
+		width: 120px;
+		height: 120px;
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		font-size: 1.2rem;
 	}
-	.sb-interview-header h2 {
-		font-size: 1rem;
+	.sb-call-avatar-icon {
+		font-size: 48px;
+		z-index: 1;
+	}
+	.sb-call-avatar-ring {
+		position: absolute;
+		inset: 0;
+		border-radius: 50%;
+		border: 3px solid #e0d6ce;
+		transition: all 0.3s ease;
+	}
+	.sb-call-avatar.speaking .sb-call-avatar-ring {
+		border-color: #c96442;
+		animation: pulse-ring 1.5s ease-in-out infinite;
+		box-shadow: 0 0 0 0 rgba(201, 100, 66, 0.3);
+	}
+	.sb-call-avatar.listening .sb-call-avatar-ring {
+		border-color: #16a34a;
+		box-shadow: 0 0 12px rgba(22, 163, 74, 0.2);
+	}
+	.sb-call-avatar.thinking .sb-call-avatar-ring {
+		border-color: #d97706;
+		animation: pulse-ring-slow 2s ease-in-out infinite;
+	}
+	@keyframes pulse-ring {
+		0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(201, 100, 66, 0.3); }
+		50% { transform: scale(1.08); box-shadow: 0 0 20px 4px rgba(201, 100, 66, 0.15); }
+	}
+	@keyframes pulse-ring-slow {
+		0%, 100% { transform: scale(1); opacity: 0.7; }
+		50% { transform: scale(1.04); opacity: 1; }
+	}
+	.sb-call-status {
+		font-size: 1.1rem;
+		color: #666;
+		font-weight: 500;
+	}
+	.sb-call-interrupt {
+		background: none;
+		border: 1px solid #d4c9be;
+		color: #999;
+		padding: 6px 16px;
+		border-radius: 16px;
+		font-size: 0.85rem;
+		cursor: pointer;
+		transition: all 0.2s;
+		animation: fade-in 0.8s ease;
+	}
+	.sb-call-interrupt:hover {
+		border-color: #c96442;
+		color: #c96442;
+	}
+	@keyframes fade-in {
+		from { opacity: 0; transform: translateY(4px); }
+		to { opacity: 1; transform: translateY(0); }
+	}
+	.sb-call-interim {
+		color: #888;
+		font-style: italic;
+		font-size: 0.95rem;
+		max-width: 80%;
+		text-align: center;
+		line-height: 1.4;
+	}
+
+	/* Transcript panel */
+	.sb-transcript-panel {
+		flex-shrink: 0;
+		max-height: 35%;
+		border-top: 1px solid #eee;
+		overflow: hidden;
+		display: flex;
+		flex-direction: column;
+	}
+	.sb-transcript-messages {
+		overflow-y: auto;
+		padding: 12px 20px;
+		font-size: 0.88rem;
+		line-height: 1.5;
+	}
+	.sb-transcript-msg {
+		margin-bottom: 8px;
+	}
+	.sb-transcript-msg.interviewer {
+		color: #444;
+	}
+	.sb-transcript-msg.candidate, .sb-transcript-msg.user {
+		color: #777;
+	}
+	.sb-transcript-label {
 		font-weight: 600;
-		color: #1a1a1a;
-		text-align: left;
-		margin: 0;
+		margin-right: 4px;
 	}
-	.sb-header-actions {
+
+	/* Call controls */
+	.sb-call-controls {
+		flex-shrink: 0;
 		display: flex;
 		align-items: center;
-		gap: 10px;
-		flex-shrink: 0;
+		justify-content: center;
+		gap: 24px;
+		padding: 0px 8px 20px;
+		border-top: 1px solid #e5e5e3;
+		background: #f9f9f8;
 	}
+	.sb-call-control-btn {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 4px;
+		margin: 10px;
+		background: none;
+		border: none;
+		cursor: pointer;
+		padding: 8px 16px;
+		border-radius: 12px;
+		transition: background 0.15s;
+	}
+	.sb-call-control-btn:hover:not(:disabled) {
+		background: #f0ebe5;
+	}
+	.sb-call-control-btn:disabled {
+		opacity: 0.3;
+		cursor: not-allowed;
+	}
+	.sb-call-control-btn.active {
+		background: #f0ebe5;
+	}
+	.sb-call-control-btn.end {
+		color: #c96442;
+	}
+	.sb-call-control-icon {
+		font-size: 1.5rem;
+	}
+	.sb-call-control-label {
+		font-size: 0.75rem;
+		color: #888;
+	}
+
+	/* ── Session Controls ── */
 	.sb-session-timer {
 		font-size: 0.9rem;
 		font-weight: 600;
@@ -1638,137 +1770,15 @@
 		border-color: #c96442;
 	}
 
-	/* ── Mic Indicator ── */
-	.sb-mic-indicator {
-		display: flex;
-		align-items: center;
-		gap: 8px;
-		margin-top: 2px;
-	}
-	.sb-mic-dot {
-		width: 8px;
-		height: 8px;
-		border-radius: 50%;
-		background: #ccc;
-		transition: background 0.3s;
-	}
-	.sb-mic-indicator.listening .sb-mic-dot {
-		background: #16a34a;
-		animation: sb-mic-pulse 1.2s ease-in-out infinite;
-	}
-	.sb-mic-indicator.speaking .sb-mic-dot {
-		background: #c96442;
-		animation: sb-mic-pulse 0.8s ease-in-out infinite;
-	}
-	.sb-mic-indicator.processing .sb-mic-dot {
-		background: #d97706;
-		animation: sb-mic-pulse 0.6s ease-in-out infinite;
-	}
-	@keyframes sb-mic-pulse {
-		0%, 100% { transform: scale(1); opacity: 1; }
-		50% { transform: scale(1.5); opacity: 0.5; }
-	}
-	.sb-mic-label {
-		font-size: 0.7rem;
-		color: #999;
-		font-weight: 500;
-	}
-	.sb-mic-indicator.listening .sb-mic-label { color: #16a34a; }
-	.sb-mic-indicator.speaking .sb-mic-label { color: #c96442; }
-	.sb-mic-indicator.processing .sb-mic-label { color: #d97706; }
 
-	/* ── Messages ── */
-	.sb-messages {
-		flex: 1;
-		overflow-y: auto;
-		padding: 24px 0 16px;
-		display: flex;
-		flex-direction: column;
-		gap: 20px;
+	/* TTS text sync: spoken text is normal, upcoming text is dimmed */
+	.tts-spoken {
+		color: inherit;
 	}
-	.sb-messages.interruptable { cursor: pointer; }
-	.sb-message { max-width: 100%; }
-	.sb-message-label {
-		font-size: 0.75rem;
-		font-weight: 600;
-		color: #999;
-		margin-bottom: 4px;
-		text-transform: uppercase;
-		letter-spacing: 0.03em;
+	.tts-upcoming {
+		color: #b0a89e;
+		transition: color 0.3s ease;
 	}
-	.sb-message-content {
-		padding: 0;
-		font-size: 0.95rem;
-		line-height: 1.7;
-		white-space: pre-wrap;
-		color: #2d2d2d;
-	}
-	.sb-message.interviewer .sb-message-content {
-		border-left: 3px solid #c96442;
-		padding: 8px 0 8px 16px;
-		color: #1a1a1a;
-	}
-	.sb-message.candidate .sb-message-content {
-		background: #f0ebe4;
-		border-radius: 12px;
-		padding: 12px 16px;
-		color: #2d2d2d;
-	}
-	.sb-message-content.typing {
-		color: #999;
-		font-style: italic;
-	}
-	.sb-message-content.interim {
-		opacity: 0.6;
-		background: #f5f0ea;
-		border: 1px dashed #d4c9be;
-		border-radius: 12px;
-		padding: 12px 16px;
-	}
-
-	/* ── Input Bar ── */
-	.sb-input-bar {
-		display: flex;
-		gap: 10px;
-		padding: 16px 0;
-		border-top: 1px solid #e5e5e3;
-		position: sticky;
-		bottom: 0;
-		background: #f9f9f8;
-	}
-	.sb-input-bar textarea {
-		flex: 1;
-		background: #ffffff;
-		border: 1px solid #e5e5e3;
-		border-radius: 20px;
-		padding: 10px 16px;
-		color: #2d2d2d;
-		font-family: inherit;
-		font-size: 0.9rem;
-		resize: none;
-	}
-	.sb-input-bar textarea:focus {
-		outline: none;
-		border-color: #c96442;
-		box-shadow: 0 0 0 2px rgba(201, 100, 66, 0.12);
-	}
-	.sb-input-bar button {
-		background: #c96442;
-		color: white;
-		border: none;
-		width: 40px;
-		height: 40px;
-		border-radius: 50%;
-		font-weight: 600;
-		font-size: 1.1rem;
-		cursor: pointer;
-		align-self: flex-end;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-	}
-	.sb-input-bar button:disabled { opacity: 0.3; cursor: not-allowed; }
-	.sb-input-bar button:hover:not(:disabled) { background: #b5593a; }
 
 	/* ── STAR Progress Panel ── */
 	.sb-star-progress-panel {
@@ -1789,6 +1799,26 @@
 		font-weight: 600;
 		color: #1a1a1a;
 		text-align: left;
+	}
+	.sb-star-expand-btn {
+		display: block;
+		margin: 0 0 12px;
+		font-size: 0.75rem;
+		font-weight: 500;
+		color: #c96442;
+		background: none;
+		border: 1px solid #e5e5e3;
+		border-radius: 8px;
+		padding: 2px 10px;
+		cursor: pointer;
+		transition: background 0.15s;
+	}
+	.sb-star-expand-btn:hover:not(:disabled) {
+		background: #fef2f2;
+	}
+	.sb-star-expand-btn:disabled {
+		opacity: 0.4;
+		cursor: not-allowed;
 	}
 	.sb-star-progress-count {
 		font-size: 0.8rem;

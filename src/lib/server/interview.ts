@@ -201,13 +201,12 @@ export async function handleUserMessageStream(
   // Persist after coach reply (fire-and-forget)
   await persistSession(sessionId, session, supabase);
 
-  // Fire STAR extraction in parallel — don't block the conversation
+  // Run STAR extraction — must await so Vercel Edge doesn't terminate early
   const userMsgCount = session.conversationHistory.filter(m => m.role === 'user').length;
-  if (userMsgCount >= 2) {
-    extractStarSections(session.conversationHistory, sessionId, supabase)
-      .then(async (sections) => {
-        if (!sections) return;
-        // Update server-side session with extracted sections
+  if (userMsgCount >= 1) {
+    try {
+      const sections = await extractStarSections(session.conversationHistory, sessionId, supabase);
+      if (sections) {
         const updates: { section: string; content: string }[] = [];
         if (sections.question) {
           session.extractedQuestion = sections.question;
@@ -223,18 +222,14 @@ export async function handleUserMessageStream(
         }
         if (updates.length > 0 || sections.question || sections.flags) {
           writer.write(`data: ${JSON.stringify({ type: 'star_update', updates, question: sections.question || null, flags: sections.flags || null })}\n\n`);
-          // Persist updated STAR sections
           await persistSession(sessionId, session, supabase);
         }
-        writer.end();
-      })
-      .catch((err) => {
-        console.warn('STAR extraction failed:', err.message);
-        writer.end();
-      });
-  } else {
-    writer.end();
+      }
+    } catch (err: any) {
+      console.warn('STAR extraction failed:', err.message);
+    }
   }
+  writer.end();
 }
 
 // ── Non-streaming fallback ──
