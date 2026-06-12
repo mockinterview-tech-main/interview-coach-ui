@@ -222,6 +222,7 @@
 				const audio = new Audio(url);
 				ttsAudio = audio;
 				let resolved = false;
+				let safetyTimeout: ReturnType<typeof setTimeout>;
 				const playStartTime = Date.now();
 				const done = (reason: string) => {
 					if (resolved) return;
@@ -229,20 +230,30 @@
 					const elapsed = Date.now() - playStartTime;
 					console.log(`[TTS] done (${reason}) after ${elapsed}ms:`, text.slice(0, 40));
 					clearTimeout(safetyTimeout);
+					try { audio.pause(); } catch {}
 					URL.revokeObjectURL(url);
 					ttsAudio = null;
 					resolve();
 				};
 				audio.onloadedmetadata = () => {
 					console.log('[TTS] metadata: duration=', audio.duration, 'readyState=', audio.readyState, text.slice(0, 30));
+					// Reset safety timeout using actual duration if available
+					if (audio.duration && isFinite(audio.duration)) {
+						clearTimeout(safetyTimeout);
+						const actualTimeoutMs = audio.duration * 1000 + 3000;
+						safetyTimeout = setTimeout(() => {
+							console.warn('[TTS] safety timeout (actual duration) — expected', audio.duration, 's, readyState=', audio.readyState, 'paused=', audio.paused, 'ended=', audio.ended);
+							done('safety-timeout');
+						}, actualTimeoutMs);
+					}
 				};
 				audio.onstalled = () => console.warn('[TTS] stalled:', text.slice(0, 30));
 				audio.onsuspend = () => console.log('[TTS] suspend:', text.slice(0, 30));
 				audio.onwaiting = () => console.warn('[TTS] waiting:', text.slice(0, 30));
-				// Safety timeout: scale with audio size (~1s per 16KB of MP3), minimum 5s
-				const estimatedDurationMs = Math.max(5000, (blob.size / 16000) * 1000 + 2000);
-				const safetyTimeout = setTimeout(() => {
-					console.warn('[TTS] safety timeout after', Math.round(estimatedDurationMs / 1000), 's — duration was', audio.duration, 'readyState=', audio.readyState, 'paused=', audio.paused, 'ended=', audio.ended);
+				// Initial safety timeout based on blob size estimate, replaced by actual duration when metadata loads
+				const estimatedDurationMs = Math.max(8000, (blob.size / 16000) * 1000 + 4000);
+				safetyTimeout = setTimeout(() => {
+					console.warn('[TTS] safety timeout (estimated) after', Math.round(estimatedDurationMs / 1000), 's — duration was', audio.duration, 'readyState=', audio.readyState, 'paused=', audio.paused, 'ended=', audio.ended);
 					done('safety-timeout');
 				}, estimatedDurationMs);
 				audio.onended = () => done('ended');
