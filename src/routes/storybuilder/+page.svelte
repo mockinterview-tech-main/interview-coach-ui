@@ -486,6 +486,40 @@
 							}
 						} else if (event.type === 'done') {
 							finalData = event;
+							// Process remaining text for TTS immediately — don't wait for stream close
+							const cleanMessage = stripMarkdown(event.message);
+							ttsFullText = cleanMessage;
+							messages = messages.map(m => m.streaming ? { ...m, content: cleanMessage } : m);
+							const remaining = cleanMessage.slice(spokenText.length).trim();
+							console.log('[TTS] done event — remaining text:', remaining.length, 'chars, queue:', sentenceQueue.length, 'processing:', isProcessingQueue);
+							if (remaining.length > 5) {
+								const sentBreaks = ['. ', '? ', '! ', '.\n', '?\n', '!\n', '."', '?"', '!"'];
+								let rest = remaining;
+								const pendingSentences: string[] = [];
+								while (rest.length > 0) {
+									let earliest = -1;
+									let bLen = 0;
+									for (const br of sentBreaks) {
+										const idx = rest.indexOf(br);
+										if (idx !== -1 && (earliest === -1 || idx < earliest)) { earliest = idx; bLen = br.length; }
+									}
+									if (earliest === -1) {
+										if (rest.trim().length > 3) pendingSentences.push(rest.trim());
+										break;
+									}
+									const chunk = rest.slice(0, earliest + bLen).trim();
+									if (chunk.length > 3) pendingSentences.push(chunk);
+									rest = rest.slice(earliest + bLen);
+								}
+								console.log('[TTS] prefetching', pendingSentences.length, 'remaining sentences');
+								pendingSentences.forEach(s => ttsFetchAudio(s));
+								pendingSentences.forEach(s => ttsQueueSentence(s));
+							}
+							if (pendingTtsWarning) {
+								ttsQueueSentence(pendingTtsWarning);
+								pendingTtsWarning = null;
+							}
+							ttsFlushQueue();
 						} else if (event.type === 'star_update') {
 							// Real-time STAR section updates from parallel extractor
 							if (event.question) extractedQuestion = event.question;
@@ -502,52 +536,11 @@
 				}
 			}
 
-			if (finalData) {
-				const cleanMessage = stripMarkdown(finalData.message);
-				ttsFullText = cleanMessage;
-				// In voice mode, keep streaming flag so template can show spoken/upcoming split
-				// Keep streaming flag so template shows spoken/upcoming split
-				messages = messages.map(m => m.streaming ? { ...m, content: cleanMessage } : m);
-
-				// Split remaining text into sentences for TTS
-				const remaining = cleanMessage.slice(spokenText.length).trim();
-				console.log('[TTS] stream done — remaining text:', remaining.length, 'chars, queue:', sentenceQueue.length, 'processing:', isProcessingQueue);
-				if (remaining.length > 5) {
-					const sentBreaks = ['. ', '? ', '! ', '.\n', '?\n', '!\n', '."', '?"', '!"'];
-					let rest = remaining;
-					const pendingSentences: string[] = [];
-					while (rest.length > 0) {
-						let earliest = -1;
-						let bLen = 0;
-						for (const br of sentBreaks) {
-							const idx = rest.indexOf(br);
-							if (idx !== -1 && (earliest === -1 || idx < earliest)) { earliest = idx; bLen = br.length; }
-						}
-						if (earliest === -1) {
-							if (rest.trim().length > 3) pendingSentences.push(rest.trim());
-							break;
-						}
-						const chunk = rest.slice(0, earliest + bLen).trim();
-						if (chunk.length > 3) pendingSentences.push(chunk);
-						rest = rest.slice(earliest + bLen);
-					}
-					// Prefetch all remaining sentences in parallel before queuing
-					console.log('[TTS] prefetching', pendingSentences.length, 'remaining sentences');
-					pendingSentences.forEach(s => ttsFetchAudio(s));
-					pendingSentences.forEach(s => ttsQueueSentence(s));
-				}
-				// Append time warning to the end of this response's TTS stream
-				if (pendingTtsWarning) {
-					ttsQueueSentence(pendingTtsWarning);
-					pendingTtsWarning = null;
-				}
-				ttsFlushQueue();
-
-				if (finalData.done) {
-					stopListening();
-					ttsStop();
-					await handleEnd(true);
-				}
+			// After stream closes, handle session-ending if needed
+			if (finalData?.done) {
+				stopListening();
+				ttsStop();
+				await handleEnd(true);
 			}
 		} catch {
 			messages = messages.filter(m => !m.streaming).concat([
