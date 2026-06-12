@@ -337,6 +337,11 @@
 	}
 
 	function ttsStartStreaming() {
+		// Stop any audio still playing from the previous turn
+		if (ttsAudio) {
+			try { ttsAudio.pause(); } catch {}
+			ttsAudio = null;
+		}
 		ttsStopped = false;
 		ttsFlush = false;
 		ttsStarted = false;
@@ -344,6 +349,7 @@
 		isProcessingQueue = false;
 		ttsRevealedText = '';
 		ttsFullText = '';
+		prefetchCache.clear();
 	}
 
 	function ttsSpeak(text: string) {
