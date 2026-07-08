@@ -5,7 +5,112 @@
 
 	const CONTACT_EMAIL = import.meta.env.VITE_CONTACT_INFO;
 
+	const SITE_URL = 'https://mockinterview.tech';
+	const PAGE_TITLE = 'AI Behavioral Interview Coach — Build STAR Stories | mockinterview.tech';
+	const PAGE_DESC =
+		"Build interview-ready STAR stories with an AI coach trained by Yijun — a Sr. FAANG TPM who's coached 600+ candidates. Turn rambling answers into remarkable stories.";
+	const OG_IMAGE = `${SITE_URL}/og-image.png`;
+
+	// JSON-LD structured data for search engines + AI/LLM answer engines
+	const jsonLd = {
+		'@context': 'https://schema.org',
+		'@graph': [
+			{
+				'@type': 'Organization',
+				'@id': `${SITE_URL}/#organization`,
+				name: 'mockinterview.tech',
+				url: SITE_URL,
+				description: PAGE_DESC,
+				founder: { '@id': `${SITE_URL}/#yijun` }
+			},
+			{
+				'@type': 'Person',
+				'@id': `${SITE_URL}/#yijun`,
+				name: 'Yijun Wang',
+				jobTitle: 'Interview Coach · Sr. TPM at FAANG',
+				description:
+					"Senior TPM at FAANG with 10+ years of experience who has coached 600+ candidates through behavioral interview rounds.",
+				knowsAbout: [
+					'Behavioral interviews',
+					'STAR method',
+					'Interview coaching',
+					'Product management interviews',
+					'Technical program management interviews'
+				],
+				url: SITE_URL
+			},
+			{
+				'@type': 'Service',
+				'@id': `${SITE_URL}/#service`,
+				name: 'AI Behavioral Interview Story Coaching',
+				serviceType: 'Behavioral interview coaching',
+				provider: { '@id': `${SITE_URL}/#organization` },
+				description:
+					'An AI interview coach that co-builds interview-ready STAR stories in real time through voice conversation, pulling out the signals interviewers care about.',
+				areaServed: 'US',
+				aggregateRating: {
+					'@type': 'AggregateRating',
+					ratingValue: '5.0',
+					reviewCount: '6',
+					bestRating: '5'
+				}
+			},
+			{
+				'@type': 'FAQPage',
+				'@id': `${SITE_URL}/#faq`,
+				mainEntity: [
+					{
+						'@type': 'Question',
+						name: 'Is my data safe and private?',
+						acceptedAnswer: {
+							'@type': 'Answer',
+							text: 'Yes. Your session data is private to your account and used only to build your interview stories.'
+						}
+					},
+					{
+						'@type': 'Question',
+						name: 'Do session credits expire?',
+						acceptedAnswer: {
+							'@type': 'Answer',
+							text: 'No, session credits do not expire. However, credits are non-refundable after purchase.'
+						}
+					},
+					{
+						'@type': 'Question',
+						name: 'Why not just use ChatGPT or a general LLM to prepare?',
+						acceptedAnswer: {
+							'@type': 'Answer',
+							text: 'A general chatbot answers questions; it does not run a structured coaching session. This coach actively listens, asks the follow-ups a real interviewer would, and co-builds each STAR section in real time so you leave with a polished, interview-ready story.'
+						}
+					}
+				]
+			}
+		]
+	};
 </script>
+
+<svelte:head>
+	<title>{PAGE_TITLE}</title>
+	<meta name="description" content={PAGE_DESC} />
+	<link rel="canonical" href={SITE_URL} />
+
+	<!-- Open Graph -->
+	<meta property="og:type" content="website" />
+	<meta property="og:site_name" content="mockinterview.tech" />
+	<meta property="og:title" content={PAGE_TITLE} />
+	<meta property="og:description" content={PAGE_DESC} />
+	<meta property="og:url" content={SITE_URL} />
+	<meta property="og:image" content={OG_IMAGE} />
+
+	<!-- Twitter -->
+	<meta name="twitter:card" content="summary_large_image" />
+	<meta name="twitter:title" content={PAGE_TITLE} />
+	<meta name="twitter:description" content={PAGE_DESC} />
+	<meta name="twitter:image" content={OG_IMAGE} />
+
+	<!-- Structured data for search + AI answer engines -->
+	{@html `<script type="application/ld+json">${JSON.stringify(jsonLd)}<\/script>`}
+</svelte:head>
 
 <div class="page">
 
