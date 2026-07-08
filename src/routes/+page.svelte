@@ -7,7 +7,10 @@
 	const CONTACT_EMAIL = import.meta.env.VITE_CONTACT_INFO;
 
 	const SITE_URL = 'https://mockinterview.tech';
-	const PAGE_TITLE = 'AI Behavioral Interview Coach — Build STAR Stories | mockinterview.tech';
+	// SERP title — keyword-forward so Google ranks it
+	const PAGE_TITLE = 'Interview Story Coach — Build STAR Stories Before You Mock | mockinterview.tech';
+	// Social share card title — human hook, this is what shows when Yijun shares a link
+	const OG_TITLE = 'Turn Rambling Answers into Interview-Ready Stories';
 	const PAGE_DESC =
 		"Build interview-ready STAR stories with an AI coach trained by Yijun — a Sr. FAANG TPM who's coached 600+ candidates. Turn rambling answers into remarkable stories.";
 	// Image must be an absolute URL reachable on THIS deployment (preview or prod),
@@ -100,14 +103,14 @@
 	<!-- Open Graph -->
 	<meta property="og:type" content="website" />
 	<meta property="og:site_name" content="mockinterview.tech" />
-	<meta property="og:title" content={PAGE_TITLE} />
+	<meta property="og:title" content={OG_TITLE} />
 	<meta property="og:description" content={PAGE_DESC} />
 	<meta property="og:url" content={SITE_URL} />
 	<meta property="og:image" content={OG_IMAGE} />
 
 	<!-- Twitter -->
 	<meta name="twitter:card" content="summary_large_image" />
-	<meta name="twitter:title" content={PAGE_TITLE} />
+	<meta name="twitter:title" content={OG_TITLE} />
 	<meta name="twitter:description" content={PAGE_DESC} />
 	<meta name="twitter:image" content={OG_IMAGE} />
 
