@@ -8,6 +8,7 @@ Disallow: /credits
 Disallow: /subscription
 Disallow: /auth
 Disallow: /logout
+Disallow: /og
 
 # Explicitly welcome AI / LLM answer-engine crawlers
 User-agent: GPTBot
