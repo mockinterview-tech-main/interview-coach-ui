@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Accordion, { Panel, Header, Content } from '@smui-extra/accordion';
+	import { page } from '$app/stores';
 	import { userStore } from '$lib/stores/userStore.js';
 	import yijunProfile from '$lib/assets/yijun-profile.png';
 
@@ -9,7 +10,9 @@
 	const PAGE_TITLE = 'AI Behavioral Interview Coach — Build STAR Stories | mockinterview.tech';
 	const PAGE_DESC =
 		"Build interview-ready STAR stories with an AI coach trained by Yijun — a Sr. FAANG TPM who's coached 600+ candidates. Turn rambling answers into remarkable stories.";
-	const OG_IMAGE = `${SITE_URL}/og-image.png`;
+	// Image must be an absolute URL reachable on THIS deployment (preview or prod),
+	// so derive it from the current request origin rather than hardcoding prod.
+	$: OG_IMAGE = `${$page.url.origin}/og-image.png`;
 
 	// JSON-LD structured data for search engines + AI/LLM answer engines
 	const jsonLd = {
