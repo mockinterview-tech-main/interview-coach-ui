@@ -1,26 +1,11 @@
 import {
-  getCoachResponse,
   streamCoachResponse,
   extractStarSections,
-  generateStoryReport,
   trackUsageToDb,
   type ConversationMessage
 } from './claude';
 
 const SESSION_LIMIT_MS = 20 * 60 * 1000; // 20 minutes
-
-const STARTER_PROMPTS = [
-  'conflict with a teammate',
-  'a project that failed or went off track',
-  'leading without authority',
-  'making a tough decision with incomplete info',
-  'delivering under a tight deadline',
-  'learning something new quickly',
-  'mentoring or helping a colleague',
-  'pushing back on a stakeholder',
-  'going above and beyond for a user',
-  'receiving and acting on critical feedback',
-];
 
 export interface StarSections {
   situation: string | null;
@@ -121,14 +106,10 @@ export async function startSession(sessionId: string, supabase: any): Promise<st
   const session = await loadSession(sessionId, supabase);
   if (!session) throw new Error('Session not found');
 
-  const shuffled = [...STARTER_PROMPTS].sort(() => Math.random() - 0.5);
-  const suggestions = shuffled.slice(0, 3);
-
-  const openingMessage = `Hey! We've got 20 minutes, plenty of time to turn a real experience into a remarkable answer to impress your interviewer.
-
-You can start by telling me which interview question you want to prepare for, or just describe a work experience you think could make a good story. If you're not sure where to begin, here are a few ideas: ${suggestions[0]}, ${suggestions[1]}, or ${suggestions[2]}.
-
-What would you like to work on?`;
+  // Kept short on purpose — this is read aloud, so every extra sentence is dead
+  // airtime before the user can start. Theme suggestions are offered by the coach
+  // only if the user asks for a recommendation.
+  const openingMessage = `Hey! We have 20 minutes to deliver an impactful STAR story. Do you have a specific question in mind, or would you like my recommendation?`;
 
   session.conversationHistory.push({
     role: 'assistant',
@@ -220,10 +201,8 @@ export async function handleUserMessageStream(
             updates.push({ section: key, content: sections[key]! });
           }
         }
-        if (updates.length > 0 || sections.question || sections.flags) {
-          writer.write(`data: ${JSON.stringify({ type: 'star_update', updates, question: sections.question || null, flags: sections.flags || null })}\n\n`);
-          await persistSession(sessionId, session, supabase);
-        }
+        writer.write(`data: ${JSON.stringify({ type: 'star_update', updates, status: sections.status, question: sections.question || null, flags: sections.flags || null })}\n\n`);
+        await persistSession(sessionId, session, supabase);
       }
     } catch (err: any) {
       console.warn('STAR extraction failed:', err.message);
@@ -232,74 +211,7 @@ export async function handleUserMessageStream(
   writer.end();
 }
 
-// ── Non-streaming fallback ──
-export async function handleUserMessage(sessionId: string, userMessage: string, supabase: any) {
-  const session = await loadSession(sessionId, supabase);
-  if (!session) throw new Error('Session not found');
-  if (session.status === 'completed') throw new Error('Session already completed');
-
-  session.conversationHistory.push({
-    role: 'user',
-    content: userMessage,
-  });
-
-  const elapsed = Date.now() - new Date(session.startedAt).getTime();
-  if (elapsed >= SESSION_LIMIT_MS) {
-    const closingMessage = "We're at the 20-minute mark! Let me wrap up what we have and put together your story report.";
-    session.conversationHistory.push({ role: 'assistant', content: closingMessage });
-    session.status = 'completed';
-    session.completedAt = new Date().toISOString();
-    await persistSession(sessionId, session, supabase);
-    return { message: closingMessage, done: true, remainingMs: 0 };
-  }
-
-  const elapsedMinutes = elapsed / 60000;
-  const coachResponse = await getCoachResponse(session.conversationHistory, elapsedMinutes, sessionId, session.starSections, supabase);
-
-  session.conversationHistory.push({
-    role: 'assistant',
-    content: coachResponse,
-  });
-
-  const remainingMs = Math.max(0, SESSION_LIMIT_MS - (Date.now() - new Date(session.startedAt).getTime()));
-
-  // Persist after coach reply
-  await persistSession(sessionId, session, supabase);
-
-  // Extract STAR sections in parallel
-  const userMsgCount = session.conversationHistory.filter(m => m.role === 'user').length;
-  let starUpdates: { section: string; content: string }[] | undefined;
-  if (userMsgCount >= 2) {
-    const sections = await extractStarSections(session.conversationHistory, sessionId, supabase);
-    if (sections) {
-      starUpdates = [];
-      if (sections.question) {
-        session.extractedQuestion = sections.question;
-      }
-      if (sections.flags) {
-        session.extractedFlags = sections.flags;
-      }
-      for (const key of ['situation', 'task', 'action', 'result'] as const) {
-        if (sections[key] && sections[key] !== session.starSections[key]) {
-          session.starSections[key] = sections[key];
-          starUpdates.push({ section: key, content: sections[key]! });
-        }
-      }
-      // Persist updated STAR sections
-      await persistSession(sessionId, session, supabase);
-    }
-  }
-
-  return {
-    message: coachResponse,
-    done: false,
-    starUpdates,
-    flags: session.extractedFlags,
-    remainingMs,
-  };
-}
-
-export async function endSession(sessionId: string, supabase: any, { generateReport = false } = {}) {
+export async function endSession(sessionId: string, supabase: any) {
   const session = await loadSession(sessionId, supabase);
   if (!session) throw new Error('Session not found');
 
@@ -310,15 +222,28 @@ export async function endSession(sessionId: string, supabase: any, { generateRep
     ? new Date(session.completedAt).getTime() - new Date(session.startedAt).getTime()
     : null;
 
-  // Fallback: generate report from full transcript when STAR extractor didn't capture sections
-  if (generateReport) {
-    const userMessages = session.conversationHistory.filter(m => m.role === 'user');
-    if (userMessages.length < 2) {
-      return { error: 'too_short', message: 'Not enough conversation to build a story.' };
-    }
-    const report = await generateStoryReport(session.conversationHistory, sessionId, supabase);
-    return { completed: true, report, durationMs };
-  }
-
   return { completed: true, durationMs };
+}
+
+// Final extraction pass — runs one last extraction over the FULL transcript at
+// session end, so the sidebar reflects the user's last messages (the per-turn
+// extraction can miss a final answer given while the coach was still streaming).
+// Returns the fresh sections and persists them as the authoritative final state.
+export async function finalizeStarExtraction(sessionId: string, supabase: any) {
+  const session = await loadSession(sessionId, supabase);
+  if (!session) return null;
+
+  const sections = await extractStarSections(session.conversationHistory, sessionId, supabase);
+  if (sections) {
+    if (sections.question) session.extractedQuestion = sections.question;
+    if (sections.flags) session.extractedFlags = sections.flags;
+    session.starSections = {
+      situation: sections.situation ?? null,
+      task: sections.task ?? null,
+      action: sections.action ?? null,
+      result: sections.result ?? null,
+    };
+    await persistSession(sessionId, session, supabase);
+  }
+  return sections;
 }

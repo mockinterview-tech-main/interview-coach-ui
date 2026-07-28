@@ -364,7 +364,7 @@
 				</Panel>
 				<Panel>
 					<Header>I left my session mid-interview. Can I get my session credit back?</Header>
-					<Content><p>If a technical issue prevents your session from starting, your credit is automatically refunded. Once a session is underway, you can only end it by clicking "Finish" — and you'll see a confirmation warning before it goes through. If you experience a crash mid-session, log in and contact us, we'll make it right.</p></Content>
+					<Content><p>If a technical issue prevents your session from starting, no credit is used. If a session ends prematurely before meaningful progress is made (under 3 minutes), your credit is automatically refunded. Choosing to end a session yourself with the "Finish" button completes it and uses your credit — you'll see a confirmation first. If something goes wrong mid-session, log in and contact us and we'll make it right.</p></Content>
 				</Panel>
 				<Panel>
 					<Header>How do I shut down my account?</Header>

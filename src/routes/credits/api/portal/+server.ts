@@ -1,10 +1,6 @@
 import { redirect } from '@sveltejs/kit';
-import Stripe from 'stripe';
 import type { RequestHandler } from './$types';
-
-const stripe = new Stripe(import.meta.env['VITE_STRIPE_SECRET_KEY'], {
-    apiVersion: '2023-08-16',
-});
+import { stripe, resolveCustomerId } from '$lib/server/billing';
 
 export const GET: RequestHandler = async ({ locals, url }) => {
     const session = await locals.getSession();
@@ -12,19 +8,20 @@ export const GET: RequestHandler = async ({ locals, url }) => {
         throw redirect(302, '/login');
     }
 
-    const email = session.user.email;
-    if (!email) {
-        throw redirect(302, '/credits');
-    }
-
-    // Find the Stripe customer by email
-    const customers = await stripe.customers.list({ limit: 1, email });
-    if (customers.data.length === 0) {
+    // Use the stored customer id when available. The old email lookup took the
+    // first match, which could be a duplicate customer WITHOUT the subscription —
+    // leaving a paying subscriber unable to reach their cancel page.
+    const customerId = await resolveCustomerId(
+        locals.supabase,
+        session.user.id,
+        session.user.email || ''
+    );
+    if (!customerId) {
         throw redirect(302, '/credits');
     }
 
     const portalSession = await stripe.billingPortal.sessions.create({
-        customer: customers.data[0].id,
+        customer: customerId,
         return_url: `${url.origin}/credits`,
     });
 

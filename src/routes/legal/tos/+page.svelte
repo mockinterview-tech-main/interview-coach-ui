@@ -3,7 +3,7 @@
         <a href="/" class="legal-back">&larr; Home</a>
 
         <h1>Terms of Service</h1>
-        <p class="legal-meta">EmpowerPro Labs LLC &middot; Last Updated: June 8, 2026</p>
+        <p class="legal-meta">EmpowerPro Labs LLC &middot; Last Updated: July 15, 2026</p>
 
         <div class="legal-summary">
             <h2>In Summary</h2>
@@ -38,7 +38,7 @@
         <section>
             <h2>Payments &amp; Refunds</h2>
             <p>We offer interview coaching credits via one-time purchases and monthly subscriptions, processed securely through Stripe. All purchases are final upon completion.</p>
-            <p><strong>Auto-refunds:</strong> If a coaching session ends prematurely (under 3 minutes with minimal progress), your credit will be automatically refunded.</p>
+            <p><strong>Auto-refunds:</strong> If a session ends prematurely — for example due to an interruption or technical problem — before meaningful progress is made (under 3 minutes with minimal progress), your credit is automatically refunded. Clicking "Finish" voluntarily completes your session and is never refunded, regardless of duration or progress.</p>
             <p><strong>Manual refund requests:</strong> If you experience a technical issue during a session that was not auto-refunded, you may submit a support request from your Dashboard. We review each request using session logs and may issue a credit refund at our discretion.</p>
             <p><strong>Subscriptions:</strong> Monthly subscriptions provide unlimited session credits for the billing period. You may cancel your subscription at any time through the Stripe Customer Portal. Cancellation takes effect at the end of the current billing period — no partial refunds are issued for unused time.</p>
             <p><strong>No cash refunds:</strong> Refunds are issued as service credits, not monetary refunds, unless required by applicable law.</p>

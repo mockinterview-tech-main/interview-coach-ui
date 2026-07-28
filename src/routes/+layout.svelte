@@ -3,16 +3,20 @@
 	import LogoFilled from '$lib/assets/icons/logo-filled.svg';
 	import { userStore } from '$lib/stores/userStore.js';
 	import { onMount } from 'svelte';
+	import { invalidate } from '$app/navigation';
 
 	export let data;
-	const { loggedIn, credits, username, subscriptionID } = data;
-	let subscriptionCancelAt = data.subscriptionCancelAt;
+	// Reactive, not a one-time destructure: when a load re-runs (navigation or
+	// invalidate('app:credits')), these follow the fresh server data.
+	$: ({ loggedIn, credits, username, subscriptionID } = data);
+	$: subscriptionCancelAt = data.subscriptionCancelAt;
 	let isUserMenuOpen = false;
 
 	$: isStorybuilderPage = $page.url.pathname === '/storybuilder';
 	$: isDashboardPage = $page.url.pathname === '/dashboard';
 
-	userStore.set({ credits, subscriptionID, subscriptionCancelAt, loggedIn: loggedIn || false });
+	// Server data is authoritative — re-sync the store whenever it changes.
+	$: userStore.set({ credits, subscriptionID, subscriptionCancelAt, loggedIn: loggedIn || false });
 
 	let userMenuEl: HTMLElement;
 
@@ -24,6 +28,18 @@
 
 	onMount(() => {
 		document.addEventListener('click', closeUserMenu);
+
+		// Returning via the browser's back/forward cache (e.g. back to Stripe and
+		// forward again) restores the old DOM without re-running any load, so the
+		// credit balance can be stale. Force a fresh fetch in that case.
+		const handlePageShow = (e: PageTransitionEvent) => {
+			if (e.persisted) invalidate('app:credits');
+		};
+		window.addEventListener('pageshow', handlePageShow);
+		return () => {
+			document.removeEventListener('click', closeUserMenu);
+			window.removeEventListener('pageshow', handlePageShow);
+		};
 	});
 
 	const CONTACT_EMAIL = import.meta.env.VITE_CONTACT_INFO;

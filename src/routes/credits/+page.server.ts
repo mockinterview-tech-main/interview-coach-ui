@@ -6,6 +6,7 @@ import {
     VITE_STRIPE_ID_ALA_CARTE,
     VITE_STRIPE_ID_SUBSCRIPTION,
 } from '$env/static/private';
+import { resolveCustomerId } from '$lib/server/billing';
 
 export type Choice = {
     type: 'subscription' | 'payment';
@@ -71,6 +72,15 @@ export const actions: Actions = {
             const chosen = JSON.parse(chosenOffering.toString()) as Choice;
             const baseUrl = url.origin;
 
+            // Reuse this user's existing Stripe customer when we know it. Passing
+            // customer_email instead creates a NEW customer on every checkout, which
+            // produces duplicates that break subscription lookups.
+            const existingCustomerId = await resolveCustomerId(
+                locals.supabase,
+                session.user.id,
+                session.user.email || ''
+            );
+
             const checkoutSession = await stripe.checkout.sessions.create({
                 line_items: [
                     {
@@ -81,7 +91,17 @@ export const actions: Actions = {
                 mode: chosen.type,
                 success_url: `${baseUrl}/credits/success?session_id={CHECKOUT_SESSION_ID}`,
                 cancel_url: `${baseUrl}/credits`,
-                customer_email: session.user.email,
+                // Reuse the known customer, else create one. In payment mode Stripe
+                // defaults to customer_creation: 'if_required', which creates NO
+                // Customer for a one-off purchase — so we ask for one explicitly,
+                // otherwise there's no id to store. (Subscription mode always makes one,
+                // and rejects the customer_creation param.)
+                ...(existingCustomerId
+                    ? { customer: existingCustomerId }
+                    : {
+                        customer_email: session.user.email,
+                        ...(chosen.type === 'payment' ? { customer_creation: 'always' as const } : {}),
+                    }),
                 metadata: {
                     credits: chosen.credits.toString(),
                     user_id: session.user.id,

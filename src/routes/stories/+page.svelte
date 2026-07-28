@@ -20,15 +20,48 @@
 		});
 	};
 
-	const hasTalkingPoints = (story: any) => {
-		if (!story.talking_points) return false;
-		return ['situation', 'task', 'action', 'result'].some(k => story.talking_points[k]?.length);
+	// Stories saved before the grounded-assessment redesign used a different shape:
+	//   talking_points: { situation: string[] }          (old)  vs  { situation: { talkingPoints, strong, missing } }  (new)
+	//   strength_signals: { strong, improve }            (old)  vs  { strengths, growth }                              (new)
+	// These normalizers read either shape so old and new rows both render.
+	const SECTION_KEYS = ['situation', 'task', 'action', 'result'];
+
+	const sectionOf = (story: any, key: string) => {
+		const tp = story.talking_points?.[key];
+		if (!tp) return null;
+		if (Array.isArray(tp)) return { points: tp, strong: null, missing: null };
+		return {
+			points: Array.isArray(tp.talkingPoints) ? tp.talkingPoints : [],
+			strong: tp.strong ?? null,
+			missing: tp.missing ?? null,
+		};
 	};
 
-	const hasSignals = (story: any) => {
-		if (!story.strength_signals) return false;
-		return (story.strength_signals.strong?.length > 0) || (story.strength_signals.improve?.length > 0);
+	const hasTalkingPoints = (story: any) =>
+		!!story.talking_points &&
+		SECTION_KEYS.some(k => {
+			const s = sectionOf(story, k);
+			return s && (s.points.length || s.strong || s.missing);
+		});
+
+	const strengthsOf = (story: any) => {
+		const sig = story.strength_signals;
+		if (!sig) return [];
+		const list = sig.strengths ?? sig.strong ?? [];
+		return Array.isArray(list) ? list : [];
 	};
+
+	const growthOf = (story: any) => {
+		const sig = story.strength_signals;
+		if (!sig) return [];
+		const list = sig.growth ?? sig.improve ?? [];
+		return Array.isArray(list) ? list : [];
+	};
+
+	// Old rows used `explanation`; new rows use `evidence` (strengths) / `detail` (growth).
+	const signalText = (item: any) => item.evidence ?? item.detail ?? item.explanation ?? '';
+
+	const hasSignals = (story: any) => strengthsOf(story).length > 0 || growthOf(story).length > 0;
 </script>
 
 <div class="sb-page">
@@ -53,10 +86,13 @@
 				{#each stories as story}
 					<!-- svelte-ignore a11y-click-events-have-key-events -->
 					<!-- svelte-ignore a11y-no-static-element-interactions -->
-					<div class="sb-story-card" class:sb-story-expanded={expandedId === story.id} on:click={() => toggleExpand(story.id)}>
+					<div class="sb-story-card" class:sb-story-expanded={expandedId === story.id} class:sb-story-incomplete={story.tier === 'partial'} on:click={() => toggleExpand(story.id)}>
 						<div class="sb-story-top">
 							<div class="sb-story-info">
-								<h3>{story.question || 'Untitled Story'}</h3>
+								{#if story.tier === 'partial'}
+									<span class="sb-story-badge">Incomplete</span>
+								{/if}
+								<h3 class:untitled={!story.question}>{story.question || 'Undefined interview question'}</h3>
 							</div>
 							<div class="sb-story-meta">
 								<span class="sb-story-date">{formatDate(story.created_at)}</span>
@@ -77,15 +113,20 @@
 									<div class="sb-section">
 										<h4>Talking Points</h4>
 										<div class="sb-tp-grid">
-											{#each ['situation', 'task', 'action', 'result'] as sKey}
-												{#if story.talking_points[sKey]?.length}
+											{#each SECTION_KEYS as sKey}
+												{@const sec = sectionOf(story, sKey)}
+												{#if sec && (sec.points.length || sec.strong || sec.missing)}
 													<div class="sb-tp-group">
 														<span class="sb-tp-label">{sKey.charAt(0).toUpperCase() + sKey.slice(1)}</span>
-														<ul>
-															{#each story.talking_points[sKey] as point}
-																<li>{point}</li>
-															{/each}
-														</ul>
+														{#if sec.points.length}
+															<ul>
+																{#each sec.points as point}
+																	<li>{point}</li>
+																{/each}
+															</ul>
+														{/if}
+														{#if sec.strong}<p class="sb-tp-strong">✓ {sec.strong}</p>{/if}
+														{#if sec.missing}<p class="sb-tp-missing">↗ {sec.missing}</p>{/if}
 													</div>
 												{/if}
 											{/each}
@@ -95,31 +136,31 @@
 
 								{#if hasSignals(story)}
 									<div class="sb-section">
-										<h4>Strength Signals</h4>
-										<p class="sb-signals-hint">How interviewers evaluate your story based on the question's theme.</p>
-										{#if story.strength_signals.strong?.length}
+										<h4>Strengths &amp; growth</h4>
+										<p class="sb-signals-hint">Based on what you actually shared in the session.</p>
+										{#if strengthsOf(story).length}
 											<div class="sb-sig-group">
-												<span class="sb-sig-label sb-sig-label-strong">Strong</span>
-												{#each story.strength_signals.strong as item}
+												<span class="sb-sig-label sb-sig-label-strong">Strengths</span>
+												{#each strengthsOf(story) as item}
 													<div class="sb-sig-item">
 														<span class="sb-sig-icon sb-sig-icon-strong">✓</span>
 														<div>
 															<span class="sb-sig-name">{item.signal}</span>
-															<span class="sb-sig-explain">{item.explanation}</span>
+															<span class="sb-sig-explain">{signalText(item)}</span>
 														</div>
 													</div>
 												{/each}
 											</div>
 										{/if}
-										{#if story.strength_signals.improve?.length}
+										{#if growthOf(story).length}
 											<div class="sb-sig-group">
-												<span class="sb-sig-label sb-sig-label-improve">Could be stronger</span>
-												{#each story.strength_signals.improve as item}
+												<span class="sb-sig-label sb-sig-label-improve">Growth areas</span>
+												{#each growthOf(story) as item}
 													<div class="sb-sig-item">
 														<span class="sb-sig-icon sb-sig-icon-improve">⚡</span>
 														<div>
 															<span class="sb-sig-name">{item.signal}</span>
-															<span class="sb-sig-explain">{item.explanation}</span>
+															<span class="sb-sig-explain">{signalText(item)}</span>
 														</div>
 													</div>
 												{/each}
@@ -258,6 +299,28 @@
 			transform: translateY(-1px);
 		}
 	}
+	/* Incomplete sessions are kept (the user paid for them) but shown distinctly. */
+	.sb-story-card.sb-story-incomplete {
+		background: #fdeceb;
+		border-color: #f0b8b2;
+		border-style: dashed;
+	}
+	.sb-story-badge {
+		display: inline-block;
+		font-size: 0.65rem;
+		font-weight: 600;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+		color: #b0392c;
+		background: #fbd9d5;
+		border-radius: 10px;
+		padding: 2px 8px;
+		margin-bottom: 6px;
+	}
+	.sb-story-info h3.untitled {
+		font-style: italic;
+		color: #999;
+	}
 	.sb-story-expanded {
 		border-color: #e5e5e3;
 		cursor: default;
@@ -349,6 +412,16 @@
 		letter-spacing: 0.05em;
 		color: $text-light;
 		margin-bottom: 6px;
+	}
+	.sb-tp-strong {
+		margin: 6px 0 0;
+		font-size: 0.82rem;
+		color: #16a34a;
+	}
+	.sb-tp-missing {
+		margin: 4px 0 0;
+		font-size: 0.82rem;
+		color: #b8860b;
 	}
 	.sb-tp-group ul {
 		margin: 0;

@@ -1,6 +1,10 @@
 import type { PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ locals, parent }) => {
+export const load: PageServerLoad = async ({ locals, parent, depends }) => {
+    // Lets the summary page call invalidate('app:stories') so a newly saved story
+    // shows up without a hard refresh.
+    depends('app:stories');
+
     const parentData = await parent();
     const session = await locals.getSession();
     if (!session) {
@@ -12,7 +16,7 @@ export const load: PageServerLoad = async ({ locals, parent }) => {
     // Fetch recent stories (last 3)
     const { data: recentStories } = await locals.supabase
         .from('stories')
-        .select('id, question, created_at')
+        .select('id, question, created_at, tier')
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
         .limit(3);

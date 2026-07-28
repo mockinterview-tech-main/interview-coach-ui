@@ -1,6 +1,8 @@
 import type { PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ locals }) => {
+export const load: PageServerLoad = async ({ locals, depends }) => {
+    depends('app:stories');
+
     const session = await locals.getSession();
     if (!session) {
         return { stories: [] };
@@ -8,7 +10,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 
     const { data: stories, error } = await locals.supabase
         .from('stories')
-        .select('id, question, full_story, talking_points, strength_signals, flags, created_at')
+        .select('id, question, full_story, talking_points, strength_signals, flags, created_at, tier')
         .eq('user_id', session.user.id)
         .order('created_at', { ascending: false });
 

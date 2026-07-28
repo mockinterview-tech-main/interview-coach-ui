@@ -9,14 +9,14 @@ export const POST: RequestHandler = async ({ locals, request }) => {
   }
 
   try {
-    const { sessionId, generateReport, starSectionsFilled } = await request.json();
+    const { sessionId, starSectionsFilled } = await request.json();
     if (!sessionId) {
       return json({ error: 'sessionId is required' }, { status: 400 });
     }
 
     let result: any;
     try {
-      result = await endSession(sessionId, locals.supabase, { generateReport: !!generateReport });
+      result = await endSession(sessionId, locals.supabase);
     } catch (endErr: any) {
       console.error('endSession failed:', endErr.message);
       // Still mark session as completed in DB even if session state is gone
