@@ -194,10 +194,9 @@
 				// the 20-minute timer already handles a genuinely abandoned session.
 				// Never auto-finish — they paid for this session, so ending it on their
 				// behalf would spend their credit on a decision they didn't make.
-				idleTimer = setTimeout(() => {
-					speakCheckIn();
-					startSilenceTimer();
-				}, IDLE_CHECKIN_MS - SILENCE_TIMEOUT_MS);
+				// No re-arm here: speaking the check-in stops recognition, and the
+				// restart afterwards calls startListening(), which arms the timer again.
+				idleTimer = setTimeout(speakCheckIn, IDLE_CHECKIN_MS - SILENCE_TIMEOUT_MS);
 			}
 		}, SILENCE_TIMEOUT_MS);
 	}
@@ -266,6 +265,11 @@
 		if (recognition) { try { recognition.abort(); } catch {} }
 		recognition = createRecognition();
 		if (recognition) { try { recognition.start(); } catch {} }
+		// Arm the timer NOW, not only when speech arrives. Previously it was started
+		// solely from onresult, so a user who said nothing at all never triggered
+		// anything — the idle check-in was unreachable in exactly the case it exists
+		// for. Silence from the very start is the situation that needs a nudge most.
+		startSilenceTimer();
 	}
 
 	function stopListening() {

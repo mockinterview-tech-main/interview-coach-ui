@@ -30,20 +30,31 @@ export interface Session {
 // In-memory cache (fast path — may be empty on serverless cold start)
 const sessions = new Map<string, Session>();
 
-// ── Load session: memory first, then Supabase ──
+// ── Load session: Supabase is the source of truth ──
+//
+// This used to return the in-memory copy whenever one existed, which silently
+// rewound conversations. Vercel Edge keeps several warm instances, each with its own
+// module-level Map, and turns alternate between them:
+//
+//   instance A  turns 1-2  -> its memory holds 2, persists 2
+//   instance B  turn 3     -> cold, loads 2 from DB, appends, persists 3
+//   instance A  turn 4     -> memory STILL holds 2, appends, persists 3
+//
+// A's write overwrites turn 3 — the user's words disappear, and anything captured
+// during that turn (the target company, an extracted question) disappears with them.
+// The cache is now only a fallback for when the database read fails.
 async function loadSession(sessionId: string, supabase: any): Promise<Session | null> {
-  // Fast path: in-memory
   const cached = sessions.get(sessionId);
-  if (cached) return cached;
 
-  // Slow path: load from Supabase
   const { data, error } = await supabase
     .from('session_logs')
     .select('session_id, created_at, status, conversation_history, star_sections, extracted_question, extracted_flags, target_company')
     .eq('session_id', sessionId)
     .single();
 
-  if (error || !data) return null;
+  // Only fall back to the cached copy if the DB is unreachable — never because it
+  // merely looks older, which is exactly the mistake that lost turns.
+  if (error || !data) return cached ?? null;
 
   const session: Session = {
     id: data.session_id,
