@@ -12,8 +12,15 @@
  *    the coach prompt are used unchanged.
  *
  * EDITING: this is data, not logic. To add a company, copy an entry and change
- * `aliases`, `label`, and `signals`. No other file needs to change. Match order is
- * "most specific first" — `detectCompanyRubric` returns the first alias found.
+ * `aliases`, `label`, and `signals`. No other file needs to change.
+ *
+ * HOW THE TARGET IS IDENTIFIED: the STAR extractor reads the whole conversation each
+ * turn and captures the company the user says they're INTERVIEWING AT, which is then
+ * stored on the session. `aliases` are matched against that captured name — never
+ * against the raw transcript. This matters: a transcript is dominated by the user's
+ * PAST employer (they spend the session telling a story about it), and the coach's own
+ * example prompts name companies too, so scanning text could not reliably tell target
+ * from noise.
  *
  * CONFIDENCE: each entry is tagged. `documented` = the company publishes the
  * framework and trains interviewers on it. `reported` = consistent across multiple
@@ -23,7 +30,7 @@
  */
 
 export interface CompanyRubric {
-  /** Lowercase substrings matched against the transcript. Include common aliases. */
+  /** Lowercase names matched against the extractor-captured company. Include common aliases. */
   aliases: string[];
   /** Short human label, used in the summary framing. */
   label: string;
@@ -403,14 +410,6 @@ designed to be defensible and auditable, so unstructured charm counts for very l
  * Phrases that signal a company is the TARGET rather than a past employer.
  * Used to disambiguate "I worked at Google, now interviewing at Amazon".
  */
-const INTENT_CUES = [
-  'interview at', 'interview with', 'interviewing at', 'interviewing with',
-  'interviewing for', 'targeting', 'target company', 'applying to', 'apply to',
-  'applied to', 'onsite at', 'onsite with', 'loop at', 'offer from', 'role at',
-  'position at', 'job at', 'joining', 'recruiter at', 'prepping for',
-  'preparing for', 'prep for', 'going for',
-];
-
 /**
  * Find the rubric set for the company the user is TARGETING.
  * No LLM call — costs nothing per turn. Returns null when no known company is
@@ -422,29 +421,21 @@ const INTENT_CUES = [
  *   2. Among equals, the LATEST mention wins — recency tracks the current focus.
  * Matching is word-boundary aware so "metadata" doesn't match "meta".
  */
-export function detectCompanyRubric(transcript: string): CompanyRubric | null {
-  const text = transcript.toLowerCase();
-  const hits: Array<{ entry: CompanyRubric; pos: number; intent: boolean }> = [];
-
+/**
+ * PRIMARY path: resolve a rubric from a clean company name that the STAR extractor
+ * captured from the conversation (e.g. "Anthropic"). Far more reliable than scanning
+ * a transcript, because the extractor understands "I was at Amazon, now interviewing
+ * at Anthropic" — where keyword matching cannot tell target from past employer.
+ * Returns null for a company we don't have a rubric for, which correctly falls back
+ * to the generic rubrics.
+ */
+export function lookupCompanyRubric(companyName: string | null | undefined): CompanyRubric | null {
+  if (!companyName) return null;
+  const name = companyName.trim().toLowerCase();
+  if (!name) return null;
   for (const entry of Object.values(COMPANY_RUBRICS)) {
-    for (const alias of entry.aliases) {
-      const pattern = new RegExp(`\\b${alias.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'g');
-      let m: RegExpExecArray | null;
-      while ((m = pattern.exec(text)) !== null) {
-        // The cue must sit IMMEDIATELY before the company name, not merely nearby —
-        // in "interviewing at Google, I was at Amazon", a windowed search would let
-        // Google's cue wrongly mark Amazon as the target.
-        const before = text
-          .slice(Math.max(0, m.index - 40), m.index)
-          .replace(/\s+(the|a|an)\s*$/, ' ')
-          .trimEnd();
-        hits.push({ entry, pos: m.index, intent: INTENT_CUES.some((c) => before.endsWith(c)) });
-      }
-    }
+    if (entry.aliases.some((a) => name === a || name.includes(a))) return entry;
   }
-
-  if (hits.length === 0) return null;
-  const intentHits = hits.filter((h) => h.intent);
-  const pool = intentHits.length > 0 ? intentHits : hits;
-  return pool.reduce((a, b) => (b.pos >= a.pos ? b : a)).entry;
+  return null;
 }
+

@@ -1,6 +1,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { assessSession } from '$lib/server/claude';
+import { getSessionTargetCompany } from '$lib/server/interview';
 
 // Grounded end-of-session assessment. Produces the whole summary (per-section
 // talking points + strong/missing, cited strengths/growth, and a full story only
@@ -30,7 +31,9 @@ export const POST: RequestHandler = async ({ locals, request }) => {
       },
       question ?? null,
       sessionId,
-      locals.supabase
+      locals.supabase,
+      // Read from the session server-side rather than trusting the client.
+      await getSessionTargetCompany(sessionId, locals.supabase)
     );
 
     return json({ assessment });

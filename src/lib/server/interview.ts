@@ -20,6 +20,7 @@ export interface Session {
   conversationHistory: ConversationMessage[];
   starSections: StarSections;
   extractedQuestion: string | null;
+  targetCompany: string | null;
   extractedFlags: Array<{ flag: string; suggestion: string }> | null;
   startedAt: string;
   completedAt: string | null;
@@ -38,7 +39,7 @@ async function loadSession(sessionId: string, supabase: any): Promise<Session | 
   // Slow path: load from Supabase
   const { data, error } = await supabase
     .from('session_logs')
-    .select('session_id, created_at, status, conversation_history, star_sections, extracted_question, extracted_flags')
+    .select('session_id, created_at, status, conversation_history, star_sections, extracted_question, extracted_flags, target_company')
     .eq('session_id', sessionId)
     .single();
 
@@ -50,6 +51,7 @@ async function loadSession(sessionId: string, supabase: any): Promise<Session | 
     conversationHistory: data.conversation_history || [],
     starSections: data.star_sections || { situation: null, task: null, action: null, result: null },
     extractedQuestion: data.extracted_question || null,
+    targetCompany: data.target_company || null,
     extractedFlags: data.extracted_flags || null,
     startedAt: data.created_at,
     completedAt: null,
@@ -70,6 +72,7 @@ async function persistSession(sessionId: string, session: Session, supabase: any
         conversation_history: session.conversationHistory,
         star_sections: session.starSections,
         extracted_question: session.extractedQuestion,
+        target_company: session.targetCompany,
         extracted_flags: session.extractedFlags,
       })
       .eq('session_id', sessionId);
@@ -88,6 +91,7 @@ export function createSession(): Session {
     conversationHistory: [],
     starSections: { situation: null, task: null, action: null, result: null },
     extractedQuestion: null,
+    targetCompany: null,
     extractedFlags: null,
     startedAt: new Date().toISOString(),
     completedAt: null,
@@ -100,6 +104,12 @@ export function createSession(): Session {
 
 export function getSession(id: string): Session | undefined {
   return sessions.get(id);
+}
+
+/** The target company captured by the extractor, for the end-of-session summary. */
+export async function getSessionTargetCompany(sessionId: string, supabase: any): Promise<string | null> {
+  const session = await loadSession(sessionId, supabase);
+  return session?.targetCompany ?? null;
 }
 
 export async function startSession(sessionId: string, supabase: any): Promise<string> {
@@ -161,7 +171,8 @@ export async function handleUserMessageStream(
       writer.write(`data: ${JSON.stringify({ type: 'chunk', text: chunk })}\n\n`);
     },
     session.starSections,
-    supabase
+    supabase,
+    session.targetCompany
   );
 
   session.conversationHistory.push({
@@ -191,6 +202,11 @@ export async function handleUserMessageStream(
         const updates: { section: string; content: string }[] = [];
         if (sections.question) {
           session.extractedQuestion = sections.question;
+        }
+        // Captured once, then reused for the rest of the session by the coach and
+        // the summary — no re-scanning the transcript.
+        if (sections.targetCompany) {
+          session.targetCompany = sections.targetCompany;
         }
         if (sections.flags) {
           session.extractedFlags = sections.flags;
