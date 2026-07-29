@@ -55,8 +55,37 @@
 	let finalTranscriptBuf = '';
 	let isActive = false;
 	let shouldRestart = false;
-	const SILENCE_TIMEOUT_MS = 1800;
-	const MIN_WORD_COUNT = 3;
+	// ── End-of-turn detection ──
+	// Silence duration alone is a poor signal for "finished speaking": "Anthropic" is a
+	// complete answer in one word, while "so the tricky part was" is unfinished no matter
+	// how long the pause. A minimum word count was worse — it trapped short answers
+	// entirely, since recognition never stopped and the turn could never be sent.
+	// Instead: judge whether the utterance SOUNDS finished, and back it with timeouts.
+	const SILENCE_TIMEOUT_MS = 1800;   // sounds complete → send
+	const UNFINISHED_TIMEOUT_MS = 4000; // sounds mid-sentence → send anyway rather than stall
+	const IDLE_CHECKIN_MS = 6000;      // nothing said at all → ask if they're still there
+	const MAX_CHECKINS_PER_TURN = 2;
+
+	// Trailing words that mean the speaker is still going. Hesitations, conjunctions,
+	// prepositions, articles, and dangling auxiliaries.
+	const HANGING_WORDS = new Set([
+		'hmm', 'um', 'uh', 'er', 'ah', 'eh', 'like', 'so', 'and', 'but', 'or', 'well',
+		'then', 'because', 'cause', 'the', 'a', 'an', 'at', 'to', 'of', 'with', 'for',
+		'from', 'in', 'on', 'my', 'our', 'their', 'his', 'her', 'its', 'was', 'were',
+		'is', 'are', 'had', 'have', 'has', 'that', 'which', 'when', 'while', 'if',
+		'i', 'we', 'they', 'it', 'this', 'about', 'into', 'over', 'by', 'as',
+	]);
+
+	function soundsUnfinished(text: string): boolean {
+		const words = text.trim().toLowerCase().split(/\s+/).filter(Boolean);
+		if (words.length === 0) return true;
+		const last = words[words.length - 1].replace(/[^a-z']/g, '');
+		return HANGING_WORDS.has(last);
+	}
+
+	let unfinishedTimer: ReturnType<typeof setTimeout> | null = null;
+	let idleTimer: ReturnType<typeof setTimeout> | null = null;
+	let checkinCount = 0;
 
 	// ── TTS state ──
 	let ttsAudio: HTMLAudioElement | null = null;
@@ -93,6 +122,15 @@
 	// ── Speech Recognition ──
 	function clearSilenceTimer() {
 		if (silenceTimer) { clearTimeout(silenceTimer); silenceTimer = null; }
+		if (unfinishedTimer) { clearTimeout(unfinishedTimer); unfinishedTimer = null; }
+		if (idleTimer) { clearTimeout(idleTimer); idleTimer = null; }
+	}
+
+	// End the turn: stop recognition, which fires onend → finalizeTurn.
+	function endTurn() {
+		clearSilenceTimer();
+		shouldRestart = true;
+		try { recognition?.stop(); } catch {}
 	}
 
 	function finalizeTurn() {
@@ -100,19 +138,54 @@
 		const transcript = finalTranscriptBuf.trim();
 		finalTranscriptBuf = '';
 		interimTranscript = '';
-		if (transcript && transcript.split(/\s+/).length >= MIN_WORD_COUNT) {
+		// Send whatever was said. The old version pushed anything under 3 words back
+		// into the buffer, which meant a one-word answer could never be submitted.
+		if (transcript) {
+			checkinCount = 0;
 			sendMessage(transcript);
-		} else if (transcript) {
-			finalTranscriptBuf = transcript;
 		}
+	}
+
+	// Spoken nudge when the user has gone quiet without saying anything. Deliberately
+	// NOT a conversation turn — no Claude call, nothing added to the transcript, so the
+	// extractor and summary never see it. Just a canned line through the existing TTS.
+	function speakCheckIn() {
+		if (checkinCount >= MAX_CHECKINS_PER_TURN) return;
+		if (isSpeaking || loading || sessionExpired) return;
+		checkinCount++;
+		// Second (final) nudge is deliberately a sign-off, not another question: it says
+		// the coach is done prompting, that the clock is still running, and that the user
+		// can simply resume. Going quiet without saying so leaves them wondering whether
+		// the session is still alive.
+		ttsSpeak(
+			checkinCount === 1
+				? 'Still with me?'
+				: "No rush — I'll be here until our time is up. Just start talking whenever you're ready."
+		);
 	}
 
 	function startSilenceTimer() {
 		clearSilenceTimer();
 		silenceTimer = setTimeout(() => {
-			if (finalTranscriptBuf.trim().split(/\s+/).length >= MIN_WORD_COUNT) {
-				shouldRestart = true;
-				try { recognition?.stop(); } catch {}
+			const buf = finalTranscriptBuf.trim();
+			if (buf && !soundsUnfinished(buf)) {
+				endTurn(); // sounds complete — send now, however short
+				return;
+			}
+			if (buf) {
+				// Mid-sentence pause. Wait a bit longer, then send anyway rather than
+				// stall — a wrong guess costs one rough turn; stalling costs the session.
+				unfinishedTimer = setTimeout(endTurn, UNFINISHED_TIMEOUT_MS - SILENCE_TIMEOUT_MS);
+			} else if (checkinCount < MAX_CHECKINS_PER_TURN) {
+				// Nothing said at all — check in instead of sending an empty turn.
+				// After the cap, go quiet: the user may simply have stepped away, and
+				// the 20-minute timer already handles a genuinely abandoned session.
+				// Never auto-finish — they paid for this session, so ending it on their
+				// behalf would spend their credit on a decision they didn't make.
+				idleTimer = setTimeout(() => {
+					speakCheckIn();
+					startSilenceTimer();
+				}, IDLE_CHECKIN_MS - SILENCE_TIMEOUT_MS);
 			}
 		}, SILENCE_TIMEOUT_MS);
 	}
