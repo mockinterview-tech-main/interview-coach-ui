@@ -66,14 +66,26 @@
 	const IDLE_CHECKIN_MS = 6000;      // nothing said at all → ask if they're still there
 	const MAX_CHECKINS_PER_TURN = 2;
 
-	// Trailing words that mean the speaker is still going. Hesitations, conjunctions,
-	// prepositions, articles, and dangling auxiliaries.
+	// Trailing words that almost certainly mean the speaker is still going: hesitations,
+	// coordinating conjunctions, and articles/determiners.
+	//
+	// Deliberately EXCLUDES prepositions and auxiliaries, even though they look like
+	// obvious continuations. English strands them at the end of perfectly complete
+	// utterances, and this app invites exactly those phrasings: "a project I'm proud
+	// OF", "someone I worked WITH", "the thing I was responsible FOR", "yes I WAS".
+	// Including them delayed common answers by the full backstop. Also excludes
+	// pronouns — "I did IT", "I like THIS" are complete sentences.
+	//
+	// The cost of a miss is small and self-correcting: a genuine fragment like "I
+	// worked at" sends early, the coach asks "at where?", and the conversation
+	// recovers naturally. Delaying every "proud of" was the worse trade.
 	const HANGING_WORDS = new Set([
-		'hmm', 'um', 'uh', 'er', 'ah', 'eh', 'like', 'so', 'and', 'but', 'or', 'well',
-		'then', 'because', 'cause', 'the', 'a', 'an', 'at', 'to', 'of', 'with', 'for',
-		'from', 'in', 'on', 'my', 'our', 'their', 'his', 'her', 'its', 'was', 'were',
-		'is', 'are', 'had', 'have', 'has', 'that', 'which', 'when', 'while', 'if',
-		'i', 'we', 'they', 'it', 'this', 'about', 'into', 'over', 'by', 'as',
+		// hesitations / discourse fillers
+		'hmm', 'hm', 'um', 'uh', 'er', 'ah', 'eh', 'well', 'like', 'so', 'then',
+		// coordinating conjunctions
+		'and', 'but', 'or', 'because', 'cause',
+		// articles / determiners
+		'the', 'a', 'an', 'my', 'our', 'your', 'their', 'his', 'her', 'its',
 	]);
 
 	function soundsUnfinished(text: string): boolean {
