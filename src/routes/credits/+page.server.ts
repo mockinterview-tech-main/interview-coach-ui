@@ -91,6 +91,11 @@ export const actions: Actions = {
                 mode: chosen.type,
                 success_url: `${baseUrl}/credits/success?session_id={CHECKOUT_SESSION_ID}`,
                 cancel_url: `${baseUrl}/credits`,
+                // Renders the "Add promotion code" field. This is the only way to enable
+                // it for a Checkout Session — the dashboard toggle only applies to
+                // Payment Links, which this flow doesn't use. Mutually exclusive with
+                // `discounts` (applying a code programmatically).
+                allow_promotion_codes: true,
                 // Reuse the known customer, else create one. In payment mode Stripe
                 // defaults to customer_creation: 'if_required', which creates NO
                 // Customer for a one-off purchase — so we ask for one explicitly,
