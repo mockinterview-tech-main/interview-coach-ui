@@ -1,8 +1,9 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
 	import { browser } from '$app/environment';
-	import { goto } from '$app/navigation';
+	import { goto, beforeNavigate, invalidate } from '$app/navigation';
 	import { userStore } from '$lib/stores/userStore';
+	import { isRefundEligible } from '$lib/refund-policy';
 
 	// ── State ──
 	let phase: 'lobby' | 'coaching' | 'loading-report' | 'report' = 'lobby';
@@ -13,12 +14,14 @@
 	let remainingTime = 20 * 60 * 1000;
 	let userConfirmedEnd = false;
 	let starSections: Record<string, string | null> = { situation: null, task: null, action: null, result: null };
+	// Per-section readiness: 'green' (interview-ready) | 'yellow' (partial) | null (none)
+	let starStatus: Record<string, 'green' | 'yellow' | null> = { situation: null, task: null, action: null, result: null };
 	let extractedQuestion: string | null = null;
 	let extractedFlags: Array<{ flag: string; suggestion: string }> | null = null;
-	let talkingPoints: any = null;
-	let talkingPointsLoading = false;
-	let strengthSignals: { strong: Array<{ signal: string; explanation: string }>; improve: Array<{ signal: string; explanation: string }> } | null = null;
-	let strengthSignalsLoading = false;
+	// Grounded end-of-session summary (per-section talking points + strong/missing,
+	// cited strengths/growth, full story only when all green).
+	let assessment: any = null;
+	let assessmentLoading = false;
 	let sidebarWidth = 380;
 	let isListening = false;
 	let isSpeaking = false;
@@ -52,8 +55,49 @@
 	let finalTranscriptBuf = '';
 	let isActive = false;
 	let shouldRestart = false;
-	const SILENCE_TIMEOUT_MS = 1800;
-	const MIN_WORD_COUNT = 3;
+	// ── End-of-turn detection ──
+	// Silence duration alone is a poor signal for "finished speaking": "Anthropic" is a
+	// complete answer in one word, while "so the tricky part was" is unfinished no matter
+	// how long the pause. A minimum word count was worse — it trapped short answers
+	// entirely, since recognition never stopped and the turn could never be sent.
+	// Instead: judge whether the utterance SOUNDS finished, and back it with timeouts.
+	const SILENCE_TIMEOUT_MS = 1800;   // sounds complete → send
+	const UNFINISHED_TIMEOUT_MS = 4000; // sounds mid-sentence → send anyway rather than stall
+	const IDLE_CHECKIN_MS = 6000;      // nothing said at all → ask if they're still there
+	const MAX_CHECKINS_PER_TURN = 2;
+
+	// Trailing words that almost certainly mean the speaker is still going: hesitations,
+	// coordinating conjunctions, and articles/determiners.
+	//
+	// Deliberately EXCLUDES prepositions and auxiliaries, even though they look like
+	// obvious continuations. English strands them at the end of perfectly complete
+	// utterances, and this app invites exactly those phrasings: "a project I'm proud
+	// OF", "someone I worked WITH", "the thing I was responsible FOR", "yes I WAS".
+	// Including them delayed common answers by the full backstop. Also excludes
+	// pronouns — "I did IT", "I like THIS" are complete sentences.
+	//
+	// The cost of a miss is small and self-correcting: a genuine fragment like "I
+	// worked at" sends early, the coach asks "at where?", and the conversation
+	// recovers naturally. Delaying every "proud of" was the worse trade.
+	const HANGING_WORDS = new Set([
+		// hesitations / discourse fillers
+		'hmm', 'hm', 'um', 'uh', 'er', 'ah', 'eh', 'well', 'like', 'so', 'then',
+		// coordinating conjunctions
+		'and', 'but', 'or', 'because', 'cause',
+		// articles / determiners
+		'the', 'a', 'an', 'my', 'our', 'your', 'their', 'his', 'her', 'its',
+	]);
+
+	function soundsUnfinished(text: string): boolean {
+		const words = text.trim().toLowerCase().split(/\s+/).filter(Boolean);
+		if (words.length === 0) return true;
+		const last = words[words.length - 1].replace(/[^a-z']/g, '');
+		return HANGING_WORDS.has(last);
+	}
+
+	let unfinishedTimer: ReturnType<typeof setTimeout> | null = null;
+	let idleTimer: ReturnType<typeof setTimeout> | null = null;
+	let checkinCount = 0;
 
 	// ── TTS state ──
 	let ttsAudio: HTMLAudioElement | null = null;
@@ -90,6 +134,15 @@
 	// ── Speech Recognition ──
 	function clearSilenceTimer() {
 		if (silenceTimer) { clearTimeout(silenceTimer); silenceTimer = null; }
+		if (unfinishedTimer) { clearTimeout(unfinishedTimer); unfinishedTimer = null; }
+		if (idleTimer) { clearTimeout(idleTimer); idleTimer = null; }
+	}
+
+	// End the turn: stop recognition, which fires onend → finalizeTurn.
+	function endTurn() {
+		clearSilenceTimer();
+		shouldRestart = true;
+		try { recognition?.stop(); } catch {}
 	}
 
 	function finalizeTurn() {
@@ -97,19 +150,53 @@
 		const transcript = finalTranscriptBuf.trim();
 		finalTranscriptBuf = '';
 		interimTranscript = '';
-		if (transcript && transcript.split(/\s+/).length >= MIN_WORD_COUNT) {
+		// Send whatever was said. The old version pushed anything under 3 words back
+		// into the buffer, which meant a one-word answer could never be submitted.
+		if (transcript) {
+			checkinCount = 0;
 			sendMessage(transcript);
-		} else if (transcript) {
-			finalTranscriptBuf = transcript;
 		}
+	}
+
+	// Spoken nudge when the user has gone quiet without saying anything. Deliberately
+	// NOT a conversation turn — no Claude call, nothing added to the transcript, so the
+	// extractor and summary never see it. Just a canned line through the existing TTS.
+	function speakCheckIn() {
+		if (checkinCount >= MAX_CHECKINS_PER_TURN) return;
+		if (isSpeaking || loading || sessionExpired) return;
+		checkinCount++;
+		// Second (final) nudge is deliberately a sign-off, not another question: it says
+		// the coach is done prompting, that the clock is still running, and that the user
+		// can simply resume. Going quiet without saying so leaves them wondering whether
+		// the session is still alive.
+		ttsSpeak(
+			checkinCount === 1
+				? 'Still with me?'
+				: "No rush — I'll be here until our time is up. Just start talking whenever you're ready."
+		);
 	}
 
 	function startSilenceTimer() {
 		clearSilenceTimer();
 		silenceTimer = setTimeout(() => {
-			if (finalTranscriptBuf.trim().split(/\s+/).length >= MIN_WORD_COUNT) {
-				shouldRestart = true;
-				try { recognition?.stop(); } catch {}
+			const buf = finalTranscriptBuf.trim();
+			if (buf && !soundsUnfinished(buf)) {
+				endTurn(); // sounds complete — send now, however short
+				return;
+			}
+			if (buf) {
+				// Mid-sentence pause. Wait a bit longer, then send anyway rather than
+				// stall — a wrong guess costs one rough turn; stalling costs the session.
+				unfinishedTimer = setTimeout(endTurn, UNFINISHED_TIMEOUT_MS - SILENCE_TIMEOUT_MS);
+			} else if (checkinCount < MAX_CHECKINS_PER_TURN) {
+				// Nothing said at all — check in instead of sending an empty turn.
+				// After the cap, go quiet: the user may simply have stepped away, and
+				// the 20-minute timer already handles a genuinely abandoned session.
+				// Never auto-finish — they paid for this session, so ending it on their
+				// behalf would spend their credit on a decision they didn't make.
+				// No re-arm here: speaking the check-in stops recognition, and the
+				// restart afterwards calls startListening(), which arms the timer again.
+				idleTimer = setTimeout(speakCheckIn, IDLE_CHECKIN_MS - SILENCE_TIMEOUT_MS);
 			}
 		}, SILENCE_TIMEOUT_MS);
 	}
@@ -178,6 +265,11 @@
 		if (recognition) { try { recognition.abort(); } catch {} }
 		recognition = createRecognition();
 		if (recognition) { try { recognition.start(); } catch {} }
+		// Arm the timer NOW, not only when speech arrives. Previously it was started
+		// solely from onresult, so a user who said nothing at all never triggered
+		// anything — the idle check-in was unreachable in exactly the case it exists
+		// for. Silence from the very start is the situation that needs a nudge most.
+		startSilenceTimer();
 	}
 
 	function stopListening() {
@@ -530,6 +622,7 @@
 							// Real-time STAR section updates from parallel extractor
 							if (event.question) extractedQuestion = event.question;
 							if (event.flags) extractedFlags = event.flags;
+							if (event.status) starStatus = { ...starStatus, ...event.status };
 							for (const update of event.updates) {
 								starSections = { ...starSections, [update.section]: update.content };
 							}
@@ -570,32 +663,35 @@
 	async function handleStart() {
 		loading = true;
 		try {
-			// Deduct credit (skip for subscribers)
-			if (!$userStore.subscriptionID) {
-				const creditRes = await fetch('/storybuilder/api/credits', {
-					method: 'POST',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({ action: 'deduct' })
-				});
-				if (creditRes.ok) {
-					const creditsBody = await creditRes.json();
-					if (creditsBody.credits !== undefined) {
-						$userStore = { ...$userStore, credits: creditsBody.credits };
-					}
-				}
-			}
-
+			// The start endpoint now handles the credit deduction atomically and
+			// server-side (subscribers are skipped). A session is only created if the
+			// deduction committed, so there's no client-side deduct/refund dance.
 			const interviewRes = await fetch('/storybuilder/api/start', { method: 'POST' });
 
 			if (!interviewRes.ok) {
-				throw new Error('Session start failed');
+				let errCode = '';
+				try { errCode = (await interviewRes.json()).error; } catch {}
+				if (interviewRes.status === 402 || errCode === 'no_credits') {
+					showToast("You're out of credits — grab more to start a session.", 'error', 8000);
+				} else if (interviewRes.status === 503 || errCode === 'billing_unavailable') {
+					showToast("We couldn't verify your plan just now — no credit was used. Please try again.", 'error', 8000);
+				} else {
+					showToast('Something went wrong starting your session — no credit was used. Please try again.', 'error', 8000);
+				}
+				loading = false;
+				return;
 			}
 
 			const data = await interviewRes.json();
+			// Server returns the new balance (null for subscribers).
+			if (data.credits !== undefined && data.credits !== null) {
+				$userStore = { ...$userStore, credits: data.credits };
+			}
 			sessionId = data.sessionId;
 			startTimeMs = Date.now();
 			remainingTime = 20 * 60 * 1000;
 			starSections = { situation: null, task: null, action: null, result: null } as Record<string, string | null>;
+			starStatus = { situation: null, task: null, action: null, result: null };
 			userConfirmedEnd = false;
 			const cleanOpening = stripMarkdown(data.message);
 			messages = [{ role: 'interviewer', content: cleanOpening }];
@@ -634,21 +730,9 @@
 
 			ttsSpeak(cleanOpening);
 		} catch {
-			// Refund the credit if session failed to start
-			try {
-				const refundRes = await fetch('/storybuilder/api/credits', {
-					method: 'POST',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({ action: 'refund' })
-				});
-				if (refundRes.ok) {
-					const refundBody = await refundRes.json();
-					if (refundBody.credits !== undefined) {
-						$userStore = { ...$userStore, credits: refundBody.credits };
-					}
-				}
-			} catch { /* best effort */ }
-			showToast('Failed to start session. Your credit is not impacted.', 'error', 8000);
+			// Network error before we received a response — the server may or may not
+			// have started (and charged). Don't falsely claim "no credit used".
+			showToast('Something went wrong starting your session. Please refresh and check your credits before retrying.', 'error', 8000);
 		}
 		loading = false;
 	}
@@ -688,24 +772,28 @@
 	}
 
 	function trySaveStory() {
-		// Only save once both talking points and strength signals are done loading
-		if (talkingPointsLoading || strengthSignalsLoading) return;
+		if (assessmentLoading) return;
 		if (savedStoryId) return; // Already saved
+		if (!assessment || assessment.tier === 'empty') return; // Nothing worth saving
 
 		fetch('/storybuilder/api/save', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({
 				session_id: sessionId || null,
-				question: report?.question || null,
-				full_story: report?.full_story || null,
-				talking_points: talkingPoints || null,
-				strength_signals: strengthSignals || null,
+				question: assessment.question || null,
+				full_story: assessment.fullStory || null,
+				talking_points: assessment.sections || null,
+				strength_signals: { strengths: assessment.strengths, growth: assessment.growth } || null,
 				flags: extractedFlags || null,
+				tier: assessment.tier,
 			}),
 		}).then(res => res.json()).then(data => {
 			if (data.saved) {
 				savedStoryId = data.id;
+				// Refresh cached Dashboard/Story Bank data so the new story shows
+				// up without a hard refresh.
+				invalidate('app:stories');
 			}
 		}).catch(err => console.warn('Failed to save story:', err));
 	}
@@ -713,8 +801,11 @@
 	// ── End session ──
 	async function handleEnd(auto = false) {
 		if (!auto) {
-			const confirmed = confirm("Are you sure you want to finish? You won't be able to return to this session and the session credit will be used.");
-			if (!confirmed) return;
+			// Subscribers aren't charged per session — don't mention credits to them.
+			const msg = $userStore.subscriptionID
+				? "Are you sure you want to finish? You won't be able to return to this session."
+				: "Are you sure you want to finish? You won't be able to return to this session and the session credit will be used.";
+			if (!confirm(msg)) return;
 		}
 
 		userConfirmedEnd = true;
@@ -723,160 +814,83 @@
 		ttsStop();
 		if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
 
-		const anySectionFilled = starSections.situation || starSections.task || starSections.action || starSections.result;
+		// Show the assembling state while we finalize.
+		phase = 'loading-report';
 
-		if (anySectionFilled) {
-			// Primary path: build report from STAR extractor's sidebar sections
-			const filledSections = [starSections.situation, starSections.task, starSections.action, starSections.result].filter(Boolean);
-			const fullStory = filledSections.join('\n\n');
-
-			report = {
-				question: extractedQuestion,
-				situation: starSections.situation,
-				task: starSections.task,
-				action: starSections.action,
-				result: starSections.result,
-				full_story: fullStory,
-			};
-			phase = 'report';
-
-			// Generate talking points + strength signals in parallel
-			talkingPointsLoading = true;
-			strengthSignalsLoading = true;
-			const convHistory = messages.filter(m => m.role === 'interviewer' || m.role === 'user').map(m => ({
-				role: m.role === 'interviewer' ? 'assistant' : 'user',
-				content: m.content,
-			}));
-
-			fetch('/storybuilder/api/talking-points', {
+		// Final extraction pass over the full transcript — ensures the sidebar reflects
+		// the user's last messages before we decide how to build the summary.
+		try {
+			const finalizeRes = await fetch('/storybuilder/api/finalize', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ sessionId, starSections }),
-			}).then(res => res.json()).then(data => {
-				if (data.talkingPoints) talkingPoints = data.talkingPoints;
-				talkingPointsLoading = false;
-				trySaveStory();
-			}).catch(() => { talkingPointsLoading = false; trySaveStory(); });
-
-			fetch('/storybuilder/api/strength-signals', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ sessionId, conversationHistory: convHistory, question: report.question, fullStory }),
-			}).then(res => res.json()).then(data => {
-				if (data.signals) strengthSignals = data.signals;
-				strengthSignalsLoading = false;
-				trySaveStory();
-			}).catch(() => { strengthSignalsLoading = false; trySaveStory(); });
-
-			// End server session and log cost
-			const starSectionsFilled = Object.values(starSections).filter(Boolean).length;
-			fetch('/storybuilder/api/end', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ sessionId, generateReport: false, starSectionsFilled }),
-			}).catch(() => {});
-		} else {
-			// Fallback: extractor didn't capture sections — generate from full transcript
-			phase = 'loading-report';
-			try {
-				const fbStarSectionsFilled = Object.values(starSections).filter(Boolean).length;
-				const res = await fetch('/storybuilder/api/end', {
-					method: 'POST',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({ sessionId, generateReport: true, starSectionsFilled: fbStarSectionsFilled }),
-				});
-				const data = await res.json();
-				if (data.error) {
-					report = { error: data.error, message: data.message };
-				} else if (data.report) {
-					report = data.report;
-					// Generate talking points + strength signals in parallel
-					talkingPointsLoading = true;
-					strengthSignalsLoading = true;
-					const fbConvHistory = messages.filter(m => m.role === 'interviewer' || m.role === 'user').map(m => ({
-						role: m.role === 'interviewer' ? 'assistant' : 'user',
-						content: m.content,
-					}));
-
-					fetch('/storybuilder/api/talking-points', {
-						method: 'POST',
-						headers: { 'Content-Type': 'application/json' },
-						body: JSON.stringify({ sessionId, fullStory: data.report.full_story }),
-					}).then(r => r.json()).then(d => {
-						if (d.talkingPoints) talkingPoints = d.talkingPoints;
-						talkingPointsLoading = false;
-						trySaveStory();
-					}).catch(() => { talkingPointsLoading = false; trySaveStory(); });
-
-					fetch('/storybuilder/api/strength-signals', {
-						method: 'POST',
-						headers: { 'Content-Type': 'application/json' },
-						body: JSON.stringify({ sessionId, conversationHistory: fbConvHistory, question: data.report.question, fullStory: data.report.full_story }),
-					}).then(r => r.json()).then(d => {
-						if (d.signals) strengthSignals = d.signals;
-						strengthSignalsLoading = false;
-						trySaveStory();
-					}).catch(() => { strengthSignalsLoading = false; trySaveStory(); });
-				} else {
-					report = { error: 'parse_error', message: 'Could not generate story.' };
+				body: JSON.stringify({ sessionId })
+			});
+			if (finalizeRes.ok) {
+				const { sections } = await finalizeRes.json();
+				if (sections) {
+					if (sections.question) extractedQuestion = sections.question;
+					if (sections.flags) extractedFlags = sections.flags;
+					if (sections.status) starStatus = { ...starStatus, ...sections.status };
+					starSections = {
+						situation: sections.situation ?? null,
+						task: sections.task ?? null,
+						action: sections.action ?? null,
+						result: sections.result ?? null
+					};
 				}
-				phase = 'report';
-			} catch {
-				report = { error: 'api_error' };
-				phase = 'report';
 			}
+		} catch { /* non-fatal — fall back to last in-session state */ }
+
+		await runAssessment();
+	}
+
+	// Single grounded end-of-session assessment — produces the whole summary from
+	// what the user actually shared (no fabrication). Used by handleEnd and retry.
+	async function runAssessment() {
+		phase = 'loading-report';
+		assessmentLoading = true;
+		const convHistory = messages.filter(m => m.role === 'interviewer' || m.role === 'user').map(m => ({
+			role: m.role === 'interviewer' ? 'assistant' : 'user',
+			content: m.content,
+		}));
+
+		try {
+			const res = await fetch('/storybuilder/api/assess', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ sessionId, starSections, starStatus, conversationHistory: convHistory, question: extractedQuestion }),
+			});
+			const data = await res.json();
+			if (data.assessment && !data.assessment.error) {
+				assessment = data.assessment;
+				report = assessment.tier === 'empty' ? { error: 'insufficient', message: 'Not enough real detail was shared to build a story.' } : null;
+			} else {
+				report = { error: 'assess_failed' };
+			}
+		} catch {
+			report = { error: 'api_error' };
 		}
+		assessmentLoading = false;
+		phase = 'report';
+
+		// Mark session completed + log cost (fire-and-forget).
+		const starSectionsFilled = Object.values(starSections).filter(Boolean).length;
+		fetch('/storybuilder/api/end', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ sessionId, generateReport: false, starSectionsFilled }),
+		}).catch(() => {});
+
+		trySaveStory();
 	}
 
 	async function handleRetry() {
 		retryCount++;
-		phase = 'loading-report';
-		try {
-			const res = await fetch('/storybuilder/api/end', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ sessionId, generateReport: true }),
-			});
-			const data = await res.json();
-			if (data.report) {
-				report = data.report;
-				retryCount = 0; // success — reset
-				// Generate talking points + strength signals in parallel
-				talkingPointsLoading = true;
-				strengthSignalsLoading = true;
-				const retryConvHistory = messages.filter(m => m.role === 'interviewer' || m.role === 'user').map(m => ({
-					role: m.role === 'interviewer' ? 'assistant' : 'user',
-					content: m.content,
-				}));
-
-				fetch('/storybuilder/api/talking-points', {
-					method: 'POST',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({ sessionId, fullStory: data.report.full_story }),
-				}).then(r => r.json()).then(d => {
-					if (d.talkingPoints) talkingPoints = d.talkingPoints;
-					talkingPointsLoading = false;
-					trySaveStory();
-				}).catch(() => { talkingPointsLoading = false; trySaveStory(); });
-
-				fetch('/storybuilder/api/strength-signals', {
-					method: 'POST',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({ sessionId, conversationHistory: retryConvHistory, question: data.report.question, fullStory: data.report.full_story }),
-				}).then(r => r.json()).then(d => {
-					if (d.signals) strengthSignals = d.signals;
-					strengthSignalsLoading = false;
-					trySaveStory();
-				}).catch(() => { strengthSignalsLoading = false; trySaveStory(); });
-			} else {
-				report = { error: 'api_error' };
-				if (retryCount >= 2) logGlitch();
-			}
-			phase = 'report';
-		} catch {
-			report = { error: 'api_error' };
+		await runAssessment();
+		if (report?.error && report.error !== 'insufficient') {
 			if (retryCount >= 2) logGlitch();
-			phase = 'report';
+		} else {
+			retryCount = 0;
 		}
 	}
 
@@ -889,21 +903,16 @@
 		}).catch(err => console.warn('Failed to log glitch:', err));
 	}
 
-	function handleBackToSession() {
-		report = null;
-		phase = 'coaching';
-		startListening();
-	}
-
 	function handleBuildAnother() {
 		phase = 'lobby';
 		messages = [];
 		sessionId = null;
 		report = null;
+		assessment = null;
 		userConfirmedEnd = false;
-		talkingPoints = null;
 		extractedFlags = null;
 		starSections = { situation: null, task: null, action: null, result: null } as Record<string, string | null>;
+		starStatus = { situation: null, task: null, action: null, result: null };
 		ttsStop();
 	}
 
@@ -956,21 +965,101 @@
 	$: micState = isSpeaking ? 'speaking' : loading ? 'processing' : isListening ? 'listening' : 'idle';
 	$: micLabel = isSpeaking ? 'Coach speaking' : loading ? 'Thinking...' : isListening ? 'Listening to you...' : 'Mic idle';
 
-	// ── STAR progress ──
-	$: completedCount = [starSections.situation, starSections.task, starSections.action, starSections.result].filter(Boolean).length;
+	// ── STAR progress (count of green sections) ──
+	$: completedCount = [starStatus.situation, starStatus.task, starStatus.action, starStatus.result].filter(s => s === 'green').length;
+	$: partialCount = [starStatus.situation, starStatus.task, starStatus.action, starStatus.result].filter(s => s === 'yellow').length;
 
-	// ── Report layout ──
-	$: showTwoColumn = (talkingPoints || talkingPointsLoading) && !report?.error;
+	// Summary is a single-column, section-card layout now.
+	const SUMMARY_SECTIONS = [
+		{ key: 'situation', label: 'Situation' },
+		{ key: 'task', label: 'Task' },
+		{ key: 'action', label: 'Action' },
+		{ key: 'result', label: 'Result' }
+	];
 
 	// ── Credits check ──
 	$: noCredits = $userStore.credits === 0 && !$userStore.subscriptionID && !loading;
 
-	function handleBeforeUnload() {
+	function reportAbandon() {
 		if (!sessionId || sessionEnded || phase !== 'coaching') return;
 		const durationMs = startTimeMs ? Date.now() - startTimeMs : 0;
 		const starSectionsFilled = Object.values(starSections).filter(Boolean).length;
 		const payload = JSON.stringify({ sessionId, durationMs, starSectionsFilled });
 		navigator.sendBeacon('/storybuilder/api/abandon', new Blob([payload], { type: 'application/json' }));
+	}
+
+	// Hard browser unload (close tab, refresh, external link)
+	function handleBeforeUnload() {
+		reportAbandon();
+	}
+
+	// In-app SvelteKit navigation (e.g. clicking the logo back to Dashboard) —
+	// beforeunload does NOT fire for client-side route changes, so catch those here.
+	// Confirm first to prevent accidental loss of an active session, with a message
+	// that truthfully reflects the refund outcome (same threshold the server uses).
+	let leavingHandled = false;
+	beforeNavigate((nav) => {
+		// Set once we've confirmed and kicked off the abandon, so the follow-up
+		// goto() isn't intercepted and re-prompted.
+		if (leavingHandled) return;
+		if (!sessionId || sessionEnded || phase !== 'coaching') return;
+		const durationMs = startTimeMs ? Date.now() - startTimeMs : 0;
+		const sections = Object.values(starSections).filter(Boolean).length;
+		const subscriber = !!$userStore.subscriptionID;
+		const eligible = !subscriber && isRefundEligible(durationMs, sections);
+
+		let msg: string;
+		if (subscriber) {
+			msg = 'Leave this session? Your in-progress story will be discarded.';
+		} else if (eligible) {
+			msg = "Leave now? Since you're just getting started, your credit will be refunded.";
+		} else {
+			msg = 'Leave now? Your credit will be used and this in-progress story will be discarded.';
+		}
+
+		if (!confirm(msg)) {
+			nav.cancel();
+			return;
+		}
+
+		// For an in-app navigation we can wait: cancel, finish the refund, then go.
+		// A fire-and-forget beacon would race the destination's server load, which
+		// reads the balance straight from the DB — so the next page could render a
+		// pre-refund number until a manual refresh.
+		const target = nav.to?.url;
+		if (target && nav.type !== 'leave') {
+			nav.cancel();
+			leavingHandled = true;
+			sessionEnded = true;
+			stopListening();
+			ttsStop();
+			finishAbandon(target.pathname + target.search);
+			return;
+		}
+
+		// Uncontrolled exit (tab close): can't await, fall back to the beacon.
+		reportAbandon();
+	});
+
+	// Report the abandon, wait for the refund to commit, then navigate — so the
+	// destination's load reads the updated balance.
+	async function finishAbandon(href: string) {
+		const durationMs = startTimeMs ? Date.now() - startTimeMs : 0;
+		const starSectionsFilled = Object.values(starSections).filter(Boolean).length;
+		try {
+			const res = await fetch('/storybuilder/api/abandon', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ sessionId, durationMs, starSectionsFilled }),
+			});
+			if (res.ok) {
+				const data = await res.json();
+				if (typeof data.credits === 'number') {
+					$userStore = { ...$userStore, credits: data.credits };
+				}
+			}
+		} catch { /* best effort — balance still settles on the next load */ }
+		await goto(href, { invalidateAll: true });
 	}
 
 	onMount(() => {
@@ -1067,7 +1156,7 @@
 
 {:else if phase === 'loading-report'}
 	<div class="sb-container">
-		<div class="sb-lobby">
+		<div class="sb-lobby sb-lobby-loading">
 			<div class="sb-lobby-icon">&#9997;&#65039;</div>
 			<h2>Assembling your story...</h2>
 			<p>Putting together your polished answer.</p>
@@ -1075,39 +1164,18 @@
 	</div>
 
 {:else if phase === 'report'}
-	<div class={showTwoColumn ? 'sb-report-layout' : 'sb-container'}>
-		{#if showTwoColumn}
-			<div class="sb-report-sidebar">
-				<!-- Talking Points Panel -->
-				<div class="sb-talking-points-panel">
-					<h3>Talking Points</h3>
-					{#if talkingPointsLoading}
-						<p class="sb-talking-points-hint">Generating your key talking points...</p>
-					{:else if talkingPoints}
-						<p class="sb-talking-points-subtitle">Don't memorize — just remember these anchors and connect them in your own words.</p>
-						{#each [{ key: 'situation', label: 'Situation', icon: '&#128205;' }, { key: 'task', label: 'Task', icon: '&#127919;' }, { key: 'action', label: 'Action', icon: '&#9889;' }, { key: 'result', label: 'Result', icon: '&#128202;' }] as section}
-							<div class="sb-talking-points-section">
-								<div class="sb-talking-points-label">{@html section.icon} {section.label}</div>
-								<ul class="sb-talking-points-list">
-									{#each (talkingPoints[section.key] || []) as point}
-										<li>{point}</li>
-									{/each}
-								</ul>
-							</div>
-						{/each}
-					{/if}
-				</div>
-			</div>
-		{/if}
-		<div class={showTwoColumn ? 'sb-report-main' : ''}>
+	<div class="sb-container">
+		<div>
 			<!-- Story Report -->
 			<div class="sb-scorecard">
 				{#if report?.error}
-					{#if report.error === 'too_short'}
+					{#if report.error === 'too_short' || report.error === 'insufficient'}
 						<h2>Not enough to build a story</h2>
 						<div class="sb-score-section">
 							<p style="color: #555;">
-								{#if userConfirmedEnd}
+								{#if report.message}
+									{report.message} A strong STAR story needs a real Situation, Task, the specific Actions you personally took, and a concrete Result.
+								{:else if userConfirmedEnd}
 									You ended the session before sharing enough details for a complete STAR story. A story needs a fleshed-out Situation, Task, Action, and Result to be useful in interviews.
 								{:else}
 									The session ended before enough details were shared to build a complete story.
@@ -1115,15 +1183,11 @@
 							</p>
 						</div>
 						<div class="sb-scorecard-actions">
-							{#if !userConfirmedEnd}
-								<button class="sb-start-btn" on:click={handleBackToSession}>Back to Session</button>
-							{:else}
-								<a href="/dashboard" class="sb-error-dashboard-link">Back to Dashboard</a>
-							{/if}
+							<a href="/dashboard" class="sb-error-dashboard-link">Back to Dashboard</a>
 						</div>
 
 						<!-- Inline support form for credit request -->
-						{#if userConfirmedEnd}
+						{#if true}
 							<div class="sb-support-inline">
 								{#if supportSubmitted}
 									<div class="sb-support-done">
@@ -1179,59 +1243,76 @@
 							<a href="/dashboard" class="sb-error-dashboard-link" style="font-size: 0.95rem;">Back to Dashboard</a>
 						</div>
 					{/if}
-				{:else}
-					<h2>Your STAR Story</h2>
-					{#if report?.question}
+				{:else if assessment}
+					<h2>{assessment.tier === 'complete' ? 'Your STAR story' : 'Your story so far'}</h2>
+					{#if assessment.question}
 						<div class="sb-score-section">
-							<h3>Interview Question</h3>
-							<p style="color: #2d2d2d; font-style: italic;">{report.question}</p>
+							<h3>Interview question</h3>
+							<p style="color: #2d2d2d; font-style: italic;">{assessment.question}</p>
 						</div>
 					{/if}
-					{#if report?.full_story}
+					{#if assessment.tier === 'complete' && assessment.fullStory}
 						<div class="sb-score-section">
-							<h3>Your Polished Answer</h3>
+							<h3>Your polished answer</h3>
 							<p style="color: #999; font-size: 0.8rem; margin-bottom: 12px;">~3-5 minutes when spoken at a natural pace</p>
-							<div class="sb-full-story">{report.full_story}</div>
+							<div class="sb-full-story">{assessment.fullStory}</div>
 						</div>
+					{:else}
+						<p class="sb-summary-note">You've got real material here, but it's not a complete story yet. Below is what you built and exactly what to add.</p>
 					{/if}
+					{#each SUMMARY_SECTIONS as s}
+						{@const sec = assessment.sections[s.key]}
+						<div class="sb-summary-card" class:green={sec.status === 'green'} class:yellow={sec.status === 'yellow'} class:none={!sec.status}>
+							<div class="sb-summary-card-head">
+								<span class="sb-summary-dot">{sec.status === 'green' ? '✓' : sec.status === 'yellow' ? '◐' : '○'}</span>
+								<span class="sb-summary-card-title">{s.label}</span>
+							</div>
+							{#if sec.talkingPoints && sec.talkingPoints.length > 0}
+								<ul class="sb-summary-points">
+									{#each sec.talkingPoints as p}<li>{p}</li>{/each}
+								</ul>
+							{/if}
+							{#if sec.strong}<p class="sb-summary-strong">✓ {sec.strong}</p>{/if}
+							{#if sec.missing}<p class="sb-summary-missing">↗ {sec.missing}</p>{/if}
+						</div>
+					{/each}
 				{/if}
 			</div>
-			<!-- Strength Signals -->
-			{#if !report?.error}
+			<!-- Strengths & growth (grounded in what the user actually shared) -->
+			{#if !report?.error && assessment}
 				<div class="sb-signals-card">
-					<h3>Story Strength Signals</h3>
-					<p class="sb-signals-subtitle">How interviewers will evaluate your story based on the question's theme.</p>
-					{#if strengthSignalsLoading}
-						<p class="sb-signals-loading">Analyzing your story against interview rubrics...</p>
-					{:else if strengthSignals}
-						{#if strengthSignals.strong.length > 0}
-							<div class="sb-signals-group">
-								<div class="sb-signals-group-label sb-signals-strong-label">Strong signals</div>
-								{#each strengthSignals.strong as item}
-									<div class="sb-signal-item sb-signal-strong">
-										<span class="sb-signal-icon">✓</span>
-										<div>
-											<span class="sb-signal-name">{item.signal}</span>
-											<span class="sb-signal-explain">{item.explanation}</span>
-										</div>
+					<h3>Strengths &amp; growth</h3>
+					<p class="sb-signals-subtitle">Based only on what you actually shared in this session.</p>
+					{#if assessment.strengths.length > 0}
+						<div class="sb-signals-group">
+							<div class="sb-signals-group-label sb-signals-strong-label">Strengths</div>
+							{#each assessment.strengths as item}
+								<div class="sb-signal-item sb-signal-strong">
+									<span class="sb-signal-icon">✓</span>
+									<div>
+										<span class="sb-signal-name">{item.signal}</span>
+										<span class="sb-signal-explain">{item.evidence}</span>
 									</div>
-								{/each}
-							</div>
-						{/if}
-						{#if strengthSignals.improve.length > 0}
-							<div class="sb-signals-group">
-								<div class="sb-signals-group-label sb-signals-improve-label">Could be stronger</div>
-								{#each strengthSignals.improve as item}
-									<div class="sb-signal-item sb-signal-improve">
-										<span class="sb-signal-icon">⚡</span>
-										<div>
-											<span class="sb-signal-name">{item.signal}</span>
-											<span class="sb-signal-explain">{item.explanation}</span>
-										</div>
+								</div>
+							{/each}
+						</div>
+					{/if}
+					{#if assessment.growth.length > 0}
+						<div class="sb-signals-group">
+							<div class="sb-signals-group-label sb-signals-improve-label">Growth areas</div>
+							{#each assessment.growth as item}
+								<div class="sb-signal-item sb-signal-improve">
+									<span class="sb-signal-icon">⚡</span>
+									<div>
+										<span class="sb-signal-name">{item.signal}</span>
+										<span class="sb-signal-explain">{item.detail}</span>
 									</div>
-								{/each}
-							</div>
-						{/if}
+								</div>
+							{/each}
+						</div>
+					{/if}
+					{#if assessment.strengths.length === 0 && assessment.growth.length === 0}
+						<p class="sb-signals-loading">No signals detected yet — share more specifics to surface your strengths.</p>
 					{/if}
 				</div>
 			{/if}
@@ -1253,9 +1334,10 @@
 				</div>
 			{/if}
 
-			{#if (!report?.error || userConfirmedEnd)}
+			{#if !report?.error && assessment}
 				<div class="sb-scorecard-actions">
-					<button class="sb-start-btn" on:click={handleBuildAnother}>Build Another Story</button>
+					<button class="sb-start-btn" on:click={handleBuildAnother}>Build another story</button>
+					<a href="/dashboard" class="sb-error-dashboard-link">Back to Dashboard</a>
 				</div>
 			{/if}
 		</div>
@@ -1379,9 +1461,9 @@
 					{starExpanded ? 'Collapse' : 'Expand'}
 				</button>
 				{#each [{ key: 'situation', label: 'Situation' }, { key: 'task', label: 'Task' }, { key: 'action', label: 'Action' }, { key: 'result', label: 'Result' }] as section}
-					<div class="sb-star-progress-section" class:filled={starSections[section.key]} class:empty={!starSections[section.key]}>
+					<div class="sb-star-progress-section" class:filled={starStatus[section.key] === 'green'} class:partial={starStatus[section.key] === 'yellow'} class:empty={!starStatus[section.key]}>
 						<div class="sb-star-progress-label">
-							<span class="sb-star-progress-dot">{starSections[section.key] ? '✓' : '○'}</span>
+							<span class="sb-star-progress-dot">{starStatus[section.key] === 'green' ? '✓' : starStatus[section.key] === 'yellow' ? '◐' : '○'}</span>
 							<span>{section.label}</span>
 						</div>
 						{#if starExpanded && starSections[section.key]}
@@ -1416,6 +1498,8 @@
 		flex-direction: column;
 		align-items: center;
 	}
+	/* Loading state sits alone on the page — clear the sticky header. */
+	.sb-lobby-loading { padding-top: 72px; }
 	.sb-no-credits {
 		text-align: center;
 		margin-bottom: auto;
@@ -1867,6 +1951,9 @@
 	.sb-star-progress-section.filled .sb-star-progress-label { color: #c96442; }
 	.sb-star-progress-dot { font-size: 0.85rem; }
 	.sb-star-progress-section.filled .sb-star-progress-dot { color: #16a34a; }
+	.sb-star-progress-section.partial { background: #fdf6ec; border: 1px solid #f0d9a8; }
+	.sb-star-progress-section.partial .sb-star-progress-label { color: #b8860b; }
+	.sb-star-progress-section.partial .sb-star-progress-dot { color: #d9a520; }
 	.sb-star-progress-content {
 		font-size: 0.85rem;
 		line-height: 1.6;
@@ -1884,28 +1971,6 @@
 	}
 
 	/* ── Report Layout ── */
-	.sb-report-layout {
-		display: flex;
-		gap: 32px;
-		max-width: 1200px;
-		margin: 0 auto;
-		padding: 24px 24px 0;
-		min-height: calc(100vh - 50px);
-	}
-	.sb-report-sidebar {
-		width: 320px;
-		flex-shrink: 0;
-		position: sticky;
-		top: 74px;
-		align-self: flex-start;
-		max-height: calc(100vh - 98px);
-		overflow-y: auto;
-	}
-	.sb-report-main {
-		flex: 1;
-		min-width: 0;
-	}
-
 	/* ── Scorecard ── */
 	.sb-scorecard { padding: 32px 0; }
 	.sb-scorecard h2 {
@@ -1958,6 +2023,55 @@
 		font-size: 0.95rem;
 		line-height: 1.7;
 		white-space: pre-wrap;
+	}
+	.sb-summary-note {
+		color: #8a7a5c;
+		font-size: 0.9rem;
+		background: #fdf6ec;
+		border: 1px solid #f0d9a8;
+		border-radius: 8px;
+		padding: 12px 16px;
+		margin: 8px 0 16px;
+	}
+	.sb-summary-card {
+		border-radius: 12px;
+		padding: 14px 16px;
+		margin-bottom: 12px;
+		border: 1px solid #e5e5e3;
+		background: #ffffff;
+	}
+	.sb-summary-card.green { background: #faf8f5; }
+	.sb-summary-card.yellow { background: #fdf6ec; border-color: #f0d9a8; }
+	.sb-summary-card.none { background: #f9f9f8; border-style: dashed; }
+	.sb-summary-card-head {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		font-size: 0.8rem;
+		font-weight: 600;
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
+		color: #555;
+	}
+	.sb-summary-card.green .sb-summary-dot { color: #16a34a; }
+	.sb-summary-card.yellow .sb-summary-dot { color: #d9a520; }
+	.sb-summary-card.none .sb-summary-dot { color: #bbb; }
+	.sb-summary-points {
+		margin: 8px 0 0;
+		padding-left: 18px;
+		color: #2d2d2d;
+		font-size: 0.9rem;
+		line-height: 1.6;
+	}
+	.sb-summary-strong {
+		margin: 8px 0 0;
+		color: #16a34a;
+		font-size: 0.85rem;
+	}
+	.sb-summary-missing {
+		margin: 6px 0 0;
+		color: #b8860b;
+		font-size: 0.85rem;
 	}
 	.sb-scorecard-actions {
 		text-align: center;
@@ -2215,62 +2329,6 @@
 		line-height: 1.45;
 	}
 
-	/* ── Talking Points Panel ── */
-	.sb-talking-points-panel {
-		background: #fff;
-		border: 1px solid #e5e5e3;
-		border-radius: 16px;
-		padding: 24px;
-	}
-	.sb-talking-points-panel h3 {
-		font-size: 1.1rem;
-		font-weight: 600;
-		color: #1a1a1a;
-		margin-bottom: 4px;
-		text-align: left;
-	}
-	.sb-talking-points-subtitle {
-		font-size: 0.8rem;
-		color: #888;
-		margin-bottom: 20px;
-		line-height: 1.4;
-	}
-	.sb-talking-points-hint {
-		color: #888;
-		font-size: 0.85rem;
-		font-style: italic;
-	}
-	.sb-talking-points-section { margin-bottom: 18px; }
-	.sb-talking-points-section:last-child { margin-bottom: 0; }
-	.sb-talking-points-label {
-		font-size: 0.8rem;
-		font-weight: 600;
-		color: #b45309;
-		text-transform: uppercase;
-		letter-spacing: 0.04em;
-		margin-bottom: 6px;
-	}
-	.sb-talking-points-list {
-		list-style: none;
-		padding: 0;
-		margin: 0;
-	}
-	.sb-talking-points-list li {
-		position: relative;
-		padding-left: 16px;
-		font-size: 0.9rem;
-		color: #2d2d2d;
-		line-height: 1.5;
-		margin-bottom: 4px;
-	}
-	.sb-talking-points-list li::before {
-		content: '\2022';
-		position: absolute;
-		left: 0;
-		color: #c96442;
-		font-weight: bold;
-	}
-
 	/* ── Responsive ── */
 	@media (max-width: 1024px) {
 		.sb-coaching-layout { flex-direction: column; }
@@ -2284,8 +2342,6 @@
 			max-height: 300px;
 		}
 		.sb-coaching-resize-handle { display: none; }
-		.sb-report-layout { flex-direction: column; padding: 16px; }
-		.sb-report-sidebar { width: 100%; position: static; max-height: none; }
 	}
 	@media (max-width: 600px) {
 		.sb-container { padding: 16px 16px 0; }

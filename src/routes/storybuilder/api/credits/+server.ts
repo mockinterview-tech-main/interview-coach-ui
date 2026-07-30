@@ -1,46 +1,42 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 
+// NOTE: The primary deduct/refund flow now lives in /api/start and /api/abandon,
+// which call the atomic deduct_credit / refund_credit RPCs directly. This endpoint
+// remains for any direct/manual use and is kept atomic + error-checked for safety.
 export const POST: RequestHandler = async ({ locals, request }) => {
     const session = await locals.getSession();
     if (!session) {
         return json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { action } = await request.json();
-    const userId = session.user.id;
+    const { action, sessionId } = await request.json();
 
     if (action !== 'deduct' && action !== 'refund') {
         return json({ error: 'Invalid action' }, { status: 400 });
     }
 
-    // Get current credits
-    const { data: profile } = await locals.supabase
-        .from('profiles')
-        .select('credits')
-        .eq('id', userId)
-        .single();
-
-    if (!profile) {
-        return json({ error: 'Profile not found' }, { status: 404 });
-    }
-
-    let newCredits = profile.credits;
-
     if (action === 'deduct') {
-        if (newCredits <= 0) {
-            return json({ error: 'No credits remaining' }, { status: 403 });
+        const { data, error } = await locals.supabase.rpc('deduct_credit', {
+            p_session_id: sessionId || null,
+        });
+        if (error) {
+            console.error('deduct_credit RPC failed:', error.message);
+            return json({ error: 'deduct_failed' }, { status: 500 });
         }
-        newCredits -= 1;
-    } else if (action === 'refund') {
-        // Only refund 1 credit — for failed session starts
-        newCredits += 1;
+        if (data === -1) {
+            return json({ error: 'No credits remaining' }, { status: 402 });
+        }
+        return json({ credits: data });
     }
 
-    await locals.supabase
-        .from('profiles')
-        .update({ credits: newCredits })
-        .eq('id', userId);
-
-    return json({ credits: newCredits });
+    const { data, error } = await locals.supabase.rpc('refund_credit', {
+        p_session_id: sessionId || null,
+        p_reason: 'manual_refund',
+    });
+    if (error) {
+        console.error('refund_credit RPC failed:', error.message);
+        return json({ error: 'refund_failed' }, { status: 500 });
+    }
+    return json({ credits: data });
 };

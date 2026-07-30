@@ -1,12 +1,12 @@
 import { redirect } from '@sveltejs/kit';
 import type { LayoutServerLoad } from './$types';
-import Stripe from 'stripe';
+import { stripe, resolveCustomerId } from '$lib/server/billing';
 
-const stripe = new Stripe(import.meta.env['VITE_STRIPE_SECRET_KEY'], {
-  apiVersion: '2023-08-16',
-});
+export const load: LayoutServerLoad = async ({ locals, url, depends }) => {
+    // Lets any page call invalidate('app:credits') to force a fresh balance
+    // instead of rendering a cached one (e.g. after a purchase or a refund).
+    depends('app:credits');
 
-export const load: LayoutServerLoad = async ({ locals, url }) => {
     const protectedRoutes = ['storybuilder', 'credits', 'stories', 'dashboard'];
     const firstSegment = url.pathname.split('/').filter(Boolean)[0];
 
@@ -39,14 +39,11 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
                 credits = profile.credits || 0;
             }
 
-            // Check Stripe for subscription
-            const stripeCustomerResult = await stripe.customers.list({
-                limit: 1,
-                email: email,
-            });
+            // Resolve the Stripe customer (stored id when known — one API call
+            // instead of two, and immune to duplicate customers from past checkouts).
+            const stripeCustomerID = await resolveCustomerId(locals.supabase, user.id, email);
 
-            if (stripeCustomerResult.data.length > 0) {
-                const stripeCustomerID = stripeCustomerResult.data[0].id;
+            if (stripeCustomerID) {
                 const subscriptionResult = await stripe.subscriptions.list({
                     customer: stripeCustomerID,
                 });

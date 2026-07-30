@@ -140,8 +140,13 @@
 			{:else}
 				<div class="dash-stories-grid">
 					{#each recentStories as story}
-						<a href="/stories" class="dash-story-card">
-							<span class="dash-story-title">{story.question || 'Untitled Story'}</span>
+						<a href="/stories" class="dash-story-card" class:incomplete={story.tier === 'partial'}>
+							{#if story.tier === 'partial'}
+								<span class="dash-story-badge">Incomplete</span>
+							{/if}
+							<span class="dash-story-title" class:untitled={!story.question}>
+								{story.question || 'Undefined interview question'}
+							</span>
 							<span class="dash-story-date">{formatDate(story.created_at)}</span>
 						</a>
 					{/each}
@@ -412,6 +417,27 @@
 			box-shadow: $card-shadow-hover;
 			transform: translateY(-2px);
 		}
+	}
+	/* Incomplete sessions still live in the Story Bank — the user paid for them —
+	   but are visually distinct from finished, interview-ready stories. */
+	.dash-story-card.incomplete {
+		background: #fdeceb;
+		border: 1px dashed #f0b8b2;
+	}
+	.dash-story-badge {
+		align-self: flex-start;
+		font-size: 0.65rem;
+		font-weight: 600;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+		color: #b0392c;
+		background: #fbd9d5;
+		border-radius: 10px;
+		padding: 2px 8px;
+	}
+	.dash-story-title.untitled {
+		font-style: italic;
+		color: #999;
 	}
 	.dash-story-title {
 		font-size: 0.9rem;

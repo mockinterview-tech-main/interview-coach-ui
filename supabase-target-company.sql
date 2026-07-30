@@ -1,0 +1,11 @@
+-- Run once in the Supabase SQL Editor.
+--
+-- Stores the company the user said they're INTERVIEWING AT, captured once by the
+-- STAR extractor and reused for the rest of the session.
+--
+-- Replaces regex-scanning the transcript on every call, which was fragile in a way
+-- that actively misfired: users spend most of a session telling a story about a PAST
+-- employer, so keyword/position heuristics reliably picked the wrong company, and the
+-- coach's own example prompts ("a senior role at Amazon?") polluted the scan too.
+-- The extractor already reads the whole conversation and can simply tell us.
+alter table public.session_logs add column if not exists target_company text;

@@ -1,8 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-
-const AUTO_REFUND_MAX_DURATION_MS = 3 * 60 * 1000; // 3 minutes
-const AUTO_REFUND_MAX_STAR_SECTIONS = 1; // fewer than 2 sections filled
+import { isRefundEligible } from '$lib/refund-policy';
 
 export const POST: RequestHandler = async ({ locals, request }) => {
     const session = await locals.getSession();
@@ -30,10 +28,33 @@ export const POST: RequestHandler = async ({ locals, request }) => {
         }
 
         // Determine if auto-refund applies
-        const shouldRefund = (durationMs || 0) < AUTO_REFUND_MAX_DURATION_MS
-            && (starSectionsFilled || 0) <= AUTO_REFUND_MAX_STAR_SECTIONS;
+        const eligibleForRefund = isRefundEligible(durationMs || 0, starSectionsFilled || 0);
 
-        const status = shouldRefund ? 'refunded' : 'abandoned';
+        // Only refund if this session actually carries a net charge in the ledger.
+        // This skips subscribers (never charged) and prevents double-refunds.
+        let refunded = false;
+        let credits: number | null = null;
+        if (eligibleForRefund) {
+            const { data: txns } = await locals.supabase
+                .from('credit_transactions')
+                .select('delta')
+                .eq('session_id', sessionId)
+                .eq('user_id', userId);
+            const net = (txns || []).reduce((sum, t) => sum + (t.delta || 0), 0);
+            if (net < 0) {
+                const { data: newBalance, error: refundError } = await locals.supabase.rpc('refund_credit', {
+                    p_session_id: sessionId,
+                    p_reason: 'auto_refund_abandon',
+                });
+                if (refundError) console.error('refund_credit RPC failed on abandon:', refundError.message);
+                else {
+                    refunded = true;
+                    if (typeof newBalance === 'number' && newBalance >= 0) credits = newBalance;
+                }
+            }
+        }
+
+        const status = refunded ? 'refunded' : 'abandoned';
 
         // Update session log
         await locals.supabase
@@ -45,24 +66,7 @@ export const POST: RequestHandler = async ({ locals, request }) => {
             })
             .eq('session_id', sessionId);
 
-        // Auto-refund credit if applicable
-        if (shouldRefund) {
-            const { data: profile } = await locals.supabase
-                .from('profiles')
-                .select('credits')
-                .eq('id', userId)
-                .single();
-
-            if (profile) {
-                await locals.supabase
-                    .from('profiles')
-                    .update({ credits: profile.credits + 1 })
-                    .eq('id', userId);
-
-            }
-        }
-
-        return json({ status, refunded: shouldRefund });
+        return json({ status, refunded, credits });
     } catch (err: any) {
         console.error('Abandon session error:', err);
         return json({ error: 'Failed to process abandoned session' }, { status: 500 });

@@ -156,7 +156,15 @@
 		}
 	}
 	.credits-card-featured {
-		border-color: #f0e0d8;
+		border-color: #c96442;
+		background: linear-gradient(180deg, #fff8f4 0%, #ffffff 55%);
+		box-shadow: 0 14px 34px rgba(201, 100, 66, 0.16);
+		transform: translateY(-6px);
+		&:hover {
+			border-color: #c96442;
+			transform: translateY(-10px);
+			box-shadow: 0 20px 40px rgba(201, 100, 66, 0.22);
+		}
 	}
 
 	.credits-card-top {
@@ -226,16 +234,19 @@
 
 	.credits-badge {
 		position: absolute;
-		top: 18px;
-		right: 18px;
+		top: -13px;
+		left: 50%;
+		transform: translateX(-50%);
 		background: #c96442;
 		color: white;
-		font-size: 0.7rem;
+		font-size: 0.72rem;
 		font-weight: 700;
-		padding: 5px 12px;
+		padding: 6px 16px;
 		border-radius: 14px;
 		text-transform: uppercase;
-		letter-spacing: 0.05em;
+		letter-spacing: 0.06em;
+		white-space: nowrap;
+		box-shadow: 0 4px 12px rgba(201, 100, 66, 0.3);
 	}
 
 	.credits-cancel-note {

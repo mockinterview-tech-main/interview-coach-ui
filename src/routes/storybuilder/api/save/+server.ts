@@ -8,7 +8,7 @@ export const POST: RequestHandler = async ({ locals, request }) => {
     }
 
     try {
-        const { session_id, question, full_story, talking_points, strength_signals, flags } = await request.json();
+        const { session_id, question, full_story, talking_points, strength_signals, flags, tier } = await request.json();
 
         const { data, error } = await locals.supabase.from('stories').insert({
             user_id: session.user.id,
@@ -18,6 +18,7 @@ export const POST: RequestHandler = async ({ locals, request }) => {
             talking_points: talking_points || null,
             strength_signals: strength_signals || null,
             flags: flags || null,
+            tier: tier || null,
         }).select('id').single();
 
         if (error) {
