@@ -6,7 +6,7 @@
 	const PAGE_URL = `${SITE_URL}/resumegateframework`;
 	const PAGE_TITLE = 'Why Your Resume Isn’t Getting Callbacks | mockinterview.tech';
 	const PAGE_DESC =
-		"There are four places an application dies and the fix for each is different. Free interrogation prompts for the ones you can fix at your desk — they ask you questions before they write anything.";
+		"There are 4 places an application dies and the fix for each is different. Free interrogation prompts for the ones you can fix at your desk — they ask you questions before they write anything.";
 
 	let email = '';
 	let submitting = false;
@@ -881,7 +881,7 @@ losing anything.`;
 				<p><strong>Don't lie or inflate.</strong> A keyword you don't have gets you into a room where someone asks about it. A number you can't explain becomes the hesitation they remember. A title that overstated your scope falls apart the moment someone asks what you actually owned.</p>
 				<p><strong>So the check is simple.</strong> Go bullet by bullet and answer two things out loud: <em>how did I get that number</em>, and <em>what exactly did I do</em>. Not in your head — out loud. Start with the ones Step 2 flagged as incomplete. The bullets you stumble on are the ones an interviewer will find, and you now know which they are before anyone else does.</p>
 				<p>If saying them out loud is where things fall apart — the bullet is true, you just can't do storytelling well under pressure.</p>
-				<p>That's what I built <strong><a href="https://mockinterview.tech">mockinterview.tech</a></strong> for. It does to your interview narratives what Step 2 did to your bullets: <span class="highlight">asks until the real story is on the table, ready for any room you walk into</span>.</p>
+				<p>That's what I built <strong><a href="https://mockinterview.tech">mockinterview.tech</a></strong> for. It prepares your interview narratives: <span class="highlight">asks until an impactful story is on the table, ready for any interview conversations</span>.</p>
 			</section>
 		{/if}
 	</div>
