@@ -40,6 +40,12 @@ create table if not exists public.session_logs (
   target_company        text
 );
 
+-- Supabase stops auto-granting Data API access to new public tables on 2026-10-30.
+-- Explicit grant so this file replays cleanly into a fresh project. RLS still
+-- governs which rows a role can see; the grant only makes the table reachable.
+grant select, insert, update, delete on table public.session_logs to authenticated, service_role;
+grant select on table public.session_logs to anon;
+
 alter table public.session_logs enable row level security;
 
 -- Verified 2026-08-19. loadSession() queries by session_id with NO user_id filter,

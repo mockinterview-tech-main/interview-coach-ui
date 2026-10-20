@@ -20,6 +20,12 @@ create table if not exists public.profiles (
   last_stripe_session_id text,
   stripe_customer_id     text
 );
+
+-- Supabase stops auto-granting Data API access to new public tables on 2026-10-30.
+-- Explicit grant so this file replays cleanly into a fresh project. RLS still
+-- governs which rows a role can see; the grant only makes the table reachable.
+grant select, insert, update, delete on table public.profiles to authenticated, service_role;
+grant select on table public.profiles to anon;
 create index if not exists profiles_stripe_customer_id_idx on public.profiles (stripe_customer_id);
 alter table public.profiles enable row level security;
 
@@ -39,6 +45,12 @@ create table if not exists public.stories (
   session_id       text,
   tier             text
 );
+
+-- Supabase stops auto-granting Data API access to new public tables on 2026-10-30.
+-- Explicit grant so this file replays cleanly into a fresh project. RLS still
+-- governs which rows a role can see; the grant only makes the table reachable.
+grant select, insert, update, delete on table public.stories to authenticated, service_role;
+grant select on table public.stories to anon;
 alter table public.stories enable row level security;
 
 -- ── credit_transactions ─────────────────────────────────────────────────────
@@ -52,6 +64,12 @@ create table if not exists public.credit_transactions (
   created_at    timestamptz not null default now(),
   reference     text
 );
+
+-- Supabase stops auto-granting Data API access to new public tables on 2026-10-30.
+-- Explicit grant so this file replays cleanly into a fresh project. RLS still
+-- governs which rows a role can see; the grant only makes the table reachable.
+grant select, insert, update, delete on table public.credit_transactions to authenticated, service_role;
+grant select on table public.credit_transactions to anon;
 create index if not exists credit_transactions_user_created_idx
   on public.credit_transactions (user_id, created_at desc);
 alter table public.credit_transactions enable row level security;
@@ -67,6 +85,12 @@ create table if not exists public.support_requests (
   status      text default 'open',
   created_at  timestamptz default now()
 );
+
+-- Supabase stops auto-granting Data API access to new public tables on 2026-10-30.
+-- Explicit grant so this file replays cleanly into a fresh project. RLS still
+-- governs which rows a role can see; the grant only makes the table reachable.
+grant select, insert, update, delete on table public.support_requests to authenticated, service_role;
+grant select on table public.support_requests to anon;
 alter table public.support_requests enable row level security;
 
 -- ── RLS policies (verbatim names; guarded because CREATE POLICY has no IF NOT EXISTS) ──

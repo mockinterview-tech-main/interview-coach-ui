@@ -30,6 +30,12 @@ create table if not exists public.purchases (
   constraint purchases_stripe_needs_session check (source <> 'stripe' or stripe_session_id is not null),
   constraint purchases_revoke_needs_reason  check (revoked_at is null or revoke_reason is not null)
 );
+
+-- Supabase stops auto-granting Data API access to new public tables on 2026-10-30.
+-- Explicit grant so this file replays cleanly into a fresh project. RLS still
+-- governs which rows a role can see; the grant only makes the table reachable.
+grant select, insert, update, delete on table public.purchases to authenticated, service_role;
+grant select on table public.purchases to anon;
 create index if not exists purchases_user_created_idx on public.purchases (user_id, created_at desc);
 
 -- expires_at is NOT NULL by decision, but a dashboard insert shouldn't require
@@ -59,6 +65,12 @@ create table if not exists public.story_consumptions (
   reason      text not null check (reason in ('completed', 'resume_after_expiry')),
   created_at  timestamptz not null default now()
 );
+
+-- Supabase stops auto-granting Data API access to new public tables on 2026-10-30.
+-- Explicit grant so this file replays cleanly into a fresh project. RLS still
+-- governs which rows a role can see; the grant only makes the table reachable.
+grant select, insert, update, delete on table public.story_consumptions to authenticated, service_role;
+grant select on table public.story_consumptions to anon;
 create index if not exists story_consumptions_user_idx     on public.story_consumptions (user_id, created_at desc);
 create index if not exists story_consumptions_purchase_idx on public.story_consumptions (purchase_id);
 create index if not exists story_consumptions_story_idx    on public.story_consumptions (story_id);
