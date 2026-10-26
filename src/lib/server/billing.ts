@@ -1,6 +1,7 @@
 import Stripe from 'stripe';
+import { env } from '$env/dynamic/private';
 
-const stripe = new Stripe(import.meta.env['VITE_STRIPE_SECRET_KEY'], {
+const stripe = new Stripe(env.STRIPE_SECRET_KEY ?? '', {
   apiVersion: '2023-08-16',
 });
 

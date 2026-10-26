@@ -1,4 +1,3 @@
-import Stripe from 'stripe';
 import { redirect } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
 
@@ -7,7 +6,7 @@ import {
     VITE_STRIPE_ID_SINGLE_STORY,
     VITE_STRIPE_ID_FINISH_STORY,
 } from '$env/static/private';
-import { resolveCustomerId } from '$lib/server/billing';
+import { stripe, resolveCustomerId } from '$lib/server/billing';
 
 // One-time purchases only for individuals (decided 2026-09-08). The monthly
 // subscription is gone from this page; the Stripe subscription CHECK stays in
@@ -25,9 +24,6 @@ export type Choice = {
     storiesAllowed: number;
 };
 
-const stripe = new Stripe(import.meta.env['VITE_STRIPE_SECRET_KEY'], {
-    apiVersion: '2023-08-16',
-});
 
 const OFFERINGS: Record<Kind, Choice> = {
     bundle: {
