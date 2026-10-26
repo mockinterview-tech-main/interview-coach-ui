@@ -24,3 +24,14 @@ update public.profiles set credits = 0 where credits > 0;
 -- verify:
 -- select count(*) from purchases where source = 'trial' and note like '%blast day%';  -- number of profiles without a prior trial
 -- select count(*) from profiles where credits > 0;                                   -- 0
+
+-- ── Signups between 2026-09-08 and blast day ───────────────────────────────
+-- The welcome-story trigger (011) gave each of them a trial row, but prod could
+-- not spend it until the release, so the 30-day clock ran out unused. Reset
+-- every UNSPENT trial to 30 days from today — the same free story as everyone
+-- else, on the same clock as the announcement. Spent trials are untouched.
+update public.purchases p
+   set expires_at = now() + interval '30 days'
+ where p.source = 'trial'
+   and p.revoked_at is null
+   and not exists (select 1 from public.story_consumptions c where c.purchase_id = p.id);
