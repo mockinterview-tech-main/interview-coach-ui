@@ -1,6 +1,7 @@
 import Stripe from 'stripe';
+import { env } from '$env/dynamic/private';
 
-const stripe = new Stripe(import.meta.env['VITE_STRIPE_SECRET_KEY'], {
+const stripe = new Stripe(env.STRIPE_SECRET_KEY ?? '', {
   apiVersion: '2023-08-16',
 });
 
@@ -52,20 +53,4 @@ export async function saveCustomerId(supabase: any, userId: string, customerId: 
     .update({ stripe_customer_id: customerId })
     .eq('id', userId);
   if (error) console.error('Failed to save stripe_customer_id:', error.message);
-}
-
-/**
- * Returns true if the user has an active Stripe subscription.
- * Reads Stripe live; with a stored customer id this is a single API call.
- */
-export async function hasActiveSubscription(
-  supabase: any,
-  userId: string,
-  email: string
-): Promise<boolean> {
-  const customerId = await resolveCustomerId(supabase, userId, email);
-  if (!customerId) return false;
-
-  const subs = await stripe.subscriptions.list({ customer: customerId, status: 'active', limit: 1 });
-  return subs.data.length > 0;
 }
